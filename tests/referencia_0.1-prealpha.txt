@@ -1,0 +1,189 @@
+=== smoke2.js easy
+easy state over score [18,2]
+[{"att":13,"made":7,"threes":1,"dunks":3,"alleys":1,"assists":3,"steals":12,"dodges":8,"blocks":2},{"att":5,"made":1,"threes":0,"dunks":0,"alleys":0,"assists":0,"steals":3,"dodges":2,"blocks":0}]
+exhausts undefined [83,100,100,77,100,100]
+swipes 57 miss 35 moves 62 passes 0
+=== smoke2.js normal
+normal state over score [11,19]
+[{"att":10,"made":5,"threes":0,"dunks":1,"alleys":1,"assists":2,"steals":6,"dodges":7,"blocks":0},{"att":14,"made":8,"threes":2,"dunks":1,"alleys":0,"assists":0,"steals":8,"dodges":4,"blocks":3}]
+exhausts undefined [100,100,100,70,100,100]
+swipes 54 miss 33 moves 65 passes 0
+=== smoke2.js hard
+hard state over score [11,18]
+[{"att":12,"made":5,"threes":0,"dunks":1,"alleys":0,"assists":0,"steals":10,"dodges":6,"blocks":0},{"att":20,"made":8,"threes":2,"dunks":0,"alleys":0,"assists":0,"steals":6,"dodges":12,"blocks":3}]
+exhausts undefined [100,100,100,100,100,100]
+swipes 48 miss 22 moves 74 passes 0
+=== test9.js
+carga 0.55 0/12
+carga 0.68 0/12
+carga 0.74 12/12
+carga 0.8 12/12
+carga 0.86 12/12
+carga 0.92 1/12
+carga 1.05 2/12
+mate one 3/3 dunkSeq cleared true y 0.00
+mate two 3/3 dunkSeq cleared true y 0.00
+mate tomahawk 3/3 dunkSeq cleared true y 0.00
+mate windmill 3/3 dunkSeq cleared true y 0.00
+mate spin360 3/3 dunkSeq cleared true y 0.00
+mate reverse 3/3 dunkSeq cleared true y 0.00
+tecla KeyJ  -> one
+tecla KeyF  -> two
+tecla KeyR  -> windmill
+tecla KeyX  -> spin360
+tecla KeyJ +Mayús -> tomahawk
+tecla KeyF +Mayús -> reverse
+regate KeyF cross
+regate KeyG between
+regate KeyR behind
+regate KeyX spin
+regate KeyT hesi
+regate KeyC step
+=== test9b.js
+chest   dist 6 receptor quieto -> recibido en 0.35 s
+chest   dist 10 receptor quieto -> recibido en 0.50 s
+chest   dist 14 receptor quieto -> recibido en 0.55 s
+chest   dist 8 receptor corriendo -> recibido en 0.45 s
+chest   dist 12 receptor corriendo -> recibido en 0.50 s
+bounce  dist 6 receptor quieto -> recibido en 0.55 s
+bounce  dist 10 receptor quieto -> recibido en 0.60 s
+bounce  dist 14 receptor quieto -> recibido en 0.70 s
+bounce  dist 8 receptor corriendo -> recibido en 0.55 s
+bounce  dist 12 receptor corriendo -> recibido en 0.70 s
+lob     dist 6 receptor quieto -> recibido en 1.05 s
+lob     dist 10 receptor quieto -> recibido en 1.15 s
+lob     dist 14 receptor quieto -> recibido en 1.25 s
+lob     dist 8 receptor corriendo -> recibido en 1.10 s
+lob     dist 12 receptor corriendo -> recibido en 1.15 s
+=== testblock.js
+distancia 1
+  pulsar 0.45 s antes de soltar -> 0/4
+  pulsar 0.36 s antes de soltar -> 0/4
+  pulsar 0.30 s antes de soltar -> 4/4
+  pulsar 0.24 s antes de soltar -> 4/4
+  pulsar 0.18 s antes de soltar -> 4/4
+  pulsar 0.12 s antes de soltar -> 4/4
+  pulsar 0.06 s antes de soltar -> 4/4
+  pulsar 0.00 s antes de soltar -> 0/4
+  pulsar -0.08 s antes de soltar -> 0/4
+distancia 1.4
+  pulsar 0.45 s antes de soltar -> 0/4
+  pulsar 0.36 s antes de soltar -> 0/4
+  pulsar 0.30 s antes de soltar -> 0/4
+  pulsar 0.24 s antes de soltar -> 4/4
+  pulsar 0.18 s antes de soltar -> 4/4
+  pulsar 0.12 s antes de soltar -> 4/4
+  pulsar 0.06 s antes de soltar -> 4/4
+  pulsar 0.00 s antes de soltar -> 0/4
+  pulsar -0.08 s antes de soltar -> 0/4
+tras fallar, stun al aterrizar: visto antes
+mate one taponados 5/8
+mate two taponados 6/8
+mate windmill taponados 7/8
+mate spin360 taponados 8/8
+=== testpad.js
+foco en play modo pad
+estado countdown entrenamiento? false
+estado tras cuenta atrás play
+stick 30% -> velocidad 0.90
+stick 60% -> velocidad 2.83 energía 1.00
+stick 100% -> velocidad 5.40
+R2 sprint -> velocidad 7.76
+arranque W: 0.1s/0.2s/0.3s/0.5s -> 3.27 / 5.37 / 5.40 / 5.40
+giro 180º: frenada con apoyo true | en 0.32 s ya corre al revés
+curva 90º corriendo: avanza 0.56 m en 0.15 s
+curva 90º esprintando: avanza 1.30 m en 0.22 s
+RS derecha      -> nada
+RS izquierda    -> nada
+RS arriba       -> nada
+RS abajo        -> nada
+RS arriba-dcha  -> nada
+RS abajo-izq    -> nada
+R3 -> spin
+□ mantenido: cargando true carga 0.59
+□ soltado: balón en el aire true
+vibraciones 1
+=== testpad2.js
+mando □     -> one
+mando △     -> two
+mando ○     -> windmill
+mando ✕     -> spin360
+mando R1+□  -> tomahawk
+mando R1+△  -> reverse
+=== teststance3.js
+correr 5.08 | R1 sprint 7.82
+L2 al correr con balón -> velocidad 2.58 postura true
+en postura ofensiva moviéndose -> 3.15
+RS con balón sin L2 -> regate: between | cámara movida false
+— balón en mano derecha
+  L2 + RS ↑ -> inout (lado -1)
+  L2 + RS → -> hesi (lado -1)
+  L2 + RS ↖ -> cross (lado -1)
+  L2 + RS ← -> between (lado -1)
+  L2 + RS ↙ -> behind (lado -1)
+  L2 + RS ↓ -> step (lado -1)
+— balón en mano izquierda
+  L2 + RS ↑ -> inout (lado 1)
+  L2 + RS → -> between (lado 1)
+  L2 + RS ↖ -> hesi (lado 1)
+  L2 + RS ← -> hesi (lado 1)
+  L2 + RS ↙ -> spin (lado -1)
+  L2 + RS ↓ -> step (lado 1)
+L2 + girar RS -> spin
+teclado F sin postura -> cross
+teclado clic der. + F -> cross
+=== testdrib2.js
+cruce -> cross
+  sin explotar, velocidad tras el cruce 2.66
+  con explosión (LS + R1) -> 8.80 m/s | combos 1
+  0,4 s después 8.89
+combo cruce→espalda: secuencia cross → behind | explosión 8.80 | combos 1,3
+piernas → explosión 8.80 | combos 1,2,3
+parada falsa: velocidad durante la parada 1.86
+  explosión 8.80 | combos 1,2,3,4
+   straight     0/12
+   cross        1/12
+   cross+exp    12/12
+   between+exp  9/12
+   hesi+exp     11/12
+   inout+exp    9/12
+=== testdrib3.js
+cruce -> cross
+  sin explotar, velocidad tras el cruce 2.66
+  con explosión (LS + R1) -> 8.80 m/s | combos 1
+  0,4 s después 8.89
+combo cruce→espalda: secuencia cross → behind | explosión 8.80 | combos 1,3
+piernas → explosión 8.80 | combos 1,2,3
+parada falsa: velocidad durante la parada 1.86
+  explosión 8.80 | combos 1,2,3,4
+   straight     0/12
+   cross        0/12
+   cross+exp    4/12
+   between+exp  5/12
+   hesi+exp     7/12
+   inout+exp    11/12
+=== testfake.js
+amago activo tras toque corto: true
+amago de tiro vs defensor IA normal: picó y saltó 7/12
+=== traintest.js
+mode train holder human true hidden others true
+{"att":6,"made":4,"perf":4,"a3":0,"m3":0,"streak":2,"best":2,"pending":false,"pending3":false,"freeT":0,"madeT":0} panel 4/6 2
+after Q holder human true
+mode match others visible true
+match state play
+=== energytest.js
+sprint 2s               56%  vel 8.0 56
+sprint 4s               12%  vel 7.5 12
+sprint 6s (sigue)        0% AGOTADO vel 0.0 Agotado
+forzando agotado 8s     14% AGOTADO vel 0.0 Agotado
+corre agotado +4s       79%  vel 5.4 79
+quieto 2s              100%  vel 0.0 100
+quieto 5s              100%  vel 0.0 100
+quieto 8s              100%  vel 0.0 100
+corre normal 6s        100%  vel 0.0 100
+corre normal 16s       100%  vel 5.4 100
+corre normal 31s       100%  vel 4.6 100
+quieto 3s              100%  vel 0.0 100
+mover normal 3s desde 50% 100%  vel 5.4 100
+sprint 2s               56%  vel 8.0 56
+soltar sprint 2s       100%  vel 5.4 100
