@@ -8,7 +8,7 @@ THREE.WebGLRenderer=R; w.THREE=THREE;
 w.HTMLCanvasElement.prototype.getContext=function(){return new Proxy({},{get:(t,k)=>k==='createRadialGradient'?()=>({addColorStop(){}}):()=>{} ,set:()=>true});};
 w.matchMedia=()=>({matches:false});
 script=script.replace("'use strict';","'use strict'; window.__dbg=()=>({get state(){return state}, set state(v){state=v}, setScoredT(){stateT=99},players,ball,hoops,startDunk,get stats(){return stats},get score(){return score},get live(){return live}, set live(v){live=v}});");
-script=script.replace("const frames = live.map(p => p.isHuman ? humanFrameInput() : aiThink(p, gdt));","const frames = live.map(p => p.isHuman ? humanFrameInput() : (window.__ctl && window.__ctl.get(p)) || { move: new V3(), sprint:false, shootHold:false });");
+script=script.replace("const frames = live.map(p => p === human ? hf : aiThink(p, gdt));","const frames = live.map(p => p.isHuman ? humanFrameInput() : (window.__ctl && window.__ctl.get(p)) || { move: new V3(), sprint:false, shootHold:false });");
 let cbs=[],tnow=0;
 new Function('window','document','THREE','performance','requestAnimationFrame','addEventListener','innerWidth','innerHeight',script)(w,w.document,THREE,{now:()=>tnow},f=>cbs.push(f),w.addEventListener.bind(w),1280,720);
 function run(sec){ for(let i=0;i<Math.round(sec*120);i++){ tnow+=1000/120; const c=cbs; cbs=[]; for(const f of c){ try{f(tnow)}catch(e){console.log('FRAME ERR',e.stack);process.exit(1)} } } }

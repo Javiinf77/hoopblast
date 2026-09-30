@@ -9,7 +9,7 @@ w.HTMLCanvasElement.prototype.getContext=function(){return new Proxy({},{get:(t,
 w.matchMedia=()=>({matches:false});
 script=script.replace("'use strict';","'use strict'; window.__dbg=()=>({players,ball,pass,get live(){return live}, set live(v){live=v}});");
 // congelar la IA para la prueba de pases
-script=script.replace("const frames = live.map(p => p.isHuman ? humanFrameInput() : aiThink(p, gdt));","const frames = live.map(p => p.isHuman ? humanFrameInput() : (window.__noai ? { move: window.__mv && p===window.__mvP ? window.__mv : new V3(), sprint:false, shootHold:false } : aiThink(p, gdt)));");
+script=script.replace("const frames = live.map(p => p === human ? hf : aiThink(p, gdt));","const frames = live.map(p => p === human ? hf : (window.__noai ? { move: window.__mv && p===window.__mvP ? window.__mv : new V3(), sprint:false, shootHold:false } : aiThink(p, gdt)));");
 let cbs=[],tnow=0;
 new Function('window','document','THREE','performance','requestAnimationFrame','addEventListener','innerWidth','innerHeight',script)(w,w.document,THREE,{now:()=>tnow},f=>cbs.push(f),w.addEventListener.bind(w),1280,720);
 function run(sec){ for(let i=0;i<sec*60;i++){ tnow+=1000/60; const c=cbs; cbs=[]; for(const f of c){ try{f(tnow)}catch(e){console.log('FRAME ERR',e.stack);process.exit(1)} } } }
