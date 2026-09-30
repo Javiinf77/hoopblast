@@ -2599,9 +2599,11 @@ addEventListener('gamepadconnected', e => { PAD.idx = e.gamepad.index; setInputM
 addEventListener('gamepaddisconnected', e => { if (PAD.idx === e.gamepad.index) PAD.idx = null; PAD.lm = PAD.lx = PAD.ly = PAD.rx = PAD.ry = 0; PAD.r2 = PAD.square = false; setInputMode('kb'); if (inMatch()) pause(); });
 
 // Devuelve el mando conectado (o null).
+let padBlocked = false;   // dentro de marcos sin permiso (vista previa de Claude) el navegador prohíbe los mandos
 function getPad() {
-  if (!navigator.getGamepads) return null;
-  const gps = navigator.getGamepads();
+  if (padBlocked || !navigator.getGamepads) return null;
+  let gps;
+  try { gps = navigator.getGamepads(); } catch (e) { padBlocked = true; return null; }
   let gp = PAD.idx !== null ? gps[PAD.idx] : null;
   if (!gp) for (const g of gps) if (g && g.connected) { gp = g; PAD.idx = g.index; break; }
   return gp;
