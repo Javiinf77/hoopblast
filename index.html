@@ -339,7 +339,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
       <dt><kbd>Z</kbd> / <kbd>V</kbd></dt><dd>Pase picado (bota en el suelo) / pase bombeado (por encima de los defensores)</dd>
       <div class="sep"></div>
       <dt><kbd>F</kbd> <kbd>G</kbd> <kbd>R</kbd></dt><dd>Cruce, entre las piernas y por la espalda (cambian tu dirección: de diagonal izquierda a diagonal derecha y al revés)</dd>
-      <dt><kbd>X</kbd> <kbd>C</kbd></dt><dd>Giro y paso atrás. El paso atrás enlaza solo con un tiro; si mantienes clic durante la carga, decides tú cuándo soltar</dd>
+      <dt><kbd>X</kbd> <kbd>C</kbd></dt><dd>Giro y paso atrás. El paso atrás también sale con S (hacia atrás) + mantener clic: enlaza con el tiro y lo sueltas al soltar el clic</dd>
       <dt>Poste</dt><dd>Con balón, mantén clic derecho cerca del aro (a menos de 6 m, o de 7 m si tienes un defensor pegado): te pones de espaldas y, si hay defensor, le empujas hacia atrás. Mantén <kbd>G</kbd> para gancho o <kbd>C</kbd> para fadeaway y suelta para tirar; <kbd>F</kbd> giro de poste</dd>
       <dt>Explosión</dt><dd>Justo después de un regate, dirección + <kbd>Mayús</kbd>: sales disparado. Un regate sirve para provocar al defensor; la explosión es lo que lo supera</dd>
       <dt>Corriendo al aro</dt><dd>Mates: clic una mano, <kbd>F</kbd> dos manos, <kbd>R</kbd> molino, <kbd>X</kbd> 360. Con Mayús: clic tomahawk, <kbd>F</kbd> reverso. Saltando junto al aro, clic también machaca</dd>
@@ -352,7 +352,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
     <dl class="controls">
       <dt>Stick izquierdo</dt><dd>Moverte: poco inclinado andas, del todo corres. <kbd>R1</kbd> (o <kbd>R2</kbd>) esprinta</dd>
       <dt><kbd>L2</kbd> mantener</dt><dd>Postura: flexionas rodillas y bajas. Sin balón, postura defensiva (pasos laterales rápidos, miras al rival). Con balón, postura ofensiva: bote bajo y protegido, cuesta más robártelo pero vas más lento. Pulsarla corriendo con balón hace una parada en seco</dd>
-      <dt>Stick derecho</dt><dd>Sin balón: cámara. Con balón: regates como en NBA 2K (mueve y suelta) con el balón en la derecha (se invierte con la izquierda): ↖ cruce, ← entre las piernas, ↙ por la espalda, ↓ paso atrás, girar el stick o <kbd>R3</kbd> giro. Con <kbd>R1</kbd> salen más explosivos. Tras un regate, empuja el stick izquierdo + <kbd>R1</kbd> para explotar: si el defensor ha picado, lo dejas atrás. Puedes encadenar regates pulsando el siguiente durante el anterior</dd>
+      <dt>Stick derecho</dt><dd>Sin balón: cámara. Con balón: regates como en NBA 2K (mueve y suelta) con el balón en la derecha (se invierte con la izquierda): ↖ cruce, ← entre las piernas, ↙ por la espalda, ↓ paso atrás (o stick izquierdo hacia atrás + mantener □: paso atrás y tiro), girar el stick o <kbd>R3</kbd> giro. Con <kbd>R1</kbd> salen más explosivos. Tras un regate, empuja el stick izquierdo + <kbd>R1</kbd> para explotar: si el defensor ha picado, lo dejas atrás. Puedes encadenar regates pulsando el siguiente durante el anterior</dd>
       <dt><kbd>L2</kbd> en el poste</dt><dd>Cerca del aro (con o sin defensor): <kbd>L2</kbd> + stick derecho ↑ gancho, ↓ fadeaway (mantén y suelta en la franja verde), ←/→ giro de poste</dd>
       <dt><kbd>□</kbd></dt><dd>Con balón: mantén para el medidor de tiro; toque corto, amago de tiro (bandeja cerca del aro). Sin balón: tapón</dd>
       <dt><kbd>✕</kbd> <kbd>○</kbd> <kbd>△</kbd></dt><dd>Con balón: pase directo, picado y bombeado al compañero hacia el que apuntas con el stick izquierdo (anillo blanco). Sin balón: <kbd>✕</kbd> saltar, <kbd>○</kbd> robar y <kbd>△</kbd> salto al rebote, que se convierte en tapón si el rival está tirando o machacando cerca</dd>
@@ -1626,6 +1626,7 @@ function updatePlayer(p, inp, dt) {
   let maxSp = (p.sprinting ? C.sprint * (0.85 + 0.15 * p.stamina) : C.speed) * p.speedMul;
   if (p.exhausted) maxSp *= CFG.energy.exhaustedSpeed;
   if (p.stance) maxSp *= holdingB ? C.stanceOff : C.stanceDef;
+  if (p.charging && p.autoShot) maxSp *= 0.12;   // tras el paso atrás se planta para tirar (aunque sigas con el stick atrás)
   // poste: postura con balón, de espaldas a un defensor pegado y cerca del aro
   p.post = false;
   if (p.stance && holdingB && !p.move) {
@@ -2575,6 +2576,11 @@ function handleActions(p, inp, dt) {
   if (!holding || p.stunT > 0) { p.charging = false; p.charge = 0; return; }
   if (p.move || p.inbounding || p.fakeT > 0) return;
   // tiro: toque cerca del aro = bandeja; mantener = medidor de tiro
+  // paso atrás: stick izquierdo hacia atrás (lejos del aro) + mantener tiro → paso atrás y tiro encadenado
+  if (!p.charging && inp.shootPress && inp.shootHold && p.onGround && !inp.postShot) {
+    const c = hoops[p.attackSide].rimC, ax = c.x - p.pos.x, az = c.z - p.pos.z, al = Math.hypot(ax, az) || 1, mm = Math.hypot(inp.move.x, inp.move.z);
+    if (mm > 0.5 && (inp.move.x * ax + inp.move.z * az) / (mm * al) < -0.6 && startMove(p, 'step', 0)) return;
+  }
   if (!p.charging && inp.shootHold && (inp.shootPress || !p.isHuman || inp.postShot)) {
     if (inLayupRange(p) && p.onGround && !inp.postShot) { layup(p); return; }
     p.charging = true; p.charge = 0; p.shotKind = inp.postShot || 'jump';   // gancho / fadeaway desde el poste
