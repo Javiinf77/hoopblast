@@ -965,7 +965,7 @@ function capsuleGeo(r1, r2, len, rs) {
 // Pose vacía: ángulos de cadera, torso, cabeza, brazos, piernas, inclinación y aplastamiento.
 function newPose() {
   return { hipsY: 0, torsoX: 0, torsoY: 0, torsoZ: 0, headX: 0, headY: 0, bodyX: 0, bodyZ: 0, squash: 0,
-    aL: { x: 0, y: 0, z: 0.12, el: -0.2 }, aR: { x: 0, y: 0, z: -0.12, el: -0.2 },
+    aL: { x: 0, y: 0, z: 0.12, el: -0.2, wr: 0 }, aR: { x: 0, y: 0, z: -0.12, el: -0.2, wr: 0 },
     lL: { x: 0, z: 0, k: 0.1, a: -0.1 }, lR: { x: 0, z: 0, k: 0.1, a: -0.1 }, ikL: 0, ikR: 0 };
 }
 
@@ -1073,8 +1073,9 @@ function makeRig(team, idx, isHuman, look) {
     if (sleeve) M(new THREE.CylinderGeometry(0.054, 0.047, 0.16, 10), accM, elbow, 0, -0.07, 0, OL.thin);    // manga larga hasta el antebrazo
     if (sideHas(L.elbow, side)) M(new THREE.CylinderGeometry(0.066, 0.066, 0.11, 12), accM, elbow, 0, 0.0, 0, OL.thin);   // codera
     if (sideHas(L.wrist, side)) M(new THREE.CylinderGeometry(0.05, 0.052, 0.07, 10), accM, elbow, 0, -0.2, 0, OL.thin);   // muñequera
-    M(new THREE.SphereGeometry(0.053, 10, 8), skinM, elbow, 0, -0.29, 0.005).scale.set(0.85, 1.15, 0.72);
-    return { shoulder, elbow, side, q: new THREE.Quaternion() };
+    const wrist = new THREE.Group(); wrist.position.y = -0.25; elbow.add(wrist);
+    M(new THREE.SphereGeometry(0.053, 10, 8), skinM, wrist, 0, -0.045, 0.008).scale.set(0.82, 1.3, 0.62);   // mano algo alargada: se nota el golpe de muñeca
+    return { shoulder, elbow, wrist, side, q: new THREE.Quaternion() };
   };
   const mkLeg = side => {
     const hip = new THREE.Group(); hip.position.set(side * 0.105, -0.04, 0); hips.add(hip);
@@ -1327,8 +1328,9 @@ function holdTarget(p, dt) {
       // fadeaway: punto de tiro alto y algo por detrás de la cabeza
       fw = lerp(0.3, 0.06, k); lat = lerp(0.05, -0.02, k); y = p.pos.y + lerp(1.25, 2.28, k);
     } else {
-      // punto de tiro: sube desde el pecho hasta encima de la frente mientras cargas
-      fw = lerp(0.32, 0.2, k); lat = lerp(0.05, -0.04, k); y = p.pos.y + lerp(1.3, 2.18, k);
+      // punto de tiro: del pecho a encima de la frente, sobre el ojo del lado de tiro; en el salto el brazo lo empuja hacia arriba
+      const up = p.shotT > 0 ? 1 - p.shotT / 0.16 : 0;
+      fw = lerp(0.3, 0.16, k) + up * 0.12; lat = lerp(0.04, 0.09, k); y = p.pos.y + lerp(1.3, 2.12, k) + up * 0.24;
     }
   }
   else if (!p.onGround || p.stunT > 0) { fw = 0.38; lat = 0.05 * p.hand; y = p.pos.y + 1.55; }
@@ -2040,7 +2042,7 @@ function shoot(p) {
   }
   release(p, shotVelocity(ball.pos, target, kind === 'hook' ? 1.7 + dist * 0.1 : kind === 'fade' ? 1.45 + dist * 0.09 : 1.25 + dist * 0.09));
   ball.shot = { team: p.team, shooter: p, from3: dist > CFG.shot.three, dunk: false };
-  p.throwT = 0.6; p.throwKind = kind === 'jump' ? 'shot' : kind; p.shotKind = 'jump';
+  p.throwT = kind === 'jump' ? 0.75 : 0.6; p.throwKind = kind === 'jump' ? 'shot' : kind; p.shotKind = 'jump';
   stats[p.team].att++; trainAttempt(p, dist > CFG.shot.three, perfect);
   sfx('shoot');
   if (p === human) {
@@ -3395,7 +3397,7 @@ function blendNum(cur, tgt, k) { for (const key in tgt) { if (typeof tgt[key] ==
 // Pose base de pie antes de aplicar cada estado.
 function resetPose(tp) {
   tp.hipsY = 0; tp.torsoX = 0.04; tp.torsoY = 0; tp.torsoZ = 0; tp.headX = 0; tp.headY = 0; tp.ikL = 0; tp.ikR = 0; tp.bodyX = 0; tp.bodyZ = 0; tp.squash = 0;
-  Object.assign(tp.aL, { x: 0.05, y: 0, z: 0.12, el: -0.2 }); Object.assign(tp.aR, { x: 0.05, y: 0, z: -0.12, el: -0.2 });
+  Object.assign(tp.aL, { x: 0.05, y: 0, z: 0.12, el: -0.2, wr: 0 }); Object.assign(tp.aR, { x: 0.05, y: 0, z: -0.12, el: -0.2, wr: 0 });
   Object.assign(tp.lL, { x: 0, z: 0.03, k: 0.08, a: -0.08 }); Object.assign(tp.lR, { x: 0, z: -0.03, k: 0.08, a: -0.08 });
 }
 let scoredTeam = -1;
@@ -3539,15 +3541,25 @@ function animatePlayer(p, dt, T) {
       knee.x = -1.3; knee.k = 1.5; tp.bodyZ = -sg * 0.22; tp.torsoZ = -sg * 0.2; tp.headY = -sg * 0.6; tp.squash = -0.06;
     }
     else if (k === 'fade') {
-      tp.aR.x = -2.85; tp.aR.el = 0; tp.aL.x = -2.3; tp.aL.el = -0.6; tp.aL.z = 0.35;
+      tp.aR.x = -2.85; tp.aR.el = 0; tp.aR.wr = -1.2; tp.aL.x = -2.3; tp.aL.el = -0.6; tp.aL.z = 0.35;
       tp.bodyX = -0.4; tp.torsoX = -0.18; tp.lL.x = -1.0; tp.lL.k = 0.35; tp.lR.x = 0.05; tp.lR.k = 0.25;
     }
-    else if (k === 'shot') { tp.aR.x = -2.95; tp.aR.el = 0; tp.aR.z = -0.05; tp.aL.x = -2.4; tp.aL.el = -0.6; tp.aL.z = 0.35; tp.squash = -0.06; tp.torsoX = -0.08; }
-    else if (k === 'layup') { tp.aR.x = -3.0; tp.aR.el = -0.05; tp.lL.x = -1.25; tp.lL.k = 1.5; tp.lR.x = 0.1; tp.lR.k = 0.2; }
+    else if (k === 'shot') {
+      // remate: brazo de tiro estirado arriba y adelante con la muñeca caída ("cuello de cisne"); mano guía arriba al lado
+      tp.aR.x = -2.72; tp.aR.el = 0; tp.aR.z = -0.06; tp.aR.wr = -1.3;
+      tp.aL.x = -2.5; tp.aL.el = -0.3; tp.aL.z = 0.5; tp.aL.wr = -0.25;
+      tp.squash = -0.06; tp.torsoX = -0.06; tp.headX -= 0.25;
+    }
+    else if (k === 'layup') { tp.aR.x = -3.0; tp.aR.el = -0.05; tp.aR.wr = -0.8; tp.lL.x = -1.25; tp.lL.k = 1.5; tp.lR.x = 0.1; tp.lR.k = 0.2; }
     else if (k === 'dunk') { tp.aR.x = tp.aL.x = -2.7; tp.aR.el = tp.aL.el = -0.35; tp.lL.k = tp.lR.k = 1.2; tp.lL.x = tp.lR.x = -0.3; }
     else if (k === 'pass') { tp.aR.x = tp.aL.x = -1.55; tp.aR.el = tp.aL.el = 0; tp.aL.z = 0.05; tp.aR.z = -0.05; tp.torsoX += 0.3; tp.bodyX = 0.12; }
     else if (k === 'bounce') { tp.aR.x = tp.aL.x = -0.95; tp.aR.el = tp.aL.el = 0; tp.aL.z = 0.15; tp.aR.z = -0.15; tp.torsoX += 0.55; tp.hipsY -= 0.14; tp.bodyX = 0.1; }
     else if (k === 'lob') { tp.aR.x = tp.aL.x = -2.7; tp.aR.el = tp.aL.el = -0.1; tp.aL.z = 0.12; tp.aR.z = -0.12; tp.torsoX -= 0.2; tp.squash = -0.05; }
+  }
+  // ---- tiro: muñeca de tiro echada atrás bajo el balón; al soltar se va soltando en el salto ----
+  if ((p.charging || p.shotT > 0) && p.shotKind !== 'hook') {
+    const up = p.shotT > 0 ? 1 - p.shotT / 0.16 : 0;
+    tp.aR.wr = lerp(1.05, 0.2, up); tp.aL.wr = 0.15; tp.headX -= 0.2;
   }
   // ---- poste: de espaldas, bajo, culo atrás y brazo libre haciendo de barrera ----
   if (p.post && !p.charging && p.shotT <= 0) {
@@ -3695,7 +3707,15 @@ function animatePlayer(p, dt, T) {
       const elIK = solveArm(arm, r.torso, _ikT, _pole, _qIK);
       _qFK.slerp(_qIK, clamp(ikw, 0, 1)); el = lerp(el, elIK, clamp(ikw, 0, 1));
     } else if (ikw > 0.01 && holding) {
-      if (p.charging || p.shotT > 0 || air || p.inbounding || (p.move && (p.move.type === 'step' || p.move.type === 'postspin'))) {
+      if ((p.charging || p.shotT > 0) && p.shotKind !== 'hook') {
+        if (arm.side < 0) {   // mano de tiro (derecha): bajo el balón y algo por detrás, con el codo debajo
+          _ikT.set(ball.pos.x - F.fx * R * 0.3 + F.rx * 0.02, ball.pos.y - R * 0.9, ball.pos.z - F.fz * R * 0.3 + F.rz * 0.02);
+          _pole.set(arm.side * 0.2, -1, 0.55);
+        } else {              // mano guía: en el lateral del balón, codo hacia fuera
+          _ikT.set(ball.pos.x - F.rx * (R + 0.03), ball.pos.y + 0.01, ball.pos.z - F.rz * (R + 0.03));
+          _pole.set(arm.side * 1, -0.35, -0.2);
+        }
+      } else if (p.charging || p.shotT > 0 || air || p.inbounding || (p.move && (p.move.type === 'step' || p.move.type === 'postspin'))) {
         _ikT.set(ball.pos.x + F.rx * -arm.side * (R + 0.02) - F.fx * 0.05, ball.pos.y - 0.02, ball.pos.z + F.rz * -arm.side * (R + 0.02) - F.fz * 0.05);
         _pole.set(arm.side * 0.5, -0.9, 0.35);
       } else {
@@ -3708,6 +3728,7 @@ function animatePlayer(p, dt, T) {
     }
     arm.shoulder.quaternion.copy(_qFK);
     arm.elbow.rotation.x = el;
+    arm.wrist.rotation.x = c.wr;
   }
 
   // anillos, cooldown de robo, marcador

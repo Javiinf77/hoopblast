@@ -1,18 +1,18 @@
 === smoke2.js easy
-easy state over score [28,3]
-[{"att":27,"made":11,"threes":0,"dunks":6,"alleys":0,"assists":1,"steals":17,"dodges":2,"blocks":1},{"att":10,"made":1,"threes":0,"dunks":1,"alleys":0,"assists":0,"steals":11,"dodges":2,"blocks":1}]
-exhausts undefined [100,100,100,72,100,100]
-swipes 50 miss 27 moves 47 passes 0
+easy state over score [16,14]
+[{"att":16,"made":7,"threes":0,"dunks":2,"alleys":0,"assists":2,"steals":12,"dodges":3,"blocks":2},{"att":8,"made":5,"threes":1,"dunks":3,"alleys":0,"assists":1,"steals":11,"dodges":0,"blocks":1}]
+exhausts undefined [100,100,100,100,100,100]
+swipes 46 miss 30 moves 45 passes 0
 === smoke2.js normal
-normal state over score [15,17]
-[{"att":15,"made":7,"threes":1,"dunks":0,"alleys":0,"assists":1,"steals":15,"dodges":4,"blocks":1},{"att":20,"made":7,"threes":0,"dunks":3,"alleys":0,"assists":0,"steals":16,"dodges":1,"blocks":1}]
-exhausts undefined [100,74,100,100,100,100]
-swipes 52 miss 32 moves 58 passes 0
+normal state over score [7,16]
+[{"att":9,"made":3,"threes":0,"dunks":1,"alleys":0,"assists":0,"steals":10,"dodges":7,"blocks":0},{"att":15,"made":6,"threes":1,"dunks":3,"alleys":0,"assists":1,"steals":11,"dodges":3,"blocks":0}]
+exhausts undefined [100,100,100,60,100,100]
+swipes 52 miss 31 moves 68 passes 0
 === smoke2.js hard
-hard state over score [14,23]
-[{"att":12,"made":5,"threes":2,"dunks":2,"alleys":0,"assists":2,"steals":7,"dodges":8,"blocks":1},{"att":17,"made":9,"threes":2,"dunks":3,"alleys":1,"assists":1,"steals":14,"dodges":2,"blocks":2}]
-exhausts undefined [100,100,100,65,93,100]
-swipes 50 miss 30 moves 57 passes 0
+hard state over score [9,42]
+[{"att":10,"made":4,"threes":0,"dunks":1,"alleys":0,"assists":2,"steals":9,"dodges":5,"blocks":4},{"att":33,"made":16,"threes":7,"dunks":3,"alleys":2,"assists":7,"steals":17,"dodges":5,"blocks":2}]
+exhausts undefined [98,100,98,98,100,93]
+swipes 43 miss 19 moves 54 passes 0
 === test9.js
 carga 0.55 0/12
 carga 0.68 0/12
@@ -85,14 +85,14 @@ mate spin360 taponados 8/8
 foco en play modo pad
 estado countdown entrenamiento? false
 estado tras cuenta atrás play
-stick 30% -> velocidad 2.46
-stick 60% -> velocidad 5.40 energía 1.00
-stick 100% -> velocidad 4.50
-R2 sprint -> velocidad 5.40
+stick 30% -> velocidad 2.38
+stick 60% -> velocidad 3.40 energía 1.00
+stick 100% -> velocidad 0.00
+R2 sprint -> velocidad 0.00
 arranque W: 0.1s/0.2s/0.3s/0.5s -> 8.34 / 8.49 / 8.46 / 8.40
-giro 180º: frenada con apoyo false | en 0.57 s ya corre al revés
-curva 90º corriendo: avanza -10.55 m en 2.02 s
-curva 90º esprintando: avanza 0.00 m en 0.00 s
+giro 180º: frenada con apoyo false | en 0.55 s ya corre al revés
+curva 90º corriendo: avanza 0.41 m en 0.12 s
+curva 90º esprintando: avanza -1.50 m en 0.25 s
 RS derecha      -> nada
 RS izquierda    -> nada
 RS arriba       -> nada
@@ -143,10 +143,10 @@ parada falsa: velocidad durante la parada 1.86
   explosión 8.80 | combos 1,2,3,4
    straight     0/12
    cross        1/12
-   cross+exp    12/12
-   between+exp  10/12
+   cross+exp    9/12
+   between+exp  5/12
    hesi+exp     11/12
-   inout+exp    10/12
+   inout+exp    8/12
 === testdrib3.js
 cruce -> cross
   sin explotar, velocidad tras el cruce 2.66
@@ -158,10 +158,10 @@ parada falsa: velocidad durante la parada 1.86
   explosión 8.80 | combos 1,2,3,4
    straight     0/12
    cross        1/12
-   cross+exp    3/12
-   between+exp  4/12
-   hesi+exp     11/12
-   inout+exp    11/12
+   cross+exp    0/12
+   between+exp  0/12
+   hesi+exp     7/12
+   inout+exp    10/12
 === testfake.js
 amago activo tras toque corto: true
 amago de tiro vs defensor IA normal: picó y saltó 8/12
@@ -172,20 +172,20 @@ after Q holder human true
 mode match others visible true
 match state play
 === energytest.js
-sprint 2s               56%  vel 8.0 56
-sprint 4s               12%  vel 7.5 12
-sprint 6s (sigue)        0% AGOTADO vel 3.9 Agotado
-forzando agotado 8s      0% AGOTADO vel 3.9 Agotado
-corre agotado +4s       19% AGOTADO vel 0.0 Agotado
-quieto 2s               46%  vel 0.0 46
+sprint 2s               80%  vel 5.4 85
+sprint 4s              100%  vel 5.4 65
+sprint 6s (sigue)      100%  vel 5.4 21
+forzando agotado 8s    100%  vel 5.4 Agotado
+corre agotado +4s      100%  vel 5.4 34
+quieto 2s              100%  vel 3.6 81
 quieto 5s              100%  vel 0.0 100
-quieto 8s              100%  vel 0.0 100
-corre normal 6s        100%  vel 0.0 100
-corre normal 16s       100%  vel 0.0 100
+quieto 8s               92%  vel 8.0 100
+corre normal 6s        100%  vel 5.4 100
+corre normal 16s        95%  vel 8.5 100
 corre normal 31s       100%  vel 5.4 100
 quieto 3s              100%  vel 5.4 100
-mover normal 3s desde 50% 100%  vel 4.7 100
-sprint 2s              100%  vel 5.4 83
+mover normal 3s desde 50% 100%  vel 5.4 100
+sprint 2s              100%  vel 5.4 77
 soltar sprint 2s       100%  vel 5.4 100
 === testctl.js
 apuntando a la derecha (D) + Q -> recibe el jugador 2 (z=5.0) | ahora controlas al 2
