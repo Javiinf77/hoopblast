@@ -1305,6 +1305,7 @@ function collideHoop(h) {
       _n.set(ex / d, ey / d, ez / d);
       p.set(qx + _n.x * md, c.y + _n.y * md, qz + _n.z * md);
       const imp = contact(_n, B.eRim, 0.3);
+      if (ball.shot) ball.shot.touched = true;   // ya ha tocado aro: se puede coger el rebote
       if (imp > 0.8) { sfx('rim', imp); h.jiggle = Math.max(h.jiggle, Math.min(0.5, imp * 0.05)); }
       if (ball.shot && state === 'play') { possTeam = -1; shotClock = CFG.shotClock; }
     }
@@ -1315,6 +1316,7 @@ function collideHoop(h) {
     if (d < 1e-6) _n.set(-h.side, 0, 0); else _n.set(ex / d, ey / d, ez / d);
     p.set(qx + _n.x * R, qy + _n.y * R, qz + _n.z * R);
     const imp = contact(_n, B.eBoard, 0.3); if (imp > 1.2) sfx('board', imp);
+    if (ball.shot) ball.shot.touched = true;     // ha tocado tablero
   }
   if (p.y < h.bTop + R) {
     const pr = p.y < 0.95 ? 0.62 : 0.14, px = p.x - h.px, pz = p.z, hd = Math.hypot(px, pz);
@@ -2148,8 +2150,17 @@ function resolveSwipe(p) {
    Funciones: tryPickup, onScore
    ============================================================================== */
 // Asigna el balón suelto/pasado al jugador más cercano que pueda cogerlo.
+// Un tiro en vuelo no se puede coger (ni atacantes ni defensores) hasta que toque aro o tablero,
+// salvo que sea un "air ball" claro: ya por debajo del aro, bajando y lejos de él
+function shotCatchable() {
+  const sh = ball.shot;
+  if (!sh || sh.touched) return true;
+  const c = hoops[sh.shooter ? sh.shooter.attackSide : 1].rimC;
+  return ball.vel.y < 0 && ball.pos.y < c.y - 0.25 && hdist(ball.pos, c) > 0.75;
+}
 function tryPickup() {
   if (ball.holder || ball.guide || state !== 'play') return;
+  if (!shotCatchable()) return;   // los tiros no se interceptan (los tapones sí: van aparte)
   let best = null, bd = 1e9;
   for (const p of live) {
     if (p.stunT > 0 || p.pickupCd > 0 || p === ball.ignore) continue;
@@ -2166,7 +2177,6 @@ function tryPickup() {
     if (d < reach && rel < 18 && score < bd) { best = p; bd = score; }
   }
   if (!best) return;
-  if (ball.shot && ball.shot.team !== best.team && !best.onGround) banner2('¡Atrapado!', teamColor(best.team), 0.9);
   const ps = ball.pass;
   if (mode === 'train') trainResolveMiss();
   ball.holder = best; ball.shot = null; ball.pass = null;

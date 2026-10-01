@@ -1,5 +1,5 @@
 const {JSDOM}=require('jsdom'); const fs=require('fs');
-const html=fs.readFileSync((process.env.HOOPBLAST || require('path').join(__dirname, '..', 'index.html')),'utf8');
+const html=fs.readFileSync('/mnt/user-data/outputs/hoopblast.html','utf8');
 let script=html.match(/<script>([\s\S]*?)<\/script>/)[1];
 const dom=new JSDOM(html.replace(/<script[\s\S]*?<\/script>/g,''),{pretendToBeVisual:true});
 const w=dom.window; const THREE=require('three');
@@ -7,7 +7,7 @@ class R{constructor(){this.domElement=w.document.createElement('canvas');this.sh
 THREE.WebGLRenderer=R; w.THREE=THREE;
 w.HTMLCanvasElement.prototype.getContext=function(){return new Proxy({},{get:(t,k)=>k==='createRadialGradient'?()=>({addColorStop(){}}):()=>{} ,set:()=>true});};
 w.matchMedia=()=>({matches:false});
-script=script.replace("'use strict';","'use strict'; window.__dbg=()=>({get state(){return state}, set state(v){state=v}, setScoredT(){stateT=99},players,ball,hoops,startDunk,get stats(){return stats},get score(){return score},get live(){return live}, set live(v){live=v}});");
+script=script.replace("'use strict';","'use strict'; window.__shoot=(p)=>shoot(p); window.__dbg=()=>({get state(){return state}, set state(v){state=v}, setScoredT(){stateT=99},players,ball,hoops,startDunk,get stats(){return stats},get score(){return score},get live(){return live}, set live(v){live=v}});");
 script=script.replace("const frames = live.map(p => p === human ? hf : aiThink(p, gdt));","const frames = live.map(p => p.isHuman ? humanFrameInput() : (window.__ctl && window.__ctl.get(p)) || { move: new V3(), sprint:false, shootHold:false });");
 let cbs=[],tnow=0;
 new Function('window','document','THREE','performance','requestAnimationFrame','addEventListener','innerWidth','innerHeight',script)(w,w.document,THREE,{now:()=>tnow},f=>cbs.push(f),w.addEventListener.bind(w),1280,720);
