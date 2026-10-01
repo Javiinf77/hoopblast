@@ -322,7 +322,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
       <div class="sep"></div>
       <dt><kbd>F</kbd> <kbd>G</kbd> <kbd>R</kbd> <kbd>Y</kbd></dt><dd>Cruce, entre las piernas, por la espalda y amago de cruce</dd>
       <dt><kbd>X</kbd> <kbd>T</kbd> <kbd>C</kbd></dt><dd>Giro, parada falsa (el defensor puede picar) y paso atrás (tiro más fácil justo después)</dd>
-      <dt>Poste</dt><dd>Con balón, mantén clic derecho de espaldas a un defensor cerca del aro: le empujas hacia atrás. Mantén <kbd>G</kbd> para gancho o <kbd>C</kbd> para fadeaway y suelta para tirar; <kbd>F</kbd> giro de poste</dd>
+      <dt>Poste</dt><dd>Con balón, mantén clic derecho cerca del aro (a menos de 6 m, o de 7 m si tienes un defensor pegado): te pones de espaldas y, si hay defensor, le empujas hacia atrás. Mantén <kbd>G</kbd> para gancho o <kbd>C</kbd> para fadeaway y suelta para tirar; <kbd>F</kbd> giro de poste</dd>
       <dt>Explosión</dt><dd>Justo después de un regate (o en plena parada falsa), dirección + <kbd>Mayús</kbd>: sales disparado. Un regate sirve para provocar al defensor; la explosión es lo que lo supera</dd>
       <dt>Corriendo al aro</dt><dd>Mates: clic una mano, <kbd>F</kbd> dos manos, <kbd>R</kbd> molino, <kbd>X</kbd> 360. Con Mayús: clic tomahawk, <kbd>F</kbd> reverso. Saltando junto al aro, clic también machaca</dd>
       <dt>Clic sin balón</dt><dd>Tapón: saltas con el brazo arriba. Acierta el momento en que el rival suelta (o sube a machacar) y el balón sale volando. Si fallas, te recuperas más lento. Tocar un balón que ya baja al aro es interferencia: canasta para el rival</dd>
@@ -335,7 +335,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
       <dt>Stick izquierdo</dt><dd>Moverte: poco inclinado andas, del todo corres. <kbd>R1</kbd> (o <kbd>R2</kbd>) esprinta</dd>
       <dt><kbd>L2</kbd> mantener</dt><dd>Postura: flexionas rodillas y bajas. Sin balón, postura defensiva (pasos laterales rápidos, miras al rival). Con balón, postura ofensiva: bote bajo y protegido, cuesta más robártelo pero vas más lento. Pulsarla corriendo con balón hace una parada en seco</dd>
       <dt>Stick derecho</dt><dd>Sin balón: cámara. Con balón: regates como en NBA 2K (mueve y suelta) con el balón en la derecha (se invierte con la izquierda): ↑ amago de cruce, → parada falsa, ↖ cruce, ← entre las piernas, ↙ por la espalda, ↓ paso atrás, girar el stick o <kbd>R3</kbd> giro. Con <kbd>R1</kbd> salen más explosivos. Tras un regate, empuja el stick izquierdo + <kbd>R1</kbd> para explotar: si el defensor ha picado, lo dejas atrás. Puedes encadenar regates pulsando el siguiente durante el anterior</dd>
-      <dt><kbd>L2</kbd> en el poste</dt><dd>De espaldas a un defensor cerca del aro: <kbd>L2</kbd> + stick derecho ↑ gancho, ↓ fadeaway (mantén y suelta en la franja verde), ←/→ giro de poste</dd>
+      <dt><kbd>L2</kbd> en el poste</dt><dd>Cerca del aro (con o sin defensor): <kbd>L2</kbd> + stick derecho ↑ gancho, ↓ fadeaway (mantén y suelta en la franja verde), ←/→ giro de poste</dd>
       <dt><kbd>□</kbd></dt><dd>Con balón: mantén para el medidor de tiro; toque corto, amago de tiro (bandeja cerca del aro). Sin balón: tapón</dd>
       <dt><kbd>✕</kbd> <kbd>○</kbd> <kbd>△</kbd></dt><dd>Con balón: pase directo, picado y bombeado al compañero hacia el que apuntas con el stick izquierdo (anillo blanco). Sin balón: saltar, robar y, en defensa, <kbd>△</kbd> cambia al jugador más cercano al balón</dd>
       <dt>Corriendo al aro</dt><dd>Mates: <kbd>□</kbd> una mano, <kbd>△</kbd> dos manos, <kbd>○</kbd> molino, <kbd>✕</kbd> 360. Con <kbd>R1</kbd>: <kbd>□</kbd> tomahawk, <kbd>△</kbd> reverso</dd>
@@ -495,7 +495,7 @@ const CFG = {
             // postura (L2 / clic derecho): rodillas flexionadas; en ataque habilita los regates, en defensa pasos laterales rápidos
             stanceOff: 0.62, stanceDef: 1.0, stanceDrain: 0.03,
             // poste (L2 con balón, de espaldas a un defensor cerca del aro)
-            postRange: 1.7, postRim: 7, postSpeed: 2.4 },
+            postRange: 1.7, postRim: 7, postRimSolo: 6, postSpeed: 2.4 },
   // Energía estilo Rematch: solo el sprint gasta; al soltarlo se recupera rápido
   energy: { sprintDrain: 0.22, regenBase: 0.1, regenScale: 0.25, moveRegenMul: 0.8,
             exhaustedSpeed: 0.72, exhaustedMoveRegen: 0.05, exhaustedIdleMul: 0.6, recover: 0.3,
@@ -1556,7 +1556,9 @@ function updatePlayer(p, inp, dt) {
   p.post = false;
   if (p.stance && holdingB && !p.move) {
     const rim = hoops[p.attackSide].rimC;
-    if (hdist(p.pos, rim) < C.postRim) for (const o of live) if (o.team !== p.team && hdist(o.pos, p.pos) < C.postRange) { p.post = true; break; }
+    const dRim = hdist(p.pos, rim);
+    if (dRim < C.postRimSolo) p.post = true;                         // cerca del aro: poste aunque no haya defensor
+    else if (dRim < C.postRim) for (const o of live) if (o.team !== p.team && hdist(o.pos, p.pos) < C.postRange) { p.post = true; break; }
   }
   if (p.post) maxSp = Math.min(maxSp, C.postSpeed);
   // regate: ventanas de explosión, secuencias y "superado"
