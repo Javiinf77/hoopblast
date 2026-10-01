@@ -1330,7 +1330,7 @@ function holdTarget(p, dt) {
     } else {
       // punto de tiro: del pecho a encima de la frente, sobre el ojo del lado de tiro; en el salto el brazo lo empuja hacia arriba
       const up = p.shotT > 0 ? 1 - p.shotT / 0.16 : 0;
-      fw = lerp(0.3, 0.16, k) + up * 0.12; lat = lerp(0.04, 0.09, k); y = p.pos.y + lerp(1.3, 2.12, k) + up * 0.24;
+      fw = lerp(0.34, 0.36, k) + up * 0.08; lat = lerp(0.06, 0.15, k); y = p.pos.y + lerp(1.3, 2.1, k) + up * 0.24;
     }
   }
   else if (!p.onGround || p.stunT > 0) { fw = 0.38; lat = 0.05 * p.hand; y = p.pos.y + 1.55; }
@@ -3549,7 +3549,7 @@ function animatePlayer(p, dt, T) {
     else if (k === 'shot') {
       // remate: brazo de tiro estirado arriba y adelante con la muñeca caída ("cuello de cisne"); mano guía arriba al lado
       tp.aR.x = -2.72; tp.aR.el = 0; tp.aR.z = -0.06; tp.aR.wr = -1.3;
-      tp.aL.x = -2.5; tp.aL.el = -0.3; tp.aL.z = 0.5; tp.aL.wr = -0.25;
+      tp.aL.x = -2.25; tp.aL.el = -0.35; tp.aL.z = 0.8; tp.aL.wr = -0.25;
       tp.squash = -0.06; tp.torsoX = -0.06; tp.headX -= 0.25;
     }
     else if (k === 'layup') { tp.aR.x = -3.0; tp.aR.el = -0.05; tp.aR.wr = -0.8; tp.lL.x = -1.25; tp.lL.k = 1.5; tp.lR.x = 0.1; tp.lR.k = 0.2; }
@@ -3560,8 +3560,8 @@ function animatePlayer(p, dt, T) {
   }
   // ---- tiro: muñeca de tiro echada atrás bajo el balón; al soltar se va soltando en el salto ----
   if ((p.charging || p.shotT > 0) && p.shotKind !== 'hook') {
-    const up = p.shotT > 0 ? 1 - p.shotT / 0.16 : 0;
-    tp.aR.wr = lerp(1.05, 0.2, up); tp.aL.wr = 0.15; tp.headX -= 0.2;
+    const up = p.shotT > 0 ? 1 - p.shotT / 0.16 : 0, k2 = p.shotT > 0 ? 1 : smooth(Math.min(1, p.charge / CFG.shot.sweet));
+    tp.aR.wr = lerp(1.05, 0.2, up); tp.aL.wr = 0.15; tp.headX -= 0.2; tp.torsoZ = 0.2 * k2;
   }
   // ---- poste: de espaldas, bajo, culo atrás y brazo libre haciendo de barrera ----
   if (p.post && !p.charging && p.shotT <= 0) {
@@ -3714,8 +3714,8 @@ function animatePlayer(p, dt, T) {
           _ikT.set(ball.pos.x - F.fx * R * 0.3 + F.rx * 0.02, ball.pos.y - R * 0.9, ball.pos.z - F.fz * R * 0.3 + F.rz * 0.02);
           _pole.set(arm.side * 0.2, -1, 0.55);
         } else {              // mano guía: en el lateral del balón, codo hacia fuera
-          _ikT.set(ball.pos.x - F.rx * (R + 0.03), ball.pos.y + 0.01, ball.pos.z - F.rz * (R + 0.03));
-          _pole.set(arm.side * 1, -0.35, -0.2);
+          _ikT.set(ball.pos.x - F.rx * (R * 0.75) + F.fx * (R * 0.55), ball.pos.y + 0.01, ball.pos.z - F.rz * (R * 0.75) + F.fz * (R * 0.55));   // lado delantero-izquierdo del balón
+          _pole.set(arm.side * 1.6, -0.7, 0.5);   // codo hacia fuera y adelante: el brazo rodea la cabeza en vez de cruzarla
         }
       } else if (p.charging || p.shotT > 0 || air || p.inbounding || (p.move && (p.move.type === 'step' || p.move.type === 'postspin'))) {
         _ikT.set(ball.pos.x + F.rx * -arm.side * (R + 0.02) - F.fx * 0.05, ball.pos.y - 0.02, ball.pos.z + F.rz * -arm.side * (R + 0.02) - F.fz * 0.05);
