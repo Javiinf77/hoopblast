@@ -3,7 +3,7 @@ eval(base + `
 const pick=(name)=>[...w.document.querySelectorAll('#animList button')].find(b=>b.textContent===name);
 // determinismo: avanzar a un fotograma, ir atrás y adelante, y comparar la pose y el balón
 const snap=()=>{ const h=d.human, r=h.rig; return [h.pos.x,h.pos.y,h.pos.z,h.yaw,r.cur.torsoX,r.cur.aR.x,r.cur.aR.el,r.cur.aR.wr,d.ball.pos.x,d.ball.pos.y].map(v=>v.toFixed(5)).join(','); };
-for (const name of ['Molino','Tiro en suspensión','Cruce + explosión','Tapón']) {
+for (const name of ['Molino','Tiro en suspensión','Cruce explosivo','Tapón']) {
   pick(name).click(); $('animPause').click();
   for (let i=0;i<40;i++) $('animStep').click();
   const a=snap(), lbl=$('animTime').textContent;
