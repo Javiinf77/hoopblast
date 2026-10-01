@@ -11,4 +11,5 @@ function trial(lx, sprint){ hh.pos.set(rim.x-7,0,-lx*2.5); hh.vel.set(0,0,0); hh
 console.log('corriendo a la derecha + □:', trial(1, true));
 console.log('corriendo a la izquierda + □:', trial(-1, true));
 console.log('andando a la derecha (stick 40%) + □:', trial(0.4, false));
+console.log('corriendo a la derecha SIN R1 + □:', trial(1, false));
 `);
