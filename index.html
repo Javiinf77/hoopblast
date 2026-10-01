@@ -339,7 +339,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
       <dt><kbd>Z</kbd> / <kbd>V</kbd></dt><dd>Pase picado (bota en el suelo) / pase bombeado (por encima de los defensores)</dd>
       <div class="sep"></div>
       <dt><kbd>F</kbd> <kbd>G</kbd> <kbd>R</kbd></dt><dd>Cruce, entre las piernas y por la espalda (cambian tu dirección: de diagonal izquierda a diagonal derecha y al revés)</dd>
-      <dt><kbd>X</kbd> / paso atrás</dt><dd>Giro. Paso atrás: S (hacia atrás, lejos del aro) + mantener clic; el tiro se va levantando mientras retrocedes y sale al soltar el clic</dd>
+      <dt><kbd>X</kbd> / paso atrás</dt><dd>Giro. Paso atrás: S (hacia atrás, lejos del aro) + mantener clic; el tiro se va levantando mientras retrocedes y sale al soltar el clic. Paso lateral: corriendo hacia un lado + mantener clic (en diagonal hacia ese lado)</dd>
       <dt>Poste</dt><dd>Con balón, mantén clic derecho cerca del aro (a menos de 6 m, o de 7 m si tienes un defensor pegado): te pones de espaldas y, si hay defensor, le empujas hacia atrás. Mantén <kbd>G</kbd> para gancho o <kbd>C</kbd> para fadeaway y suelta para tirar; <kbd>F</kbd> giro de poste</dd>
       <dt>Explosión</dt><dd>Justo después de un regate, dirección + <kbd>Mayús</kbd>: sales disparado. Un regate sirve para provocar al defensor; la explosión es lo que lo supera</dd>
       <dt>Corriendo al aro</dt><dd>Mates: clic una mano, <kbd>F</kbd> dos manos, <kbd>R</kbd> molino, <kbd>X</kbd> 360. Con Mayús: clic tomahawk, <kbd>F</kbd> reverso. Saltando junto al aro, clic también machaca</dd>
@@ -1914,7 +1914,10 @@ function stepBackSteer(p, dt) {
   const pulse = (a, b) => (k > a && k < b) ? Math.sin(Math.PI * (k - a) / (b - a)) : 0;
   const sp = 0.6 * (k < 0.18 ? 1 - k / 0.18 : 0) + 5.4 * pulse(0.2, 0.46) + 5.6 * pulse(0.42, 0.74);   // amago al frente, dos empujes atrás (≈1,3 m)
   const dir = k < 0.18 ? -1 : 1;
-  p.vel.x = m.back.x * sp * dir; p.vel.z = m.back.z * sp * dir;
+  if (m.sideStep) {   // paso lateral: la carrera se frena enseguida y los dos apoyos van en diagonal (sin amago al frente)
+    const carry = Math.max(0, 1 - k / 0.22), sp2 = 5.2 * pulse(0.12, 0.42) + 5.2 * pulse(0.38, 0.7);
+    p.vel.x = m.v0.x * carry + m.back.x * sp2; p.vel.z = m.v0.z * carry + m.back.z * sp2;
+  } else { p.vel.x = m.back.x * sp * dir; p.vel.z = m.back.z * sp * dir; }
   if (!m.hop && k >= 0.44 && p.onGround) { m.hop = true; p.vel.y = 2.6; p.onGround = false; }   // el segundo apoyo es un saltito atrás
 }
 function hesiBurst(p, move) {
@@ -2582,8 +2585,19 @@ function handleActions(p, inp, dt) {
   // paso atrás: stick izquierdo hacia atrás (lejos del aro) + mantener tiro → paso atrás y tiro encadenado
   if (!p.charging && inp.shootPress && inp.shootHold && p.onGround && !inp.postShot) {
     const c = hoops[p.attackSide].rimC, ax = c.x - p.pos.x, az = c.z - p.pos.z, al = Math.hypot(ax, az) || 1, mm = Math.hypot(inp.move.x, inp.move.z);
-    if (mm > 0.5 && (inp.move.x * ax + inp.move.z * az) / (mm * al) < -0.6 && startMove(p, 'step', 0)) {
-      p.move.shotLinked = true; p.charging = true; p.charge = 0; p.shotKind = 'jump';   // el tiro se va levantando durante el paso atrás
+    const fwdDot = mm > 0 ? (inp.move.x * ax + inp.move.z * az) / (mm * al) : 0;
+    const fx = ax / al, fz = az / al, rx = -fz, rz = fx, latDot = mm > 0 ? (inp.move.x * rx + inp.move.z * rz) / mm : 0;
+    const running = Math.hypot(p.vel.x, p.vel.z) > 3.5;
+    let kind = null;
+    if (mm > 0.5 && fwdDot < -0.6) kind = 'back';                                         // stick atrás + tiro: paso atrás
+    else if (mm > 0.5 && running && Math.abs(latDot) > 0.7 && !inLayupRange(p)) kind = 'side';   // corriendo de lado + tiro: paso lateral
+    if (kind && startMove(p, 'step', 0)) {
+      if (kind === 'side') {
+        // paso lateral: como el paso atrás pero en diagonal (hacia el lado al que corrías y algo atrás), frenando la carrera
+        const sd = Math.sign(latDot), dx = rx * sd * 0.85 - fx * 0.45, dz = rz * sd * 0.85 - fz * 0.45, dl = Math.hypot(dx, dz);
+        p.move.back = { x: dx / dl, z: dz / dl }; p.move.side = sd; p.move.sideStep = true; p.move.v0 = { x: p.vel.x, z: p.vel.z };
+      }
+      p.move.shotLinked = true; p.charging = true; p.charge = 0; p.shotKind = 'jump';   // el tiro se va levantando durante el paso
       return;
     }
   }
@@ -3672,7 +3686,9 @@ function animatePlayer(p, dt, T) {
       if (p.move && p.move.type === 'step') {
         // paso atrás: amago al frente y dos apoyos hacia atrás; el tronco se mantiene erguido y algo adelantado (equilibrio)
         const k = p.move.t / p.move.dur, ph = (a, b) => (k > a && k < b) ? Math.sin(Math.PI * (k - a) / (b - a)) : 0;
-        const first = p.hand > 0 ? tp.lR : tp.lL, second = p.hand > 0 ? tp.lL : tp.lR;
+        const lead = p.move.sideStep ? p.move.side : p.hand;
+        const first = lead > 0 ? tp.lR : tp.lL, second = lead > 0 ? tp.lL : tp.lR;
+        if (p.move.sideStep) { first.z = -lead * 0.35 * ph(0.12, 0.42); tp.bodyZ = lead * 0.1 * ph(0.1, 0.7); }
         first.x = 0.55 * ph(0.18, 0.46) - 0.25 * ph(0, 0.2) + cr.x; first.k = 0.35 + 0.6 * ph(0.18, 0.46);
         second.x = 0.5 * ph(0.4, 0.7) + cr.x; second.k = 0.35 + 0.55 * ph(0.4, 0.7);
         tp.torsoX = 0.18 + 0.1 * ph(0, 0.2); tp.bodyX = 0.04; tp.squash = 0.04 * ph(0.18, 0.7);
@@ -4293,6 +4309,9 @@ const ANIMS = [
     setup() { animPlace(H(), -2, 0); giveBall(H()); H().hand = h; }, tick(t) { fwd(t < 1.3 ? 0.5 : 0); once(t, 0.45, () => startMove(H(), ty, -h)); } }))),
   ...[1, -1].map(h => ({ cat: 'Regates', name: 'Giro' + (h > 0 ? ' (der. → izq.)' : ' (izq. → der.)'), dur: 2.4,
     setup() { animPlace(H(), -2, 0); giveBall(H()); H().hand = h; }, tick(t) { fwd(t < 0.45 ? 0.5 : 0); once(t, 0.45, () => startMove(H(), 'spin', -h)); } })),
+  ...[[1, 'derecha'], [-1, 'izquierda']].map(([sd, nm]) => ({ cat: 'Regates', name: 'Paso lateral a la ' + nm + ' + tiro', dur: 3.4,
+    setup() { animPlace(H(), RIM1().x - 7, -sd * 2.5, Math.PI / 2 + sd * 0.0); giveBall(H()); },
+    tick(t) { if (t < 1.1) ANIM.inp.move.set(0.15, 0, sd); ANIM.inp.sprint = t < 0.55; ANIM.inp.shootHold = t >= 0.55 && t < 1.2; once(t, 0.55, () => tap('shoot')); } })),
   { cat: 'Regates', name: 'Paso atrás + tiro', dur: 3.4, setup() { animPlace(H(), RIM1().x - 6.5, 0); giveBall(H()); },
     tick(t) { if (t < 0.4) fwd(0.45); else if (t < 1.1) ANIM.inp.move.set(-1, 0, 0); ANIM.inp.shootHold = t >= 0.4 && t < 1.08; once(t, 0.4, () => tap('shoot')); } },   // stick atrás + mantener tiro, suelta al aterrizar
   ...[['cross', 'Cruce'], ['behind', 'Espalda'], ['spin', 'Giro']].map(([ty, nm]) => ({ cat: 'Cambio de dirección', name: 'Diagonal izq. → ' + nm + ' → diagonal der.', dur: 2.8,
