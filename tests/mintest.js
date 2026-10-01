@@ -15,5 +15,5 @@ const $=id=>w.document.getElementById(id);
 run(1); $('play').click(); run(120);
 console.log('partido: marcador', $('s0').textContent,'-',$('s1').textContent,'reloj',$('clock').textContent);
 $('quit').click(); run(0.5); $('train').click(); run(20); console.log('entrenamiento: panel visible', !$('trainpanel').hidden);
-$('quit').click(); run(0.5); $('customize').click(); run(2); w.document.querySelector('#custform .ob').click(); run(1); $('custRand').click(); run(1); $('custDone').click(); run(1);
+$('quit').click(); run(0.5); $('customize').click(); run(2); w.document.querySelector('#custform .cstep button').click(); w.document.getElementById('ctab2').click(); w.document.querySelector('#custform .sw').click(); run(1); $('custRand').click(); run(1); $('custDone').click(); run(1);
 console.log('vestuario ok, menú visible', !$('menu').hidden, '| sin errores');
