@@ -1665,7 +1665,7 @@ function updatePlayer(p, inp, dt) {
     p.headPrev = head;
     const rim = hoops[p.attackSide].rimC, rx = rim.x - p.pos.x, rz = rim.z - p.pos.z, rl = Math.hypot(rx, rz) || 1;
     const mvL = Math.hypot(move.x, move.z), backStick = mvL > 0.3 && (move.x * rx + move.z * rz) / (mvL * rl) < -0.3;
-    const calm = p.plantT <= 0 && !backStick && !inp.shootHold && Math.abs(turn) < 7;   // nada de cambios en medias vueltas, al tirar o con el stick atrás
+    const calm = p.plantT <= 0 && !backStick && !inp.shootHold;   // nada de cambios en medias vueltas, al tirar o con el stick atrás
     const wrongSide = calm && (lat * p.hand < -0.45 || turn * p.hand < -1.6);   // vas (o giras) hacia el lado contrario al del balón
     if (wrongSide) { p.swapT = (p.swapT || 0) + dt; if (p.swapT > 0.1) { startSwap(p, -p.hand); p.swapT = 0; } } else p.swapT = 0;
   }
