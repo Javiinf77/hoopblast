@@ -4366,7 +4366,7 @@ const ANIMS = [
     setup() { animPlace(H(), -2, 0); giveBall(H()); H().hand = h; }, tick(t) { fwd(t < 0.45 ? 0.5 : 0); once(t, 0.45, () => startMove(H(), 'spin', -h)); } })),
   ...[[1, 'derecha'], [-1, 'izquierda']].map(([sd, nm]) => ({ cat: 'Regates', name: 'Paso lateral a la ' + nm + ' + tiro', dur: 3.4,
     setup() { animPlace(H(), RIM1().x - 7, -sd * 2.5, Math.PI / 2 + sd * 0.0); giveBall(H()); },
-    tick(t) { if (t < 1.1) ANIM.inp.move.set(0.15, 0, sd); ANIM.inp.sprint = t < 0.55; ANIM.inp.shootHold = t >= 0.55 && t < 1.2; once(t, 0.55, () => tap('shoot')); } })),
+    tick(t) { if (t < 1.1) ANIM.inp.move.set(0.15, 0, sd); ANIM.inp.sprint = t < 0.62; ANIM.inp.shootHold = t >= 0.55 && t < 1.2; once(t, 0.55, () => tap('shoot')); } })),
   ...[['euro', 0.3, 'Eurostep'], ['spinlay', 0.08, 'Bandeja con giro']].flatMap(([ty, gap, nm]) => [[1, 'por la derecha'], [-1, 'por la izquierda']].map(([sd, sn]) => ({ cat: 'Bandejas', name: nm + ' ' + sn, dur: 3.2,
     setup() { animPlace(H(), RIM1().x - 10.5, 0); giveBall(H()); },
     tick(t) { ANIM.inp.move.set(1, 0, t > 0.7 ? sd * 0.4 : 0); ANIM.inp.sprint = t < 0.9; once(t, 0.75, () => tap('shoot')); once(t, 0.75 + gap, () => tap('shoot')); ANIM.inp.shootHold = (t > 0.75 && t < 0.8) || (t > 0.75 + gap && t < 0.8 + gap); } }))),
