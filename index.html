@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  HOOPBLAST 3v3 — versión 0.1 pre-alpha (primera versión del juego)
+  HOOPBLAST 3v3 — versión 0.2 alpha
   Baloncesto 3v3 en un único archivo: Three.js r128 + cel-shading, física propia del balón, regates estilo NBA 2K,
   mando PS4, IA, entrenamiento y vestuario. Sin recursos externos salvo Three.js y fuentes de Google.
   Estructura del código: ver el ÍNDICE al inicio del código JavaScript, más abajo (secciones §01–§31).
@@ -305,7 +305,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
 <section id="menu" class="overlay">
   <div class="col">
     <h1 class="title">HOOPBLAST<small>3v3</small></h1>
-    <span class="version">v0.1 pre-alpha</span>
+    <span class="version">v0.2 alpha</span>
     <div class="split"></div>
     <p class="lead">Baloncesto tres contra tres en una jaula. Protege el balón con el cuerpo, rompe tobillos con tus regates y roba con un manotazo en el momento justo.</p>
     <div class="row">
@@ -443,7 +443,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 /* ==============================================================================
-   HOOPBLAST 3v3 — ÍNDICE DEL CÓDIGO (versión 0.1 pre-alpha)
+   HOOPBLAST 3v3 — ÍNDICE DEL CÓDIGO (versión 0.2 alpha)
    Cada sección empieza con «§NN». Para ir a una sección busca «§NN» (p. ej. «§13»).
    Las funciones de cada sección se listan en su cabecera.
    ==============================================================================
@@ -459,7 +459,8 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
    §10  EFECTOS: PARTÍCULAS Y ESTELA     Chispas/confeti (burst) y estela del balón rápido.
    §11  FÍSICA DEL BALÓN                 Choques con suelo, cristal, aro, tablero y cuerpos; balón en las manos (bote); imán del pase; paso de física.
    §12  MOVIMIENTO Y ENERGÍA             Energía/agotamiento, dirección con inercia (steer), actualización del jugador y choques entre jugadores (corte defensivo).
-   §13  REGATES                          Los 7 regates, reacción del defensor, explosión tras el regate y combos.
+   §13  REGATES                          Regates (cruce, entre piernas, espalda, giro, retroceso, pasos atrás y lateral, eurostep, bandeja con giro, poste),
+   cambios de dirección, reacción del defensor, explosión tras el regate y combos.
    §14  ROBO (MANOTAZO)                  Manotazo con ventana activa, exposición del balón, esquivas y cooldown.
    §15  POSESIÓN Y MARCADOR              Recoger balones sueltos/pases, puntuación, estadísticas y canasta.
    §16  TIRO                             Medidor de tiro, bandeja, amago de tiro, tiro en suspensión y trayectoria balística.
@@ -950,7 +951,8 @@ function guideTo(target, dur, arc, endVel) { ball.guide = { from: ball.pos.clone
 /* ==============================================================================
    §08 MODELO DE JUGADOR Y VESTUARIO
    Construcción del muñeco articulado (1,95 m), estampados, peinados, accesorios y aspecto guardado.
-   Funciones: numberTex, jerseyTex, shortsTex, capsuleGeo, newPose, makeRig
+   Funciones: numberTex, jerseyTex, shortsTex, capsuleGeo, newPose, miiGeo, miiFaceTex, miiHead,
+     makeRig
    ============================================================================== */
 const SKINS = [0xf1c7a0, 0x8d5a3b, 0xe0ac85, 0x6b4430, 0xc98b5e, 0xf5d2b8];
 const HAIRS = [0x1b1410, 0x0f0f14, 0x5a3a1e, 0x16110d, 0x3a2616, 0xd9b36a];
@@ -1783,8 +1785,10 @@ function playersCollide(a, b) {
 
 /* ==============================================================================
    §13 REGATES
-   Los 7 regates, reacción del defensor, explosión tras el regate y combos.
-   Funciones: startMove, provokeDefenders, comboCheck, explode, hesiBurst, endMove, sideFromInput
+   Regates (cruce, entre piernas, espalda, giro, retroceso, pasos atrás y lateral, eurostep, bandeja con giro, poste),
+   cambios de dirección, reacción del defensor, explosión tras el regate y combos.
+   Funciones: startMove, provokeDefenders, comboCheck, explode, mirrorDir, moveSteer, driveSteer,
+     pivotSpin, stepBackSteer, hesiBurst, endMove, sideFromInput
    ============================================================================== */
 // Inicia un regate (si se puede): coste, protección, impulso y reacción del defensor.
 function startMove(p, type, side, momentum) {
@@ -2153,7 +2157,8 @@ function onScore(hi) {
 /* ==============================================================================
    §16 TIRO
    Medidor de tiro, bandeja, amago de tiro, tiro en suspensión y trayectoria balística.
-   Funciones: shotVelocity, release, contested, shotWindow, layup, pumpFake, beginShot, shoot, planShot
+   Funciones: shotVelocity, release, contested, shotWindow, layup, pumpFake, beginShot, shoot,
+     planShot
    ============================================================================== */
 const shotSkill = p => p.exhausted ? CFG.energy.exhaustedShot : p.stamina < 0.25 ? CFG.energy.lowShot : 1;
 
@@ -2380,7 +2385,7 @@ function stepDunk(p, dt) {
 /* ==============================================================================
    §18 PASES
    Pase directo, picado y bombeado; elección del receptor.
-   Funciones: pass, bestPassTarget
+   Funciones: pass, bestPassTarget, setControlled, jumpOrBlock, switchToNearest
    ============================================================================== */
 // Pase directo, picado o bombeado (alley-oop si procede).
 function pass(p, to, alley, type) {
@@ -3277,8 +3282,8 @@ function toMenu() {
 /* ==============================================================================
    §25 MODO ENTRENAMIENTO
    Solo tú con el balón: estadísticas de tiro, retorno automático del balón y panel de combos.
-   Funciones: resetTrainStats, updateTrainHUD, trainAttempt, trainResolveMiss, trainScore, returnBall,
-     stepTraining, setTrainingVisible, startTraining
+   Funciones: toggleTrainRival, resetTrainStats, updateTrainHUD, trainAttempt, trainResolveMiss,
+     trainScore, returnBall, stepTraining, setTrainingVisible, startTraining
    ============================================================================== */
 // Rival de práctica: un defensor de la IA (players[3]) que se activa con P / Share
 function toggleTrainRival(force) {
@@ -3400,7 +3405,7 @@ function startTraining() {
 /* ==============================================================================
    §26 VESTUARIO (MENÚ)
    Pantalla de personalización con vista previa giratoria.
-   Funciones: applyLook, buildCustomForm, openCustomizer, closeCustomizer
+   Funciones: applyLook, custTabs, buildCustomForm, openCustomizer, closeCustomizer
    ============================================================================== */
 let previewYaw = 0, previewDrag = null;
 
@@ -4080,7 +4085,7 @@ function animatePlayer(p, dt, T) {
 /* ==============================================================================
    §29 CÁMARA Y EFECTOS DE ESCENA
    Cámara en tercera persona, red/aro/onda al anotar y giro visual del balón.
-   Funciones: updateCamera, updateHoopFx, updateBallVisual
+   Funciones: setCamMode, updateBroadcastCam, updateCamera, updateHoopFx, updateBallVisual
    ============================================================================== */
 // Modo de cámara: 'broad' = retransmisión estilo NBA 2K (elevada, detrás, mirando a la canasta que se ataca); 'third' = tercera persona
 let camMode = 'broad';
@@ -4328,7 +4333,8 @@ requestAnimationFrame(frame);
    §33 MODO ANIMACIONES (depuración)
    Lista de animaciones reproducibles una a una, en bucle, con pausa, fotograma a fotograma y velocidad.
    Cada entrada: { cat, name, dur, setup(), tick(t) }. tick rellena ANIM.inp (entrada del jugador) y pulsa acciones.
-   Funciones: enterAnimMode, exitAnimMode, playAnim, animTick, animUI
+   Funciones: animPlace, animUI, buildAnimUI, playAnim, animTick, simAnimFrame, animFrame,
+     animSeek, enterAnimMode, exitAnimMode
    ============================================================================== */
 // aleatoriedad con semilla mientras se está en el modo animaciones (rebobinar da exactamente lo mismo)
 let animSeed = 1;
