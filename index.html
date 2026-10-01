@@ -1797,7 +1797,7 @@ function startMove(p, type, side, momentum) {
   if (p.stamina < M.cost || (p.exhausted && (type === 'spin' || type === 'step'))) return false;
   const F = carrierFrame(p);
   const s = side || -p.hand;
-  p.move = { type, t: 0, dur: M.dur, side: s, from: p.hand, burst: false };
+  p.move = { type, t: 0, dur: M.dur, side: s, from: p.hand, burst: false, static: Math.hypot(p.vel.x, p.vel.z) < 1.5 };   // parado: el regate se hace en el sitio
   if (p.chainT > CFG.moves.chainGap) { p.chain = []; p.chainHand = p.hand; }   // empieza una secuencia nueva
   p.chain.push(type); p.explodeWin = 0; p.burstT = 0;
   if (type === 'cross' || type === 'between' || type === 'behind' || type === 'behindAir' || type === 'spin') mirrorDir(p, s);
@@ -1841,7 +1841,7 @@ function startMove(p, type, side, momentum) {
     const c = hoops[p.attackSide].rimC, ax = c.x - p.pos.x, az = c.z - p.pos.z, al = Math.hypot(ax, az) || 1;
     p.move.rim = { x: ax / al, z: az / al }; p.move.sp0 = Math.max(hs, 4.5); p.ctrlT = M.dur; dx = p.vel.x; dz = p.vel.z; spd = hs;
   }
-  else if (type === 'behind' || type === 'behindAir') { mirrorDir(p, s); dx = p.move.newDir.x; dz = p.move.newDir.z; spd = Math.max(hs * 0.85, 3.2); p.ctrlT = 0.2; }
+  else if (type === 'behind' || type === 'behindAir') { mirrorDir(p, s); dx = p.move.newDir.x; dz = p.move.newDir.z; spd = p.move.static ? 0.7 : Math.max(hs * 0.85, 3.2); p.ctrlT = 0.2; }
   if (momentum && (type === 'behind' || type === 'behindAir')) { spd *= 1.2; spend(p, M.cost * 0.5); }
   if (momentum && (type === 'cross' || type === 'between')) spend(p, M.cost * 0.5);   // versión de escape con sprint: más explosiva
   const l = Math.hypot(dx, dz) || 1;
@@ -1919,7 +1919,8 @@ function moveSteer(p, dt) {
   const drag = smooth(clamp((k - 0.2) / 0.7, 0, 1));                    // 0,2→0,9: arrastre al otro lado
   const O = m.oldDir, N = m.newDir;
   const dx = O.x * (1 - drag) + N.x * drag - r.x * s * 0.3 * sell, dz = O.z * (1 - drag) + N.z * drag - r.z * s * 0.3 * sell, l = Math.hypot(dx, dz) || 1;
-  const sp = m.sp0 * (1 - 0.25 * Math.sin(Math.PI * Math.min(1, k * 1.4))) + (m.boost ? 3.6 : 1.6) * drag;   // frena un poco al cambiar el peso y sale
+  const sp = m.static ? 1.1 * Math.sin(Math.PI * k)                                                       // parado: solo un pequeño balanceo del peso
+    : m.sp0 * (1 - 0.25 * Math.sin(Math.PI * Math.min(1, k * 1.4))) + (m.boost ? 3.6 : 1.6) * drag;   // frena un poco al cambiar el peso y sale
   const a = 1 - Math.exp(-10 * dt);
   p.vel.x += (dx / l * sp - p.vel.x) * a; p.vel.z += (dz / l * sp - p.vel.z) * a;
 }
@@ -1995,7 +1996,7 @@ function endMove(p) {
     p.charging = true; p.charge = 0.3; p.shotKind = 'jump'; p.autoShot = true; p.autoHeld = false;
     p.autoPlan = p.isHuman ? CFG.shot.sweet + gauss() * 0.04 : planShot(p, p.team === 1 ? diff : MATES);
   }
-  if (p.move.newDir) {
+  if (p.move.newDir && !p.move.static) {
     const N = p.move.newDir;
     if (t === 'spin') { const sp = Math.max(3, Math.hypot(p.vel.x, p.vel.z)); p.vel.x = N.x * sp; p.vel.z = N.z * sp; }
     p.dirOverride = { from: p.move.oldDir, to: N, t: 1.6 };
@@ -3020,7 +3021,7 @@ document.addEventListener('pointerlockchange', () => {
    Funciones: setInputMode, getPad, rumble, menuNav, padFrame
    ============================================================================== */
 // Botones con el mapeo estándar: 0 ✕, 1 ○, 2 □, 3 △, 4 L1, 5 R1, 6 L2, 7 R2, 9 Options, 10 L3, 11 R3, 12-15 cruceta
-const PAD = { postShot: null, idx: null, prev: [], lx: 0, ly: 0, lm: 0, rx: 0, ry: 0, r2: false, l2: false, square: false, side: 0, navT: 0, rot: 0, rotT: 0, peak: 0, flickO: 0, lastAng: null };
+const PAD = { sx: 0, sy: 0, n: 0, postShot: null, idx: null, prev: [], lx: 0, ly: 0, lm: 0, rx: 0, ry: 0, r2: false, l2: false, square: false, side: 0, navT: 0, rot: 0, rotT: 0, peak: 0, flickO: 0, lastAng: null };
 let inputMode = 'kb';
 
 // Cambia los iconos de controles entre teclado y mando.
@@ -3117,22 +3118,23 @@ function padFrame(dt) {
       // stick derecho estilo NBA 2K: "mueve y suelta". Se decide al soltar, relativo a la mano del balón
       // en mitad de un combo las direcciones se leen con la mano con la que empezó la secuencia (↖ luego ↙ = cruce + espalda)
       const hand = human.move ? human.move.from : (human.chainT < CFG.moves.chainGap ? human.chainHand : human.hand);
+      // lectura estricta: solo cuenta el stick a fondo (>85 %), se promedia la dirección mientras está a fondo
+      // y cada regate tiene una ventana de ±17° alrededor de su dirección; fuera de ella no se hace nada
       const m = Math.hypot(rx, ry);
       if (m > 0.3) {
         const ang = Math.atan2(rx, -ry);
         if (PAD.lastAng !== null) PAD.rot += wrapA(ang - PAD.lastAng);
         PAD.lastAng = ang;
-        if (m > 0.8 && m >= PAD.peak) { PAD.peak = m; PAD.flickO = Math.round(Math.atan2(rx * hand, -ry) / (Math.PI / 4)); }
+        if (m > 0.85) { PAD.sx += rx * hand / m; PAD.sy += -ry / m; PAD.n++; }
         PAD.rotT += dt;
       } else if (PAD.lastAng !== null) {
-        // al soltar: media vuelta de stick = giro; si no, el regate según la dirección
-        if (Math.abs(PAD.rot) > 2.4) { pendH.move = 'spin'; PAD.side = PAD.rot > 0 ? 1 : -1; }
-        else if (PAD.peak > 0.8 && PAD.rotT < 0.6) {
-          const map = { 0: null, 1: null, 2: null, 3: 'spin', 4: 'retreat', '-4': 'retreat', '-1': 'cross', '-2': 'between', '-3': 'behind' };
-          const type = map[PAD.flickO];
-          if (type) pendH.move = type; PAD.side = type === 'spin' ? hand : -hand;
+        if (Math.abs(PAD.rot) > 3.3 && PAD.rotT < 0.55) { pendH.move = 'spin'; PAD.side = PAD.rot > 0 ? 1 : -1; }   // vuelta completa del stick = giro
+        else if (PAD.n >= 2 && PAD.rotT < 0.6 && Math.abs(PAD.rot) < 1.2) {
+          const a = Math.atan2(PAD.sx, PAD.sy) * 180 / Math.PI;             // 0 = arriba, + = lado de la mano del balón
+          const T = [[-45, 'cross'], [-90, 'between'], [-135, 'behind'], [180, 'retreat'], [-180, 'retreat'], [135, 'spin']];
+          for (const [ta, ty] of T) if (Math.abs(a - ta) <= 17) { pendH.move = ty; PAD.side = ty === 'spin' ? hand : -hand; break; }
         }
-        PAD.rot = 0; PAD.rotT = 0; PAD.peak = 0; PAD.lastAng = null;
+        PAD.rot = 0; PAD.rotT = 0; PAD.peak = 0; PAD.lastAng = null; PAD.sx = 0; PAD.sy = 0; PAD.n = 0;
       }
       // con balón y sin tocar la cámara, se va alineando poco a poco hacia el aro rival
       const c = hoops[human.attackSide].rimC, want = Math.atan2(-(c.x - human.pos.x), -(c.z - human.pos.z));
