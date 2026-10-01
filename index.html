@@ -1339,7 +1339,7 @@ function holdTarget(p, dt) {
   } else {
     ball.phase += dt * (5 + sp * 0.8);
     y = R + (0.95 - R) * Math.abs(Math.cos(ball.phase));
-    if ((p.guarded || p.stance) && !p.sprinting) { fw = 0.06; lat = 0.36 * p.hand; y = R + ((p.stance ? 0.6 : 0.7) - R) * Math.abs(Math.cos(ball.phase)); }   // bote protegido, bajo y al costado
+    if (((p.guarded && !p.isHuman) || p.stance) && !p.sprinting) { fw = 0.06; lat = 0.36 * p.hand; y = R + ((p.stance ? 0.6 : 0.7) - R) * Math.abs(Math.cos(ball.phase)); }   // bote protegido, bajo y al costado
     else if (p.sprinting) { fw = 0.72 + sp * 0.02; lat = 0.16 * p.hand; }                                                    // sprint: balón adelantado y expuesto
     else { fw = 0.42 + sp * 0.03; lat = 0.28 * p.hand; }
   }
@@ -2781,7 +2781,10 @@ function padFrame(dt) {
   if (any || lm > 0 || Math.hypot(rx, ry) > 0) setInputMode('pad');
   PAD.lx = lx; PAD.ly = ly; PAD.lm = lm; PAD.rx = rx; PAD.ry = ry;
   PAD.r2 = b(5) || b(7);                                             // R1 (o R2): correr
-  PAD.l2 = (gp.buttons[6] ? gp.buttons[6].value : 0) > 0.35;         // L2: postura ofensiva / defensiva
+  // L2: postura. Algunos mandos dejan el gatillo con un valor residual al soltarlo: se toma su reposo como referencia
+  const l2v = gp.buttons[6] ? gp.buttons[6].value : 0;
+  PAD.l2Rest = PAD.l2Rest === undefined ? l2v : Math.min(PAD.l2Rest + dt * 0.02, l2v);
+  PAD.l2 = b(6) && l2v - PAD.l2Rest > 0.3;
   PAD.square = b(2);
   const menuOpen = state === 'menu' || state === 'over' || state === 'paused' || state === 'custom';
   if (menuOpen) {
@@ -3395,7 +3398,7 @@ function animatePlayer(p, dt, T) {
   // ---- agacharse ----
   let crouchD = 0.03;
   if (defending) crouchD = 0.3;
-  if (holding && p.guarded && !p.sprinting) crouchD = 0.18;
+  if (holding && p.guarded && !p.sprinting && !p.isHuman) crouchD = 0.18;   // tú solo te agachas con L2
   if (holding && p.stance) crouchD = 0.26;       // postura ofensiva: rodillas muy flexionadas, centro de gravedad bajo
   if (p.post) crouchD = 0.26;
   if (p.move) {
@@ -3466,7 +3469,7 @@ function animatePlayer(p, dt, T) {
       const lat = (ball.pos.x - p.pos.x) * F.rx + (ball.pos.z - p.pos.z) * F.rz;
       if (lat >= 0) tp.ikR = 1; else tp.ikL = 1;
       const off = lat >= 0 ? tp.aL : tp.aR, s = lat >= 0 ? 1 : -1;
-      if ((p.guarded || p.stance) && !p.sprinting) { off.x = -1.25; off.z = s * 0.6; off.el = -0.9; tp.torsoY = -s * 0.38; tp.torsoX += 0.15; tp.lL.z = 0.22; tp.lR.z = -0.22; }
+      if (((p.guarded && !p.isHuman) || p.stance) && !p.sprinting) { off.x = -1.25; off.z = s * 0.6; off.el = -0.9; tp.torsoY = -s * 0.38; tp.torsoX += 0.15; tp.lL.z = 0.22; tp.lR.z = -0.22; }
     }
     if (p.move) {
       const mv = p.move, k = mv.t / mv.dur, s = mv.side, sw = Math.sin(Math.PI * k);
