@@ -55,6 +55,9 @@ html,body{ height:100%; margin:0; overflow:hidden; background:var(--ink); color:
 .combos span{ display:inline-flex; align-items:center; gap:5px; }
 .combos i{ width:12px; height:12px; border-radius:50%; border:2px solid var(--muted); display:inline-block; }
 .combos span.done{ color:var(--chalk); } .combos span.done i{ background:#4fe08a; border-color:#4fe08a; }
+/* en el entrenamiento los paneles van a la derecha para no tapar la canasta con la cámara de retransmisión */
+#combos{ position:fixed; right:calc(env(safe-area-inset-right,0px) + 16px); top:calc(env(safe-area-inset-top,0px) + 16px); width:330px; flex-direction:column; align-items:flex-start; }
+#traintip{ position:fixed; right:calc(env(safe-area-inset-right,0px) + 16px); top:calc(env(safe-area-inset-top,0px) + 178px); width:330px; box-sizing:border-box; }
 .traintip{ font-weight:600; font-size:15px; color:var(--muted); background:var(--panel); padding:4px 12px; border-radius:4px; }
 .shotclock{ font-weight:700; font-size:16px; color:var(--muted); background:var(--panel); padding:3px 12px; border-radius:4px; border-top:3px solid var(--c,transparent); }
 .shotclock b{ font-family:Anton,Impact,sans-serif; font-weight:400; font-size:20px; color:var(--chalk); margin-left:6px; }
@@ -295,6 +298,13 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
         <button data-d="hard" aria-pressed="false">Difícil</button>
       </div>
     </div>
+    <div class="row">
+      <span class="lbl">Cámara</span>
+      <div class="seg camseg" role="group" aria-label="Cámara">
+        <button data-cam="broad" aria-pressed="true">Retransmisión</button>
+        <button data-cam="third" aria-pressed="false">Tercera persona</button>
+      </div>
+    </div>
     <div class="row" style="margin-bottom:0">
       <button id="play" class="btn"><span>Jugar partido</span></button>
       <button id="train" class="btn ghost"><span>Entrenamiento</span></button>
@@ -318,7 +328,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
       <dt>Clic sin balón</dt><dd>Tapón: saltas con el brazo arriba. Acierta el momento en que el rival suelta (o sube a machacar) y el balón sale volando. Si fallas, te recuperas más lento. Tocar un balón que ya baja al aro es interferencia: canasta para el rival</dd>
       <dt><kbd>E</kbd></dt><dd>Manotazo para robar. Si aciertas, el rival queda aturdido. Si fallas, te desequilibras un instante y tienes que esperar para repetir</dd>
       <div class="sep"></div>
-      <dt><kbd>B</kbd></dt><dd>Cámara siempre mirando al balón</dd>
+      <dt><kbd>B</kbd></dt><dd>En tercera persona: cámara siempre mirando al balón. El tipo de cámara se elige en el menú o en la pausa</dd>
     </dl>
     <h3 class="padtitle">Con mando de PS4</h3>
     <dl class="controls">
@@ -356,6 +366,13 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
   <div class="col">
     <h2 class="title">Pausa</h2>
     <div class="split"></div>
+    <div class="row">
+      <span class="lbl">Cámara</span>
+      <div class="seg camseg" role="group" aria-label="Cámara">
+        <button data-cam="broad" aria-pressed="true">Retransmisión</button>
+        <button data-cam="third" aria-pressed="false">Tercera persona</button>
+      </div>
+    </div>
     <div class="row">
       <button id="resume" class="btn"><span>Continuar</span></button>
       <button id="resetTrain" class="btn ghost" hidden><span>Reiniciar estadísticas</span></button>
@@ -3722,6 +3739,39 @@ function animatePlayer(p, dt, T) {
    Cámara en tercera persona, red/aro/onda al anotar y giro visual del balón.
    Funciones: updateCamera, updateHoopFx, updateBallVisual
    ============================================================================== */
+// Modo de cámara: 'broad' = retransmisión estilo NBA 2K (elevada, detrás, mirando a la canasta que se ataca); 'third' = tercera persona
+let camMode = 'broad';
+try { camMode = localStorage.getItem('hoopblast.cam') || 'broad'; } catch (e) { /* sin almacenamiento */ }
+let broadSide = 1;   // hacia qué canasta mira la retransmisión (+1 / -1 en x)
+function setCamMode(m) {
+  camMode = m;
+  try { localStorage.setItem('hoopblast.cam', m); } catch (e) { /* sin almacenamiento */ }
+  document.querySelectorAll('.seg button[data-cam]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.cam === m)));
+}
+// Retransmisión: sigue al balón desde detrás y en alto; gira sola al cambiar la posesión. Sin control manual.
+function updateBroadcastCam(dt) {
+  const h = human;
+  // canasta que se ataca: la del equipo con el balón (o la tuya si nadie lo tiene)
+  const team = ball.holder ? ball.holder.team : possTeam >= 0 ? possTeam : h.team;
+  const atkIdx = mode === 'train' ? h.attackSide : (team === 0 ? 1 : 0);
+  const s = Math.sign(hoops[atkIdx].rimC.x) || 1;
+  broadSide = s;
+  // foco: quien tiene el balón (o el balón suelto), algo atraído hacia tu jugador
+  const fp = ball.holder ? ball.holder.pos : ball.pos;
+  const fx = clamp(lerp(fp.x, h.pos.x, 0.2), -17, 17), fz = clamp(lerp(fp.z, h.pos.z, 0.2), -9, 9);
+  _cw.set(clamp(fx - s * 11, -21, 21), 8.2, fz * 0.45);
+  const rimX = hoops[atkIdx].rimC.x;
+  _cl.set(lerp(fx, rimX, 0.22), 0.4, fz * 0.75);   // el jugador queda en el tercio inferior, con la canasta al fondo
+  camPos.lerp(_cw, 1 - Math.exp(-3.2 * dt));
+  camLook.lerp(_cl, 1 - Math.exp(-4.5 * dt));
+  camera.position.copy(camPos);
+  if (shake > 0) camera.position.add(_cl.set(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(shake * 0.18));
+  camera.lookAt(camLook);
+  fovKick = Math.max(0, fovKick - dt * 2.2);
+  camera.fov = lerp(camera.fov, 50 + fovKick * 5, 1 - Math.exp(-6 * dt)); camera.updateProjectionMatrix();
+  // los controles siguen a la pantalla: "arriba" es hacia donde mira la cámara
+  camYaw = Math.atan2(-(camLook.x - camPos.x), -(camLook.z - camPos.z));
+}
 let fovKick = 0;
 // Indicador del compañero que recibiría el pase (anillo blanco sobre su cabeza)
 let passPreview = null, lastAim = new V3();
@@ -3742,6 +3792,7 @@ function updateCamera(dt, T) {
     camera.fov = 56; camera.updateProjectionMatrix(); return;
   }
   if (state === 'paused') return;
+  if (camMode === 'broad') { updateBroadcastCam(dt); return; }
   const h = human;
   camYaw += ((keys.ArrowLeft ? 1 : 0) - (keys.ArrowRight ? 1 : 0)) * 2.6 * dt;
   camPitch = clamp(camPitch + ((keys.ArrowUp ? 1 : 0) - (keys.ArrowDown ? 1 : 0)) * 1.2 * dt, -0.15, 0.6);
@@ -3891,10 +3942,13 @@ function frame(now) {
    §31 MENÚS Y ARRANQUE
    Botones de los menús y puesta en marcha del bucle.
    ============================================================================== */
-document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
-  document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+document.querySelectorAll('.seg button[data-d]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.seg button[data-d]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
   diffKey = b.dataset.d;
 }));
+document.body.append($('combos'), $('traintip'));   // paneles del entrenamiento fuera del marcador centrado (van a la derecha)
+document.querySelectorAll('.seg button[data-cam]').forEach(b => b.addEventListener('click', () => setCamMode(b.dataset.cam)));
+setCamMode(camMode);
 $('play').addEventListener('click', startMatch);
 $('train').addEventListener('click', startTraining);
 $('customize').addEventListener('click', openCustomizer);
