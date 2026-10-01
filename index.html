@@ -567,7 +567,7 @@ const CFG = {
     explodeWin: 0.4, burstSpeed: 8.8, burstTime: 0.55, burstCost: 0.05, chainGap: 0.45, queueAt: 0.4
   },
   // Tiro: mantén para cargar el medidor y suelta en la franja verde. La dirección al aro es automática.
-  shot: { fill: 0.85, sweet: 0.8, late: 1.15, three: 6.75, layup: 2.6, fakeMax: 0.2, fakeDur: 0.5, fakeCd: 0.7 },
+  shot: { fill: 0.85, sweet: 0.8, late: 1.15, three: 6.75, layup: 2.6, fakeMax: 0.2, fakeDur: 0.3, fakeCd: 0.25 },
   // Pases: velocidad de vuelo (m/s) y gravedad reducida para que el directo y el picado vayan tensos pero sin ser instantáneos
   pass: { magnet: 5.5, chestSpeed: 15.5, bounceSpeed: 12.5, lobTime: 0.45, lobSpeed: 13, chestG: 0.22, bounceG: 0.55, lockTime: 4 },
   // Tapón (clic sin balón): salto con ventana activa, igual que el robo tiene su momento justo
@@ -2307,7 +2307,7 @@ function layup(p) {
 function pumpFake(p) {
   p.charging = false; p.charge = 0;
   if (p.fakeCd > 0 || !p.onGround) return;
-  p.fakeT = CFG.shot.fakeDur; p.fakeCd = CFG.shot.fakeCd; p.ctrlT = 0.28; p.vel.x *= 0.2; p.vel.z *= 0.2;
+  p.fakeT = CFG.shot.fakeDur; p.fakeCd = CFG.shot.fakeCd; p.ctrlT = 0.12; p.vel.x *= 0.2; p.vel.z *= 0.2;
   p.deadDribble = true;   // has recogido el balón: ya no puedes volver a botar (solo pasar, tirar o pivotar)
   let bit = false;
   for (const o of live) {
@@ -2734,7 +2734,8 @@ function handleActions(p, inp, dt) {
   }
   if (!holding || p.stunT > 0) { p.charging = false; p.charge = 0; return; }
   if (inp.shootPress || inp.shootHold || inp.postShot) finishSwap(p);   // tirar (o paso atrás) no espera al cambio de mano
-  if (p.move || p.inbounding || p.fakeT > 0) return;
+  if (p.move || p.inbounding) return;
+  if (p.fakeT > 0 && inp.shootPress) p.fakeT = 0;   // tras el amago puedes tirar al instante (corta la animación)
   // tiro: toque cerca del aro = bandeja; mantener = medidor de tiro
   // eurostep / bandeja con giro: corriendo hacia la canasta, □ y otra vez □ (rápido = giro; con algo de pausa = eurostep)
   if (p.drive && p.deadDribble) p.drive = null;
