@@ -1,26 +1,26 @@
 === smoke2.js easy
-easy state over score [13,10]
-[{"att":23,"made":6,"threes":0,"dunks":1,"alleys":0,"assists":1,"steals":10,"dodges":1,"blocks":3},{"att":13,"made":4,"threes":2,"dunks":0,"alleys":0,"assists":0,"steals":9,"dodges":2,"blocks":2}]
-exhausts undefined [100,100,100,100,100,100]
-swipes 51 miss 33 moves 44 passes 0
+easy state over score [28,3]
+[{"att":27,"made":11,"threes":0,"dunks":6,"alleys":0,"assists":1,"steals":17,"dodges":2,"blocks":1},{"att":10,"made":1,"threes":0,"dunks":1,"alleys":0,"assists":0,"steals":11,"dodges":2,"blocks":1}]
+exhausts undefined [100,100,100,72,100,100]
+swipes 50 miss 27 moves 47 passes 0
 === smoke2.js normal
-normal state over score [22,14]
-[{"att":20,"made":9,"threes":0,"dunks":4,"alleys":0,"assists":2,"steals":13,"dodges":4,"blocks":4},{"att":23,"made":7,"threes":0,"dunks":0,"alleys":0,"assists":0,"steals":13,"dodges":3,"blocks":0}]
-exhausts undefined [100,100,100,81,80,100]
-swipes 54 miss 32 moves 45 passes 0
+normal state over score [15,17]
+[{"att":15,"made":7,"threes":1,"dunks":0,"alleys":0,"assists":1,"steals":15,"dodges":4,"blocks":1},{"att":20,"made":7,"threes":0,"dunks":3,"alleys":0,"assists":0,"steals":16,"dodges":1,"blocks":1}]
+exhausts undefined [100,74,100,100,100,100]
+swipes 52 miss 32 moves 58 passes 0
 === smoke2.js hard
-hard state over score [9,19]
-[{"att":11,"made":3,"threes":1,"dunks":2,"alleys":0,"assists":1,"steals":13,"dodges":5,"blocks":2},{"att":17,"made":8,"threes":2,"dunks":1,"alleys":0,"assists":2,"steals":18,"dodges":3,"blocks":4}]
-exhausts undefined [100,100,100,100,100,100]
-swipes 51 miss 28 moves 72 passes 0
+hard state over score [14,23]
+[{"att":12,"made":5,"threes":2,"dunks":2,"alleys":0,"assists":2,"steals":7,"dodges":8,"blocks":1},{"att":17,"made":9,"threes":2,"dunks":3,"alleys":1,"assists":1,"steals":14,"dodges":2,"blocks":2}]
+exhausts undefined [100,100,100,65,93,100]
+swipes 50 miss 30 moves 57 passes 0
 === test9.js
 carga 0.55 0/12
 carga 0.68 0/12
-carga 0.74 12/12
+carga 0.74 6/12
 carga 0.8 12/12
-carga 0.86 12/12
-carga 0.92 1/12
-carga 1.05 1/12
+carga 0.86 8/12
+carga 0.92 2/12
+carga 1.05 0/12
 mate one 3/3 dunkSeq cleared true y 0.00
 mate two 3/3 dunkSeq cleared true y 0.00
 mate tomahawk 3/3 dunkSeq cleared true y 0.00
@@ -77,9 +77,9 @@ distancia 1.4
   pulsar 0.00 s antes de soltar -> 0/4
   pulsar -0.08 s antes de soltar -> 0/4
 tras fallar, stun al aterrizar: visto antes
-mate one taponados 4/8
+mate one taponados 6/8
 mate two taponados 5/8
-mate windmill taponados 8/8
+mate windmill taponados 7/8
 mate spin360 taponados 8/8
 === testpad.js
 foco en play modo pad
@@ -87,11 +87,11 @@ estado countdown entrenamiento? false
 estado tras cuenta atrás play
 stick 30% -> velocidad 2.46
 stick 60% -> velocidad 5.40 energía 1.00
-stick 100% -> velocidad 4.99
+stick 100% -> velocidad 4.50
 R2 sprint -> velocidad 5.40
-arranque W: 0.1s/0.2s/0.3s/0.5s -> 5.40 / 5.40 / 5.40 / 5.40
-giro 180º: frenada con apoyo false | en 0.02 s ya corre al revés
-curva 90º corriendo: avanza 10.35 m en 2.02 s
+arranque W: 0.1s/0.2s/0.3s/0.5s -> 8.34 / 8.49 / 8.46 / 8.40
+giro 180º: frenada con apoyo false | en 0.57 s ya corre al revés
+curva 90º corriendo: avanza -10.55 m en 2.02 s
 curva 90º esprintando: avanza 0.00 m en 0.00 s
 RS derecha      -> nada
 RS izquierda    -> nada
@@ -102,7 +102,7 @@ RS abajo-izq    -> nada
 R3 -> spin
 □ mantenido: cargando true carga 0.59
 □ soltado: balón en el aire true
-vibraciones 3
+vibraciones 2
 === testpad2.js
 mando □     -> one
 mando △     -> two
@@ -144,7 +144,7 @@ parada falsa: velocidad durante la parada 1.86
    straight     0/12
    cross        1/12
    cross+exp    12/12
-   between+exp  9/12
+   between+exp  10/12
    hesi+exp     11/12
    inout+exp    10/12
 === testdrib3.js
@@ -158,16 +158,16 @@ parada falsa: velocidad durante la parada 1.86
   explosión 8.80 | combos 1,2,3,4
    straight     0/12
    cross        1/12
-   cross+exp    1/12
-   between+exp  8/12
-   hesi+exp     9/12
-   inout+exp    10/12
+   cross+exp    3/12
+   between+exp  4/12
+   hesi+exp     11/12
+   inout+exp    11/12
 === testfake.js
 amago activo tras toque corto: true
-amago de tiro vs defensor IA normal: picó y saltó 4/12
+amago de tiro vs defensor IA normal: picó y saltó 8/12
 === traintest.js
 mode train holder human true hidden others true
-{"att":6,"made":4,"perf":4,"a3":0,"m3":0,"streak":2,"best":2,"pending":false,"pending3":false,"freeT":0,"madeT":0} panel 4/6 2
+{"rival":false,"rivalHoldT":0,"att":6,"made":4,"perf":4,"a3":0,"m3":0,"streak":2,"best":2,"pending":false,"pending3":false,"freeT":0,"madeT":0} panel 4/6 2
 after Q holder human true
 mode match others visible true
 match state play
@@ -175,18 +175,18 @@ match state play
 sprint 2s               56%  vel 8.0 56
 sprint 4s               12%  vel 7.5 12
 sprint 6s (sigue)        0% AGOTADO vel 3.9 Agotado
-forzando agotado 8s     13% AGOTADO vel 0.0 Agotado
-corre agotado +4s       75%  vel 5.4 75
-quieto 2s              100%  vel 0.0 100
+forzando agotado 8s      0% AGOTADO vel 3.9 Agotado
+corre agotado +4s       19% AGOTADO vel 0.0 Agotado
+quieto 2s               46%  vel 0.0 46
 quieto 5s              100%  vel 0.0 100
 quieto 8s              100%  vel 0.0 100
-corre normal 6s        100%  vel 5.4 100
+corre normal 6s        100%  vel 0.0 100
 corre normal 16s       100%  vel 0.0 100
 corre normal 31s       100%  vel 5.4 100
-quieto 3s              100%  vel 0.0 100
-mover normal 3s desde 50% 100%  vel 5.4 100
-sprint 2s               74%  vel 8.3 74
-soltar sprint 2s       100%  vel 0.0 100
+quieto 3s              100%  vel 5.4 100
+mover normal 3s desde 50% 100%  vel 4.7 100
+sprint 2s              100%  vel 5.4 83
+soltar sprint 2s       100%  vel 5.4 100
 === testctl.js
 apuntando a la derecha (D) + Q -> recibe el jugador 2 (z=5.0) | ahora controlas al 2
 apuntando a la izquierda (A) + Q -> recibe el jugador 0 (z=0.0) | ahora controlas al 0
