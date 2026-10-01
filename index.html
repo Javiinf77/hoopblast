@@ -3748,7 +3748,7 @@ function animatePlayer(p, dt, T) {
         if (p.move.sideStep) { first.z = -lead * 0.35 * ph(0.12, 0.42); tp.bodyZ = lead * 0.1 * ph(0.1, 0.7); }
         first.x = 0.55 * ph(0.18, 0.46) - 0.25 * ph(0, 0.2) + cr.x; first.k = 0.35 + 0.6 * ph(0.18, 0.46);
         second.x = 0.5 * ph(0.4, 0.7) + cr.x; second.k = 0.35 + 0.55 * ph(0.4, 0.7);
-        tp.torsoX = 0.18 + 0.1 * ph(0, 0.2); tp.bodyX = 0.04; tp.squash = 0.04 * ph(0.18, 0.7);
+        tp.torsoX = (p.move.shotLinked ? 0.04 : 0.18) + 0.1 * ph(0, 0.2); tp.bodyX = 0.04; tp.squash = 0.04 * ph(0.18, 0.7);   // con el tiro subiendo, tronco más erguido
       }
       if (p.fakeT > 0) {
         // amago de tiro: sube el balón a la frente, se estira de puntillas y lo vuelve a bajar
