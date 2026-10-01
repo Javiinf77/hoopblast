@@ -3988,7 +3988,6 @@ function frame(now) {
     if (c !== lastCount && c > 0) { lastCount = c; banner(String(c), 'var(--chalk)', 0.9); }
     if (stateT <= 0) startPlay();
   } else if (state === 'custom') {
-    if (previewDrag === null) previewYaw += rdt * 0.35;
     human.yaw = previewYaw; human.pos.set(0, 0, 0); human.vel.set(0, 0, 0);
     ball.pos.set(Math.sin(0) * 3, 1.4, 3.2);   // la cabeza mira hacia la cámara
   } else if (state === 'menu' || state === 'over') {
