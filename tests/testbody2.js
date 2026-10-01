@@ -15,7 +15,7 @@ function check(name){ pick(name).click(); $('animPause').click(); const h=d.huma
   }
   return 'balón-tronco mín '+minBall.toFixed(2)+' (f'+fB+')  antebrazo-tronco mín '+minArm.toFixed(2)+' (f'+fA+') '+info;
 }
-for(const n of ['Por la espalda con bote (der. → izq.)','Por la espalda con bote (izq. → der.)','Por la espalda sin bote (der. → izq.)','Por la espalda sin bote (izq. → der.)','Giro (der. → izq.)','Giro (izq. → der.)','Giro de poste (hacia la derecha)','Giro de poste (hacia la izquierda)','Paso atrás','Cruce','Entre las piernas','Cruce explosivo']) console.log(n.padEnd(40), check(n));
+for(const n of ['Por la espalda con bote (der. → izq.)','Por la espalda con bote (izq. → der.)','Por la espalda sin bote (der. → izq.)','Por la espalda sin bote (izq. → der.)','Giro (der. → izq.)','Giro (izq. → der.)','Giro de poste (hacia la derecha)','Giro de poste (hacia la izquierda)','Paso atrás + tiro','Retroceso con bote','Cruce','Entre las piernas','Cruce explosivo']) console.log(n.padEnd(40), check(n));
 // pie de eje del giro: posición del pie izquierdo durante la rotación
 pick('Giro (der. → izq.)').click(); $('animPause').click(); const r=d.human.rig; let pts=[];
 for(let f=1; f<130; f++){ $('animStep').click(); if(d.human.move && d.human.move.type==='spin'){ const k=d.human.move.t/d.human.move.dur; if(k>0.25&&k<0.85){ const ft=wp(r.legL.ankle); pts.push(ft); } } }
