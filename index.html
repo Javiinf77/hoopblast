@@ -538,6 +538,8 @@ const CFG = {
             turnSlow: 15, turnFast: 5.5, turnAgile: 22, plantAngle: 2.0, plantDecel: 40, backpedal: 0.82,
             // postura (L2 / clic derecho): rodillas flexionadas; en ataque habilita los regates, en defensa pasos laterales rápidos
             stanceOff: 0.62, stanceDef: 1.0, stanceDrain: 0.03,
+            // contacto: en postura el cuerpo ocupa más (piernas abiertas) y frena o empuja
+            stanceReach: 0.88, contactSlow: 0.82, postDrainAtk: 0.17, postDrainDef: 0.03, postPushSpeed: 1.1,
             // poste (L2 con balón, de espaldas a un defensor cerca del aro)
             postRange: 1.7, postRim: 7, postRimSolo: 6, postSpeed: 2.4 },
   // Energía estilo Rematch: solo el sprint gasta; al soltarlo se recupera rápido
@@ -1544,7 +1546,7 @@ function updateEnergy(p, wantSprint, dt) {
   let rate;
   if (p.sprinting) rate = -E.sprintDrain;
   else if (p.exhausted) rate = hs > 0.5 ? (wantSprint ? 0 : E.exhaustedMoveRegen) : regen * E.exhaustedIdleMul;   // agotado y forzando el sprint: no recupera
-  else rate = regen * (hs > 0.5 ? E.moveRegenMul : 1);
+  else rate = (p.pushT > 0 ? 0 : regen) * (hs > 0.5 ? E.moveRegenMul : 1);   // empujando en el poste no se recupera
   p.stamina = clamp(p.stamina + rate * dt, 0, 1);
   p.energyRate = rate;
   if (p.stamina <= 0.001) exhaust(p);
@@ -1655,6 +1657,9 @@ function updatePlayer(p, inp, dt) {
     else if (dRim < C.postRim) for (const o of live) if (o.team !== p.team && hdist(o.pos, p.pos) < C.postRange) { p.post = true; break; }
   }
   if (p.post) maxSp = Math.min(maxSp, C.postSpeed);
+  p.contactT = Math.max(0, (p.contactT || 0) - dt); p.pushT = Math.max(0, (p.pushT || 0) - dt);
+  if (p.post && p.pushT > 0) maxSp = Math.min(maxSp, C.postPushSpeed);   // empujando a un defensor se avanza despacio
+  if (p.contactT > 0 && holdingB && !p.move && !p.dunkSeq) maxSp *= C.contactSlow;   // pegado a un defensor en postura: va más lento
   // mano natural: al girar o desplazarte hacia el lado contrario al de la mano del balón, el balón pasa a la otra mano
   if (holdingB && !p.move && !p.charging && p.shotT <= 0 && p.onGround && !p.post && !p.stance && !p.inbounding) {
     const sp = Math.hypot(p.vel.x, p.vel.z), F = carrierFrame(p);
@@ -1790,15 +1795,33 @@ function playersCollide(a, b) {
       }
     }
   }
-  if (d >= 0.72) return;
+  // contacto con postura: la postura (L2) ocupa más espacio
+  const C = CFG.player, opp = a.team !== b.team;
+  const contactR = opp && (a.stance || b.stance || a.post || b.post) ? C.stanceReach : 0.72;
+  if (d >= contactR + 0.06) return;
+  if (opp && car && (car === a || car === b)) {   // contacto (con un margen): desgaste en el poste y frenado por la postura
+    const atk = car, def = car === a ? b : a;
+    if (atk.post) {
+      // poste: el atacante mete el cuerpo y hunde al defensor; cansa a los dos (más al que empuja)
+      const into = (atk.vel.x * (def.pos.x - atk.pos.x) + atk.vel.z * (def.pos.z - atk.pos.z)) / (d || 1);
+      if (into > 0.3) { spend(atk, C.postDrainAtk * CFG.step); spend(def, C.postDrainDef * CFG.step); atk.pushT = def.pushT = 0.2; }
+    } else if (def.stance && def.stunT <= 0) {
+      atk.contactT = 0.12;   // defensor en postura pegado: frena al que conduce (se aplica en updatePlayer)
+    }
+  }
+  if (d >= contactR) return;
   // quien gira pesa más: rueda alrededor del defensor
   let wa = 0.5, wb = 0.5;
   if (a.dunkSeq) { wa = 0; wb = 1; } else if (b.dunkSeq) { wa = 1; wb = 0; }
   else if (a.move && a.move.type === 'spin') { wa = 0.15; wb = 0.85; }
   else if (b.move && b.move.type === 'spin') { wa = 0.85; wb = 0.15; }
-  else if (car && car.post && (car === a || car === b)) { wa = car === a ? 0.35 : 0.65; wb = 1 - wa; }   // en el poste el atacante empuja al defensor hacia atrás
-  else if (car && (car === a || car === b)) { const def = car === a ? b : a; if (def.stance && def.team !== car.team) { wa = car === a ? 0.8 : 0.2; wb = 1 - wa; } }
-  const push = 0.72 - d, nx = dx / d, nz = dz / d;
+  else if (car && car.post && (car === a || car === b)) {
+    // en el poste el atacante empuja al defensor hacia atrás; si el defensor está en postura aguanta más
+    const def = car === a ? b : a, ws = def.stance ? 0.66 : 0.45;
+    wa = car === a ? ws : 1 - ws; wb = 1 - wa;
+  }
+  else if (car && (car === a || car === b)) { const def = car === a ? b : a; if (def.stance && def.team !== car.team) { wa = car === a ? 0.62 : 0.38; wb = 1 - wa; } }
+  const push = contactR - d, nx = dx / d, nz = dz / d;
   a.pos.x -= nx * push * wa; a.pos.z -= nz * push * wa; b.pos.x += nx * push * wb; b.pos.z += nz * push * wb;
 }
 
