@@ -201,6 +201,26 @@ button:focus-visible{ outline:3px solid var(--gold); outline-offset:3px; }
   border:1px solid var(--line); border-radius:8px; height:42px; cursor:pointer; }
 .cbtn:hover{ background:rgba(243,245,255,.13); }
 .cbtn.primary{ background:var(--chalk); color:var(--ink); border-color:var(--chalk); }
+/* ── Modo animaciones (depuración) ── */
+.animdbg{ position:fixed; inset:0; pointer-events:none; }
+.apanel{ pointer-events:auto; position:absolute; left:16px; top:16px; bottom:16px; width:270px; display:flex; flex-direction:column;
+  background:rgba(12,15,36,.92); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+.apanel header{ display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--line); }
+.apanel h2{ margin:0; font-family:Anton,Impact,sans-serif; font-weight:400; font-size:26px; }
+.apanel header .cbtn{ flex:0 0 auto; height:34px; padding:0 12px; }
+.alist{ overflow:auto; padding:6px 8px 12px; }
+.alist h4{ margin:12px 6px 4px; font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--gold); }
+.alist button{ display:block; width:100%; text-align:left; font:inherit; font-weight:700; font-size:15px; color:var(--muted); background:none; border:0; border-radius:6px; padding:6px 10px; cursor:pointer; }
+.alist button:hover{ background:rgba(243,245,255,.07); color:var(--chalk); }
+.alist button[aria-pressed="true"]{ background:var(--chalk); color:var(--ink); }
+.abar{ pointer-events:auto; position:absolute; left:302px; right:16px; bottom:16px; display:flex; flex-wrap:wrap; align-items:center; gap:10px;
+  background:rgba(12,15,36,.92); border:1px solid var(--line); border-radius:12px; padding:10px 14px; }
+.aname{ font-weight:800; font-size:18px; color:var(--chalk); }
+.atime{ font-weight:700; font-size:15px; color:var(--gold); min-width:70px; font-variant-numeric:tabular-nums; }
+.actl{ display:flex; gap:6px; }
+.actl .cbtn{ flex:0 0 auto; height:34px; padding:0 12px; font-size:14px; }
+.actl .cbtn[aria-pressed="true"]{ background:var(--chalk); color:var(--ink); }
+.ahint{ position:absolute; right:20px; top:12px; margin:0; font-size:13px; font-weight:600; color:var(--muted); text-shadow:0 1px 2px #000; }
 /* ── Indicador de postura (L2) ── */
 .stancelbl{ display:flex; align-items:center; gap:6px; font-weight:700; font-size:14px; color:var(--muted); }
 .stancelbl.on{ color:var(--gold); }
@@ -309,6 +329,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
       <button id="play" class="btn"><span>Jugar partido</span></button>
       <button id="train" class="btn ghost"><span>Entrenamiento</span></button>
       <button id="customize" class="btn ghost"><span>Personalizar</span></button>
+      <button id="animMode" class="btn ghost"><span>Animaciones</span></button>
     </div>
     <dl class="controls">
       <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>Moverte</dd>
@@ -359,6 +380,25 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
       <button id="custDone" class="cbtn primary">Listo</button>
     </footer>
   </div>
+</section>
+
+<!-- ── Modo animaciones (depuración): lista, controles de reproducción y cámara orbital ── -->
+<section id="animdbg" class="animdbg" hidden>
+  <aside class="apanel">
+    <header><h2>Animaciones</h2><button id="animBack" class="cbtn">Volver</button></header>
+    <div id="animList" class="alist"></div>
+  </aside>
+  <div class="abar">
+    <span id="animName" class="aname">—</span>
+    <span id="animTime" class="atime">0,00 s</span>
+    <div class="actl">
+      <button id="animPause" class="cbtn">Pausa</button>
+      <button id="animStep" class="cbtn" title="Avanzar un fotograma">+1 fotograma</button>
+      <button id="animRestart" class="cbtn">Repetir</button>
+    </div>
+    <div class="actl" id="animSpeeds"></div>
+  </div>
+  <p class="ahint">Arrastra para girar la cámara · rueda para acercar · Esc para salir</p>
 </section>
 
 <!-- ── Pausa ── -->
@@ -438,6 +478,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
    §30  BUCLE PRINCIPAL                  Paso de física fijo (120 Hz) y fotograma: entrada, física, animación, cámara, HUD y render.
    §31  MENÚS Y ARRANQUE                 Botones de los menús y puesta en marcha del bucle.
    §32  DATOS DE MODELOS               Mallas compactas de cabezas/pelo/nariz/barba (miiRawData). No hace falta leerlo.
+   §33  MODO ANIMACIONES (debug)       Reproducir cada animación por separado: lista, pausa, fotograma a fotograma, velocidad.
    ==============================================================================
    CÓMO FUNCIONA (resumen para orientarse rápido)
    · Un fotograma: frame() §30 → padFrame() §23 → entrada humana (humanFrameInput §22) o IA (aiThink §21)
@@ -1921,7 +1962,7 @@ stats = newStats();
 
 // Canasta: puntos, rótulo, efectos y cambio de estado.
 function onScore(hi) {
-  if (mode === 'train') { trainScore(hi); return; }
+  if (mode !== 'match') { trainScore(hi); return; }
   const team = hi === 1 ? 0 : 1, hp = hoops[hi], sh = ball.shot;
   let pts = 2, label = '¡Canasta!';
   if (sh && sh.team === team) {
@@ -2704,6 +2745,7 @@ const inMatch = () => state === 'countdown' || state === 'play' || state === 'sc
 function lock() { try { const r = renderer.domElement.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (e) { /* sin pointer lock: flechas */ } }
 addEventListener('keydown', e => {
   setInputMode('kb');
+  if (mode === 'anim' && state === 'play') { if (e.code === 'Escape') exitAnimMode(); else if (e.code === 'Space') { ANIM.paused = !ANIM.paused; animUI(); } e.preventDefault(); return; }
   if (inMatch() && ['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
   if (e.code === 'Escape') { if (!locked && (inMatch() || state === 'paused')) togglePause(); return; }
   if (e.repeat) return;
@@ -2729,6 +2771,7 @@ addEventListener('blur', () => { for (const k in keys) keys[k] = false; mouseHel
 renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
 renderer.domElement.addEventListener('mousedown', e => {
   setInputMode('kb');
+  if (mode === 'anim') { ANIM.drag = [e.clientX, e.clientY]; return; }
   if (!inMatch()) return;
   if (!locked) lock();
   if (e.button === 0) { mouseHeld = true; pendH.shoot = true; }
@@ -2820,7 +2863,7 @@ function padFrame(dt) {
       previewYaw += rx * 2.5 * dt;
       if (down(4) || down(5)) { custTab = (custTab + (down(5) ? 1 : 3)) % 4; buildCustomForm('ctab' + custTab); }   // L1/R1: pestañas
     }
-  } else if (inMatch()) {
+  } else if (inMatch() && mode !== 'anim') {
     if (down(9)) { pause(); PAD.prev = gp.buttons.map(x => x.pressed); return; }
     if (down(8) && mode === 'train') toggleTrainRival();                                          // Share: rival de práctica
     const holding = ball.holder === human, dunkRange = holding && canRunDunk(human);
@@ -3815,6 +3858,13 @@ function updateCamera(dt, T) {
     camera.fov = 56; camera.updateProjectionMatrix(); return;
   }
   if (state === 'paused') return;
+  if (mode === 'anim') {
+    // cámara orbital alrededor del jugador
+    const c = human.pos;
+    _cl.set(c.x, c.y + 1.15, c.z);
+    camPos.set(_cl.x + Math.sin(ANIM.az) * Math.cos(ANIM.el) * ANIM.dist, _cl.y + Math.sin(ANIM.el) * ANIM.dist, _cl.z + Math.cos(ANIM.az) * Math.cos(ANIM.el) * ANIM.dist);
+    camera.position.copy(camPos); camera.lookAt(_cl); camera.fov = 45; camera.updateProjectionMatrix(); return;
+  }
   if (camMode === 'broad') { updateBroadcastCam(dt); return; }
   const h = human;
   camYaw += ((keys.ArrowLeft ? 1 : 0) - (keys.ArrowRight ? 1 : 0)) * 2.6 * dt;
@@ -3893,6 +3943,7 @@ function step(dt, frames) {
   if (wantSwitch) { wantSwitch = false; switchToNearest(); }
   stepBall(dt);
   if (mode === 'train') { stepTraining(dt); return; }
+  if (mode === 'anim') return;
   const inb = ball.holder && ball.holder.inbounding ? ball.holder : null;
   if (inb && state === 'play') {
     inboundT -= dt;
@@ -3920,12 +3971,14 @@ function frame(now) {
   if (hitstop > 0) { hitstop -= rdt; updateCamera(rdt, T); renderer.render(scene, camera); return; }
   if (slowT > 0) slowT -= rdt;
   timeScale = lerp(timeScale, slowT > 0 ? 0.3 : 1, 1 - Math.exp(-10 * rdt));
-  const gdt = rdt * timeScale;
+  let gdt = rdt * timeScale;
+  if (mode === 'anim') { gdt *= ANIM.paused ? 0 : ANIM.speed; if (ANIM.stepOnce) { gdt = 1 / 60; ANIM.stepOnce = false; } }
 
   if (state === 'play' || state === 'scored') {
     if (mode === 'match') updateTeamPlans(gdt);
-    const hf = humanFrameInput();
-    const frames = live.map(p => p === human ? hf : aiThink(p, gdt));
+    if (mode === 'anim') animTick(gdt);
+    const hf = mode === 'anim' ? ANIM.inp : humanFrameInput();
+    const frames = live.map(p => p === human ? hf : mode === 'anim' ? (ANIM.npc.get(p) || ANIM.idle) : aiThink(p, gdt));
     acc += gdt; let n = 0;
     while (acc >= CFG.step && n < 12) { step(CFG.step, frames); acc -= CFG.step; n++; if (state !== 'play' && state !== 'scored') break; }
     if (state === 'scored') { stateT -= rdt; if (stateT <= 0) afterScore(); }
@@ -3948,7 +4001,7 @@ function frame(now) {
     }
   }
 
-  const vdt = state === 'paused' ? 0 : gdt;
+  const vdt = state === 'paused' ? 0 : (mode === 'anim' && gdt === 0 ? 0 : gdt);
   passMark.visible = false; passPreview = null;
   for (const p of live) animatePlayer(p, vdt, T);
   updateBallVisual(vdt);
@@ -3975,6 +4028,7 @@ setCamMode(camMode);
 $('play').addEventListener('click', startMatch);
 $('train').addEventListener('click', startTraining);
 $('customize').addEventListener('click', openCustomizer);
+$('animMode').addEventListener('click', enterAnimMode);
 $('custDone').addEventListener('click', closeCustomizer);
 $('custReset').addEventListener('click', () => { myLook = Object.assign({}, DEFAULT_LOOK); applyLook(); buildCustomForm(); });
 $('custRand').addEventListener('click', () => {
@@ -3994,6 +4048,134 @@ if (window.matchMedia('(pointer: coarse)').matches) $('touchnote').hidden = fals
 ball.pos.set(0, 6, 0);
 $('play').focus();
 requestAnimationFrame(frame);
+
+/* ==============================================================================
+   §33 MODO ANIMACIONES (depuración)
+   Lista de animaciones reproducibles una a una, en bucle, con pausa, fotograma a fotograma y velocidad.
+   Cada entrada: { cat, name, dur, setup(), tick(t) }. tick rellena ANIM.inp (entrada del jugador) y pulsa acciones.
+   Funciones: enterAnimMode, exitAnimMode, playAnim, animTick, animUI
+   ============================================================================== */
+const ANIM = { on: false, cur: null, t: 0, speed: 1, paused: false, stepOnce: false, az: 0.9, el: 0.28, dist: 5.2, drag: null,
+  inp: { move: new V3(), sprint: false, shootHold: false, stance: false, postShot: null }, npc: new Map(),
+  idle: { move: new V3(), sprint: false, shootHold: false } };
+const RIM1 = () => hoops[1].rimC;
+// coloca a un jugador (x, z, mirando hacia yaw) y limpia su estado
+function animPlace(p, x, z, yaw) {
+  p.pos.set(x, 0, z); p.vel.set(0, 0, 0); p.onGround = true; p.yaw = yaw === undefined ? Math.PI / 2 : yaw; p.spinAngle = 0;
+  p.move = null; p.nextMove = null; p.dunkSeq = null; p.charging = false; p.charge = 0; p.shotT = 0; p.shotKind = 'jump'; p.fakeT = 0;
+  p.stunT = 0; p.missT = 0; p.swipeT = 0; p.swipeCd = 0; p.blockT = 0; p.blockCd = 0; p.ctrlT = 0; p.plantT = 0; p.burstT = 0; p.explodeWin = 0;
+  p.throwT = 0; p.stamina = 1; p.exhausted = false; p.reactT = 0; p.pickupCd = 0; p.land = 0; p.hand = 1;
+  for (const k in p.moveCd) p.moveCd[k] = 0;
+  for (const k in p.pend) p.pend[k] = k === 'move' ? null : false;
+}
+const giveBall = p => { ball.holder = p; ball.shot = null; ball.pass = null; ball.guide = null; ball.pos.set(p.pos.x, 1, p.pos.z); ball.vel.set(0, 0, 0); };
+const fwd = (k) => ANIM.inp.move.set(k, 0, 0);   // hacia la canasta (+x)
+const H = () => human, P1 = () => players[1], R0 = () => players[3];
+// atajos para las entradas pulsadas
+const tap = (key, val) => { human.pend[key] = val === undefined ? true : val; };
+const once = (t, at, fn) => { if (t >= at && !ANIM.fired.has(at)) { ANIM.fired.add(at); fn(); } };
+const regate = (type, side) => ({ cat: 'Regates', name: { cross: 'Cruce', between: 'Entre las piernas', behind: 'Por la espalda', spin: 'Giro', hesi: 'Parada falsa', inout: 'Amago de cruce', step: 'Paso atrás' }[type], dur: 2.2,
+  setup() { animPlace(H(), -2, 0); giveBall(H()); }, tick(t) { fwd(t < 1.2 ? 0.55 : 0); once(t, 0.45, () => startMove(H(), type, side || -H().hand)); } });
+const mate = (type, name) => ({ cat: 'Mates', name, dur: 3.2,
+  setup() { animPlace(H(), RIM1().x - 5.5, 0.3); giveBall(H()); },
+  tick(t) { fwd(t < 0.55 ? 1 : 0); ANIM.inp.sprint = true; once(t, 0.5, () => startDunk(H(), type, false)); } });
+const ANIMS = [
+  { cat: 'Movimiento', name: 'Reposo', dur: 3, setup() { animPlace(H(), 0, 0); }, tick() {} },
+  { cat: 'Movimiento', name: 'Andar', dur: 3, setup() { animPlace(H(), -4, 0); }, tick(t) { fwd(0.4); } },
+  { cat: 'Movimiento', name: 'Correr', dur: 2.5, setup() { animPlace(H(), -6, 0); }, tick(t) { fwd(1); } },
+  { cat: 'Movimiento', name: 'Sprint', dur: 2.2, setup() { animPlace(H(), -8, 0); }, tick(t) { fwd(1); ANIM.inp.sprint = true; } },
+  { cat: 'Movimiento', name: 'Frenada y cambio de sentido', dur: 2.6, setup() { animPlace(H(), -4, 0); }, tick(t) { fwd(t < 1.1 ? 1 : -1); ANIM.inp.sprint = t < 1.1; } },
+  { cat: 'Movimiento', name: 'Bote con balón', dur: 3, setup() { animPlace(H(), -4, 0); giveBall(H()); }, tick(t) { fwd(0.6); } },
+  { cat: 'Movimiento', name: 'Agotado', dur: 3, setup() { animPlace(H(), -3, 0); H().stamina = 0.02; exhaust(H()); }, tick(t) { fwd(0.5); } },
+  { cat: 'Movimiento', name: 'Salto (rebote)', dur: 1.8, setup() { animPlace(H(), 0, 0); }, tick(t) { once(t, 0.3, () => tap('jump')); } },
+  { cat: 'Posturas', name: 'Postura defensiva (L2)', dur: 3, setup() { animPlace(H(), 0, 0, -Math.PI / 2); animPlace(R0(), -2.2, 0); giveBall(R0()); },
+    tick(t) { ANIM.inp.stance = true; ANIM.inp.move.set(0, 0, Math.sin(t * 2.5) > 0 ? 0.8 : -0.8); } },
+  { cat: 'Posturas', name: 'Postura ofensiva (L2)', dur: 3, setup() { animPlace(H(), 0, 0); giveBall(H()); }, tick(t) { ANIM.inp.stance = true; ANIM.inp.move.set(0, 0, Math.sin(t * 2) * 0.6); } },
+  { cat: 'Posturas', name: 'Poste de espaldas', dur: 3, setup() { animPlace(H(), RIM1().x - 4.2, 0.3); giveBall(H()); animPlace(R0(), RIM1().x - 3.2, 0.3, -Math.PI / 2); },
+    tick(t) { ANIM.inp.stance = true; fwd(t > 0.4 && t < 2.4 ? 0.7 : 0); } },
+  regate('cross'), regate('between'), regate('behind'), regate('spin'), regate('hesi'), regate('inout'), regate('step'),
+  { cat: 'Regates', name: 'Cruce + explosión', dur: 2.4, setup() { animPlace(H(), -4, 0); giveBall(H()); },
+    tick(t) { fwd(t < 0.4 ? 0.5 : 1); ANIM.inp.sprint = t > 0.72; once(t, 0.4, () => startMove(H(), 'cross', -H().hand)); } },
+  { cat: 'Regates', name: 'Giro de poste', dur: 2.4, setup() { animPlace(H(), RIM1().x - 4, 0.3, -Math.PI / 2); giveBall(H()); },
+    tick(t) { ANIM.inp.stance = t < 0.5; once(t, 0.45, () => startMove(H(), 'postspin', 1)); } },
+  { cat: 'Tiro', name: 'Tiro en suspensión', dur: 3.2, setup() { animPlace(H(), RIM1().x - 6, 0); giveBall(H()); }, tick(t) { ANIM.inp.shootHold = t > 0.3 && t < 0.98; if (t > 0.3) once(t, 0.3, () => tap('shoot')); } },
+  { cat: 'Tiro', name: 'Amago de tiro', dur: 2, setup() { animPlace(H(), RIM1().x - 6, 0); giveBall(H()); }, tick(t) { ANIM.inp.shootHold = t > 0.4 && t < 0.5; once(t, 0.4, () => tap('shoot')); } },
+  { cat: 'Tiro', name: 'Bandeja', dur: 3, setup() { animPlace(H(), RIM1().x - 6.5, 0.6); giveBall(H()); },
+    tick(t) { fwd(0.55); /* trotando: corriendo rápido sería un mate */ if (hdist(H().pos, RIM1()) < 2.4 && ball.holder === H()) { ANIM.inp.shootHold = true; tap('shoot'); } else ANIM.inp.shootHold = false; } },
+  { cat: 'Tiro', name: 'Gancho (poste)', dur: 3.2, setup() { animPlace(H(), RIM1().x - 3.5, 0.3, -Math.PI / 2); giveBall(H()); },
+    tick(t) { ANIM.inp.stance = t < 0.35; ANIM.inp.postShot = t > 0.3 && t < 0.98 ? 'hook' : null; ANIM.inp.shootHold = !!ANIM.inp.postShot; } },
+  { cat: 'Tiro', name: 'Fadeaway (poste)', dur: 3.2, setup() { animPlace(H(), RIM1().x - 4, 0.3, -Math.PI / 2); giveBall(H()); },
+    tick(t) { ANIM.inp.stance = t < 0.35; ANIM.inp.postShot = t > 0.3 && t < 0.98 ? 'fade' : null; ANIM.inp.shootHold = !!ANIM.inp.postShot; } },
+  mate('one', 'Una mano'), mate('two', 'Dos manos'), mate('tomahawk', 'Tomahawk'), mate('windmill', 'Molino'), mate('spin360', '360'), mate('reverse', 'Reverso'),
+  ...[['chest', 'Pase directo'], ['bounce', 'Pase picado'], ['lob', 'Pase bombeado']].map(([ty, name]) => ({ cat: 'Pases', name, dur: 2.4,
+    setup() { animPlace(H(), -3, 0); giveBall(H()); animPlace(P1(), 4, 0, -Math.PI / 2); },
+    tick(t) { ANIM.inp.move.set(t < 0.6 ? 0.35 : 0, 0, 0); once(t, 0.5, () => tap('pass', ty)); } })),
+  { cat: 'Pases', name: 'Recibir un pase', dur: 2.4, setup() { animPlace(H(), 0, 0, -Math.PI / 2); animPlace(P1(), -7, 0); giveBall(P1()); },
+    tick(t) { once(t, 0.4, () => pass(P1(), H(), false, 'chest')); } },
+  { cat: 'Defensa', name: 'Robo (manotazo)', dur: 2.2, setup() { animPlace(H(), 1.3, 0, -Math.PI / 2); animPlace(R0(), 0, 0); giveBall(R0()); },
+    tick(t) { ANIM.inp.stance = true; once(t, 0.6, () => tap('steal')); } },
+  { cat: 'Defensa', name: 'Tapón', dur: 3, setup() { animPlace(H(), RIM1().x - 5.7, 0, -Math.PI / 2); animPlace(R0(), RIM1().x - 7, 0); R0().attackSide = 1; giveBall(R0()); },
+    tick(t) { ANIM.npc.set(R0(), { move: new V3(), sprint: false, shootHold: t > 0.2 && t < 0.88 }); once(t, 0.62, () => tap('shoot')); } },
+];
+function animUI() {
+  $('animPause').textContent = ANIM.paused ? 'Reanudar' : 'Pausa';
+  for (const b of $('animSpeeds').children) b.setAttribute('aria-pressed', String(+b.dataset.s === ANIM.speed));
+  for (const b of $('animList').querySelectorAll('button')) b.setAttribute('aria-pressed', String(+b.dataset.i === ANIM.cur));
+  $('animName').textContent = ANIM.cur === null ? '—' : ANIMS[ANIM.cur].cat + ' · ' + ANIMS[ANIM.cur].name;
+}
+function buildAnimUI() {
+  const list = $('animList'); list.innerHTML = ''; let cat = '';
+  ANIMS.forEach((a, i) => {
+    if (a.cat !== cat) { cat = a.cat; const h = document.createElement('h4'); h.textContent = cat; list.appendChild(h); }
+    const b = document.createElement('button'); b.textContent = a.name; b.dataset.i = i; b.onclick = () => playAnim(i); list.appendChild(b);
+  });
+  const sp = $('animSpeeds'); sp.innerHTML = '';
+  for (const s of [0.1, 0.25, 0.5, 1]) { const b = document.createElement('button'); b.className = 'cbtn'; b.dataset.s = s; b.textContent = '×' + String(s).replace('.', ','); b.onclick = () => { ANIM.speed = s; animUI(); }; sp.appendChild(b); }
+}
+// arranca (o reinicia) una animación concreta
+function playAnim(i) {
+  const a = ANIMS[i]; ANIM.cur = i; ANIM.t = 0; ANIM.fired = new Set(); ANIM.npc.clear();
+  // en escena: el jugador y, si la animación lo necesita, un compañero o un rival
+  for (const p of players) if (p !== human) { animPlace(p, 0, 0); p.pos.set(0, -50, 0); p.rig.root.visible = p.rig.ring.visible = false; }
+  hoops.forEach(h => { h.hang = null; });
+  ball.holder = null; ball.pos.set(0, -5, 0); ball.vel.set(0, 0, 0); ball.shot = null; ball.pass = null; ball.guide = null;
+  human.attackSide = 1; R0().attackSide = 0;
+  a.setup();
+  live = [human, P1(), R0()].filter(p => p === human || p.pos.y > -1);
+  for (const p of live) { p.rig.root.visible = p.rig.ring.visible = true; p.rig.root.position.copy(p.pos); }
+  animUI();
+}
+// cada fotograma: tiempo de la animación, entrada guionizada y bucle
+function animTick(gdt) {
+  if (ANIM.cur === null) return;
+  const a = ANIMS[ANIM.cur];
+  ANIM.t += gdt;
+  if (ANIM.t > a.dur) { playAnim(ANIM.cur); return; }
+  const I = ANIM.inp; I.move.set(0, 0, 0); I.sprint = false; I.shootHold = false; I.stance = false; I.postShot = null;
+  a.tick(ANIM.t);
+  $('animTime').textContent = ANIM.t.toFixed(2).replace('.', ',') + ' s';
+}
+function enterAnimMode() {
+  SFX.init();
+  mode = 'anim'; ANIM.paused = false; ANIM.speed = 1;
+  resetEntities(); stats = newStats(); resetTrainStats();
+  for (const id of ['menu', 'over', 'pause', 'hud']) $(id).hidden = true;
+  $('animdbg').hidden = false; possTeam = -1; state = 'play';
+  buildAnimUI(); playAnim(ANIM.cur === null ? 0 : ANIM.cur);
+}
+function exitAnimMode() {
+  $('animdbg').hidden = true;
+  for (const p of players) { p.rig.root.visible = p.rig.ring.visible = true; p.attackSide = p.team === 0 ? 1 : 0; }
+  ANIM.npc.clear(); mode = 'match'; live = players; toMenu();
+}
+$('animBack').addEventListener('click', exitAnimMode);
+$('animPause').addEventListener('click', () => { ANIM.paused = !ANIM.paused; animUI(); });
+$('animStep').addEventListener('click', () => { ANIM.paused = true; ANIM.stepOnce = true; animUI(); });
+$('animRestart').addEventListener('click', () => { if (ANIM.cur !== null) playAnim(ANIM.cur); });
+// cámara orbital: arrastrar gira, rueda acerca/aleja
+addEventListener('mousemove', e => { if (mode !== 'anim' || !ANIM.drag) return; ANIM.az -= (e.clientX - ANIM.drag[0]) * 0.008; ANIM.el = clamp(ANIM.el + (e.clientY - ANIM.drag[1]) * 0.006, -0.1, 1.3); ANIM.drag = [e.clientX, e.clientY]; });
+addEventListener('mouseup', () => { ANIM.drag = null; });
+renderer.domElement.addEventListener('wheel', e => { if (mode !== 'anim') return; ANIM.dist = clamp(ANIM.dist * (e.deltaY > 0 ? 1.1 : 0.9), 2, 14); e.preventDefault(); }, { passive: false });
 
 /* ==============================================================================
    §32 DATOS DE MODELOS (cabezas, pelo, nariz, barba estilo Mii) — datos compactos, no editar
