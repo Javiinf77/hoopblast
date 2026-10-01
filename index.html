@@ -1583,6 +1583,7 @@ function steer(p, move, maxSp, dt) {
 }
 
 // Paso de física del jugador: timers, postura, energía, regates, movimiento, salto, límites y orientación.
+const _mv = new V3();
 function updatePlayer(p, inp, dt) {
   const C = CFG.player;
   p.pickupCd = Math.max(0, p.pickupCd - dt);
@@ -1669,7 +1670,14 @@ function updatePlayer(p, inp, dt) {
   }
 
   p.plantT = Math.max(0, p.plantT - dt);
-  if (p.ctrlT <= 0) steer(p, move, maxSp, dt);
+  // tras un cambio de dirección: mientras sigas empujando el stick hacia la dirección vieja, avanzas en la nueva
+  let moveEff = move;
+  if (p.dirOverride) {
+    const o = p.dirOverride, mm = Math.hypot(move.x, move.z); o.t -= dt;
+    if (ball.holder !== p || o.t <= 0 || mm < 0.3 || (move.x * o.from.x + move.z * o.from.z) / mm < 0.5) p.dirOverride = null;
+    else { _mv.set(o.to.x * mm, 0, o.to.z * mm); moveEff = _mv; }
+  }
+  if (p.ctrlT <= 0) steer(p, moveEff, maxSp, dt);
   if (jump && p.onGround && !p.move) { p.vel.y = C.jump * (p.exhausted ? 0.8 : 1); p.onGround = false; spend(p, CFG.energy.jump); if (p === human) sfx('jump'); }
   p.vel.y += CFG.gravity * dt * (p.vel.y < 0 ? 1.2 : 1);
   p.pos.addScaledVector(p.vel, dt);
@@ -1766,6 +1774,7 @@ function startMove(p, type, side, momentum) {
   p.move = { type, t: 0, dur: M.dur, side: s, from: p.hand, burst: false };
   if (p.chainT > CFG.moves.chainGap) { p.chain = []; p.chainHand = p.hand; }   // empieza una secuencia nueva
   p.chain.push(type); p.explodeWin = 0; p.burstT = 0;
+  if (type === 'cross' || type === 'between' || type === 'behind' || type === 'behindAir' || type === 'spin') mirrorDir(p, s);
   provokeDefenders(p, type, s);
   p.protectT = M.prot * (p.heat >= 2.5 ? CFG.moves.heatPenalty : 1) * (p.exhausted ? CFG.energy.exhaustedProt : 1);   // encadenar regates o estar agotado protege menos
   spend(p, M.cost);
@@ -1798,7 +1807,7 @@ function startMove(p, type, side, momentum) {
     const c = hoops[p.attackSide].rimC, ax = c.x - p.pos.x, az = c.z - p.pos.z, al = Math.hypot(ax, az) || 1;
     p.move.back = { x: -ax / al, z: -az / al }; p.ctrlT = M.dur; p.stepT = 1.1; dx = p.vel.x; dz = p.vel.z; spd = hs;
   }
-  else if (type === 'behind' || type === 'behindAir') { dx = F.fx + F.rx * s * 0.35; dz = F.fz + F.rz * s * 0.35; spd = Math.max(hs * 0.8, 3.2); p.ctrlT = 0.2; }
+  else if (type === 'behind' || type === 'behindAir') { mirrorDir(p, s); dx = p.move.newDir.x; dz = p.move.newDir.z; spd = Math.max(hs * 0.85, 3.2); p.ctrlT = 0.2; }
   if (momentum && (type === 'behind' || type === 'behindAir')) { spd *= 1.2; spend(p, M.cost * 0.5); }
   if (momentum && (type === 'cross' || type === 'between')) spend(p, M.cost * 0.5);   // versión de escape con sprint: más explosiva
   const l = Math.hypot(dx, dz) || 1;
@@ -1856,13 +1865,26 @@ function explode(p, move) {
 }
 
 // parada falsa: si durante la parada explotas, los defensores que la compraron se quedan congelados
+// Cambio de dirección de los regates: refleja la dirección de avance respecto a la línea hacia la canasta.
+// Diagonal izquierda + cambio a la derecha → diagonal derecha (si vas recto, sale a unos 40° hacia el lado del cambio)
+function mirrorDir(p, s) {
+  const c = hoops[p.attackSide].rimC, ax = c.x - p.pos.x, az = c.z - p.pos.z, al = Math.hypot(ax, az) || 1;
+  const fx = ax / al, fz = az / al, rx = -fz, rz = fx;            // hacia la canasta y su derecha
+  let vx = p.vel.x, vz = p.vel.z, vl = Math.hypot(vx, vz);
+  if (vl < 1) { const F = carrierFrame(p); vx = F.fx; vz = F.fz; vl = 1; }
+  vx /= vl; vz /= vl;
+  const th = Math.atan2(vx * rx + vz * rz, vx * fx + vz * fz);   // ángulo actual respecto a la canasta (+ derecha)
+  const th2 = s * clamp(Math.abs(th), 0.7, 2.4);
+  p.move.oldDir = { x: vx, z: vz };
+  p.move.newDir = { x: fx * Math.cos(th2) + rx * Math.sin(th2), z: fz * Math.cos(th2) + rz * Math.sin(th2) };
+}
 // Cruce / entre las piernas: dirección que cambia con suavidad (primero al lado del balón, luego arrastre al nuevo lado y hacia delante)
 function moveSteer(p, dt) {
   const m = p.move, k = Math.min(1, m.t / m.dur), s = m.side, f = m.f, r = m.r;
   const sell = 1 - smooth(Math.min(1, k / 0.35));                      // 0→0,35: amago hacia el lado de la mano
   const drag = smooth(clamp((k - 0.2) / 0.7, 0, 1));                    // 0,2→0,9: arrastre al otro lado
-  const lx = -s * 0.35 * sell + s * 0.85 * drag, fz = 0.75 + 0.15 * drag;
-  const dx = f.x * fz + r.x * lx, dz = f.z * fz + r.z * lx, l = Math.hypot(dx, dz) || 1;
+  const O = m.oldDir, N = m.newDir;
+  const dx = O.x * (1 - drag) + N.x * drag - r.x * s * 0.3 * sell, dz = O.z * (1 - drag) + N.z * drag - r.z * s * 0.3 * sell, l = Math.hypot(dx, dz) || 1;
   const sp = m.sp0 * (1 - 0.25 * Math.sin(Math.PI * Math.min(1, k * 1.4))) + (m.boost ? 3.6 : 1.6) * drag;   // frena un poco al cambiar el peso y sale
   const a = 1 - Math.exp(-10 * dt);
   p.vel.x += (dx / l * sp - p.vel.x) * a; p.vel.z += (dz / l * sp - p.vel.z) * a;
@@ -1916,6 +1938,11 @@ function endMove(p) {
   if (t === 'cross' || t === 'between' || t === 'behind' || t === 'behindAir') p.hand = p.move.side;
   if (p.move.type === 'spin' || p.move.type === 'postspin') { p.yaw = p.yaw + p.spinAngle; p.spinAngle = 0; }
   const burst = p.move.burst;
+  if (p.move.newDir) {
+    const N = p.move.newDir;
+    if (t === 'spin') { const sp = Math.max(3, Math.hypot(p.vel.x, p.vel.z)); p.vel.x = N.x * sp; p.vel.z = N.z * sp; }
+    p.dirOverride = { from: p.move.oldDir, to: N, t: 1.6 };
+  }
   if (t === 'cross' || t === 'between' || t === 'behind' || t === 'behindAir' || t === 'spin' || t === 'postspin') ball.phase = 0;   // el bote normal arranca arriba, donde acaba el cruce
   p.move = null; p.chainT = 0;
   if (!burst) p.explodeWin = CFG.moves.explodeWin;
@@ -4199,7 +4226,7 @@ function animPlace(p, x, z, yaw) {
   p.throwT = 0; p.stamina = 1; p.exhausted = false; p.reactT = 0; p.pickupCd = 0; p.land = 0; p.hand = 1;
   p.heat = 0; p.chain = []; p.chainT = 9; p.cutT = 0; p.swatT = 0; p.fakeCd = 0; p.stepT = 0; p.callT = 0; p.protectT = 0;
   p.speedMul = 1; p.guarded = false; p.stance = false; p.post = false; p.blockDone = false; p.blockMissLand = false; p.beat = null;
-  p.anim = 0; p.rebT = 0;   // fase de la zancada y rebote
+  p.anim = 0; p.rebT = 0; p.dirOverride = null;   // fase de la zancada y rebote
   for (const k in p.moveCd) p.moveCd[k] = 0;
   for (const k in p.pend) p.pend[k] = k === 'move' ? null : false;
 }
@@ -4242,6 +4269,9 @@ const ANIMS = [
   ...[1, -1].map(h => ({ cat: 'Regates', name: 'Giro' + (h > 0 ? ' (der. → izq.)' : ' (izq. → der.)'), dur: 2.4,
     setup() { animPlace(H(), -2, 0); giveBall(H()); H().hand = h; }, tick(t) { fwd(t < 0.45 ? 0.5 : 0); once(t, 0.45, () => startMove(H(), 'spin', -h)); } })),
   { cat: 'Regates', name: 'Paso atrás', dur: 2.4, setup() { animPlace(H(), RIM1().x - 6.5, 0); giveBall(H()); }, tick(t) { fwd(t < 0.4 ? 0.45 : 0); once(t, 0.4, () => startMove(H(), 'step', 0)); } },
+  ...[['cross', 'Cruce'], ['behind', 'Espalda'], ['spin', 'Giro']].map(([ty, nm]) => ({ cat: 'Cambio de dirección', name: 'Diagonal izq. → ' + nm + ' → diagonal der.', dur: 2.8,
+    setup() { animPlace(H(), -5, 1.5); giveBall(H()); H().hand = -1; },
+    tick(t) { ANIM.inp.move.set(0.7, 0, -0.7); once(t, 0.7, () => startMove(H(), ty, 1)); } })),
   { cat: 'Regates', name: 'Cruce explosivo', dur: 2.4, setup() { animPlace(H(), -4, 0); giveBall(H()); },
     tick(t) { if (t < 0.4) fwd(0.55); else ANIM.inp.move.set(0.6, 0, -0.5); ANIM.inp.sprint = t > 0.4; once(t, 0.4, () => startMove(H(), 'cross', -1, true)); } },
   ...[1, -1].map(sd => ({ cat: 'Regates', name: 'Giro de poste' + (sd > 0 ? ' (hacia la derecha)' : ' (hacia la izquierda)'), dur: 2.4,
