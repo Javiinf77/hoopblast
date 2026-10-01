@@ -283,7 +283,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
       <span class="chip"><kbd data-kb="G" data-pad="RS ←">G</kbd>Piernas<i id="cd-between"></i></span>
       <span class="chip"><kbd data-kb="R" data-pad="RS ↙">R</kbd>Espalda<i id="cd-behind"></i></span>
       <span class="chip"><kbd data-kb="X" data-pad="R3">X</kbd>Giro<i id="cd-spin"></i></span>
-      <span class="chip"><kbd data-kb="C" data-pad="RS ↓">C</kbd>Paso atrás<i id="cd-step"></i></span>
+      <span class="chip"><kbd data-kb="S + clic" data-pad="LS ↓ + □">S + clic</kbd>Paso atrás<i id="cd-step"></i></span>
     </div>
   </div>
   <div id="smeter" class="smeter"><div class="strack"><i id="swin"></i><i id="sfill"></i></div><span id="slabel" class="slabel"></span></div>
@@ -339,7 +339,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
       <dt><kbd>Z</kbd> / <kbd>V</kbd></dt><dd>Pase picado (bota en el suelo) / pase bombeado (por encima de los defensores)</dd>
       <div class="sep"></div>
       <dt><kbd>F</kbd> <kbd>G</kbd> <kbd>R</kbd></dt><dd>Cruce, entre las piernas y por la espalda (cambian tu dirección: de diagonal izquierda a diagonal derecha y al revés)</dd>
-      <dt><kbd>X</kbd> <kbd>C</kbd></dt><dd>Giro y paso atrás. El paso atrás también sale con S (hacia atrás) + mantener clic: enlaza con el tiro y lo sueltas al soltar el clic</dd>
+      <dt><kbd>X</kbd> / paso atrás</dt><dd>Giro. Paso atrás: S (hacia atrás, lejos del aro) + mantener clic; el tiro se va levantando mientras retrocedes y sale al soltar el clic</dd>
       <dt>Poste</dt><dd>Con balón, mantén clic derecho cerca del aro (a menos de 6 m, o de 7 m si tienes un defensor pegado): te pones de espaldas y, si hay defensor, le empujas hacia atrás. Mantén <kbd>G</kbd> para gancho o <kbd>C</kbd> para fadeaway y suelta para tirar; <kbd>F</kbd> giro de poste</dd>
       <dt>Explosión</dt><dd>Justo después de un regate, dirección + <kbd>Mayús</kbd>: sales disparado. Un regate sirve para provocar al defensor; la explosión es lo que lo supera</dd>
       <dt>Corriendo al aro</dt><dd>Mates: clic una mano, <kbd>F</kbd> dos manos, <kbd>R</kbd> molino, <kbd>X</kbd> 360. Con Mayús: clic tomahawk, <kbd>F</kbd> reverso. Saltando junto al aro, clic también machaca</dd>
@@ -352,7 +352,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
     <dl class="controls">
       <dt>Stick izquierdo</dt><dd>Moverte: poco inclinado andas, del todo corres. <kbd>R1</kbd> (o <kbd>R2</kbd>) esprinta</dd>
       <dt><kbd>L2</kbd> mantener</dt><dd>Postura: flexionas rodillas y bajas. Sin balón, postura defensiva (pasos laterales rápidos, miras al rival). Con balón, postura ofensiva: bote bajo y protegido, cuesta más robártelo pero vas más lento. Pulsarla corriendo con balón hace una parada en seco</dd>
-      <dt>Stick derecho</dt><dd>Sin balón: cámara. Con balón: regates como en NBA 2K (mueve y suelta) con el balón en la derecha (se invierte con la izquierda): ↖ cruce, ← entre las piernas, ↙ por la espalda, ↓ paso atrás (o stick izquierdo hacia atrás + mantener □: paso atrás y tiro), girar el stick o <kbd>R3</kbd> giro. Con <kbd>R1</kbd> salen más explosivos. Tras un regate, empuja el stick izquierdo + <kbd>R1</kbd> para explotar: si el defensor ha picado, lo dejas atrás. Puedes encadenar regates pulsando el siguiente durante el anterior</dd>
+      <dt>Stick derecho</dt><dd>Sin balón: cámara. Con balón: regates como en NBA 2K (mueve y suelta) con el balón en la derecha (se invierte con la izquierda): ↖ cruce, ← entre las piernas, ↙ por la espalda, girar el stick o <kbd>R3</kbd> giro. Con <kbd>R1</kbd> salen más explosivos. Tras un regate, empuja el stick izquierdo + <kbd>R1</kbd> para explotar: si el defensor ha picado, lo dejas atrás. Puedes encadenar regates pulsando el siguiente durante el anterior</dd>
       <dt><kbd>L2</kbd> en el poste</dt><dd>Cerca del aro (con o sin defensor): <kbd>L2</kbd> + stick derecho ↑ gancho, ↓ fadeaway (mantén y suelta en la franja verde), ←/→ giro de poste</dd>
       <dt><kbd>□</kbd></dt><dd>Con balón: mantén para el medidor de tiro; toque corto, amago de tiro (bandeja cerca del aro). Sin balón: tapón</dd>
       <dt><kbd>✕</kbd> <kbd>○</kbd> <kbd>△</kbd></dt><dd>Con balón: pase directo, picado y bombeado al compañero hacia el que apuntas con el stick izquierdo (anillo blanco). Sin balón: <kbd>✕</kbd> saltar, <kbd>○</kbd> robar y <kbd>△</kbd> salto al rebote, que se convierte en tapón si el rival está tirando o machacando cerca</dd>
@@ -1626,7 +1626,7 @@ function updatePlayer(p, inp, dt) {
   let maxSp = (p.sprinting ? C.sprint * (0.85 + 0.15 * p.stamina) : C.speed) * p.speedMul;
   if (p.exhausted) maxSp *= CFG.energy.exhaustedSpeed;
   if (p.stance) maxSp *= holdingB ? C.stanceOff : C.stanceDef;
-  if (p.charging && p.autoShot) maxSp *= 0.12;   // tras el paso atrás se planta para tirar (aunque sigas con el stick atrás)
+  if ((p.charging && !p.move && p.shotKind === 'jump') || (p.shotT > 0 && p.shotKind === 'jump')) { maxSp = 0; p.vel.x = 0; p.vel.z = 0; }   // tirando: fijo en su sitio
   // poste: postura con balón, de espaldas a un defensor pegado y cerca del aro
   p.post = false;
   if (p.stance && holdingB && !p.move) {
@@ -1659,7 +1659,7 @@ function updatePlayer(p, inp, dt) {
   if (p.move) {
     p.move.t += dt;
     if (p.move.type === 'spin' || p.move.type === 'postspin') pivotSpin(p, dt);
-    if (p.move.type === 'step') stepBackSteer(p, dt);
+    if (p.move.type === 'step') { stepBackSteer(p, dt); if (p.move.shotLinked && p.charging) p.charge = Math.min(CFG.shot.late, p.charge + dt / CFG.shot.fill); }
     if (p.move.type === 'hesi' && !p.move.burst && p.move.t >= 0.2 && sprint && Math.hypot(move.x, move.z) > 0.5 && !p.exhausted) hesiBurst(p, move);
     if (p.move.type === 'cross' || p.move.type === 'between') moveSteer(p, dt);
     if (p.move.type === 'inout' && p.move.jab && p.move.t >= 0.14) {
@@ -1940,7 +1940,10 @@ function endMove(p) {
   if (t === 'cross' || t === 'between' || t === 'behind' || t === 'behindAir') p.hand = p.move.side;
   if (p.move.type === 'spin' || p.move.type === 'postspin') { p.yaw = p.yaw + p.spinAngle; p.spinAngle = 0; }
   const burst = p.move.burst;
-  if (t === 'step' && ball.holder === p) {
+  if (t === 'step' && ball.holder === p && p.move.shotLinked) {
+    // paso atrás + tiro: la carga sigue donde iba; se suelta al soltar el botón (si ya lo soltaste, sale al aterrizar)
+    p.charging = true; p.autoShot = true; p.autoHeld = true; p.autoPlan = CFG.shot.late;
+  } else if (t === 'step' && ball.holder === p) {
     // tiro tras paso atrás: el medidor arranca ya cargado y sale solo con buen tiempo;
     // si mantienes □ / clic durante la carga, el momento de soltar lo decides tú
     p.charging = true; p.charge = 0.3; p.shotKind = 'jump'; p.autoShot = true; p.autoHeld = false;
@@ -2184,7 +2187,7 @@ function beginShot(p) {
   const c = hoops[p.attackSide].rimC, dx = c.x - p.pos.x, dz = c.z - p.pos.z, l = Math.hypot(dx, dz) || 1;
   if (p.shotKind === 'fade') { p.shotT = 0.2; p.vel.set(-dx / l * 3.2, 4.0, -dz / l * 3.2); }          // salta hacia atrás
   else if (p.shotKind === 'hook') { p.shotT = 0.18; p.vel.set(dx / l * 1.0, 3.8, dz / l * 1.0); }        // gancho: impulso hacia el aro con una pierna
-  else { p.shotT = 0.16; p.vel.y = 3.4; p.vel.x *= 0.3; p.vel.z *= 0.3; }
+  else { p.shotT = 0.16; p.vel.y = 3.4; p.vel.x = 0; p.vel.z = 0; }   // salto vertical: no se desplaza
   p.onGround = false;
 }
 
@@ -2579,11 +2582,15 @@ function handleActions(p, inp, dt) {
   // paso atrás: stick izquierdo hacia atrás (lejos del aro) + mantener tiro → paso atrás y tiro encadenado
   if (!p.charging && inp.shootPress && inp.shootHold && p.onGround && !inp.postShot) {
     const c = hoops[p.attackSide].rimC, ax = c.x - p.pos.x, az = c.z - p.pos.z, al = Math.hypot(ax, az) || 1, mm = Math.hypot(inp.move.x, inp.move.z);
-    if (mm > 0.5 && (inp.move.x * ax + inp.move.z * az) / (mm * al) < -0.6 && startMove(p, 'step', 0)) return;
+    if (mm > 0.5 && (inp.move.x * ax + inp.move.z * az) / (mm * al) < -0.6 && startMove(p, 'step', 0)) {
+      p.move.shotLinked = true; p.charging = true; p.charge = 0; p.shotKind = 'jump';   // el tiro se va levantando durante el paso atrás
+      return;
+    }
   }
   if (!p.charging && inp.shootHold && (inp.shootPress || !p.isHuman || inp.postShot)) {
     if (inLayupRange(p) && p.onGround && !inp.postShot) { layup(p); return; }
     p.charging = true; p.charge = 0; p.shotKind = inp.postShot || 'jump';   // gancho / fadeaway desde el poste
+    if (p.shotKind === 'jump') { p.vel.x = 0; p.vel.z = 0; }
   }
   if (inp.fake && !p.charging && p.onGround) { pumpFake(p); return; }
   if (p.charging) {
@@ -2905,7 +2912,6 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyG') pendH.move = 'between';
   if (e.code === 'KeyR') pendH.move = 'behind';
   if (e.code === 'KeyX') pendH.move = 'spin';
-  if (e.code === 'KeyC') pendH.move = 'step';
   if (e.code === 'KeyP' && mode === 'train' && state === 'play') toggleTrainRival();
   if (e.code === 'KeyB') { ballCam = !ballCam; $('camlbl').textContent = ballCam ? 'Cámara libre' : 'Cámara al balón'; }
 });
@@ -3045,7 +3051,7 @@ function padFrame(dt) {
         // al soltar: media vuelta de stick = giro; si no, el regate según la dirección
         if (Math.abs(PAD.rot) > 2.4) { pendH.move = 'spin'; PAD.side = PAD.rot > 0 ? 1 : -1; }
         else if (PAD.peak > 0.8 && PAD.rotT < 0.6) {
-          const map = { 0: null, 1: null, 2: null, 3: 'spin', 4: 'step', '-4': 'step', '-1': 'cross', '-2': 'between', '-3': 'behind' };
+          const map = { 0: null, 1: null, 2: null, 3: 'spin', 4: null, '-4': null, '-1': 'cross', '-2': 'between', '-3': 'behind' };
           const type = map[PAD.flickO];
           if (type) pendH.move = type; PAD.side = type === 'spin' ? hand : -hand;
         }
@@ -4287,7 +4293,8 @@ const ANIMS = [
     setup() { animPlace(H(), -2, 0); giveBall(H()); H().hand = h; }, tick(t) { fwd(t < 1.3 ? 0.5 : 0); once(t, 0.45, () => startMove(H(), ty, -h)); } }))),
   ...[1, -1].map(h => ({ cat: 'Regates', name: 'Giro' + (h > 0 ? ' (der. → izq.)' : ' (izq. → der.)'), dur: 2.4,
     setup() { animPlace(H(), -2, 0); giveBall(H()); H().hand = h; }, tick(t) { fwd(t < 0.45 ? 0.5 : 0); once(t, 0.45, () => startMove(H(), 'spin', -h)); } })),
-  { cat: 'Regates', name: 'Paso atrás + tiro', dur: 3.4, setup() { animPlace(H(), RIM1().x - 6.5, 0); giveBall(H()); }, tick(t) { fwd(t < 0.4 ? 0.45 : 0); once(t, 0.4, () => startMove(H(), 'step', 0)); } },
+  { cat: 'Regates', name: 'Paso atrás + tiro', dur: 3.4, setup() { animPlace(H(), RIM1().x - 6.5, 0); giveBall(H()); },
+    tick(t) { if (t < 0.4) fwd(0.45); else if (t < 1.1) ANIM.inp.move.set(-1, 0, 0); ANIM.inp.shootHold = t >= 0.4 && t < 1.08; once(t, 0.4, () => tap('shoot')); } },   // stick atrás + mantener tiro, suelta al aterrizar
   ...[['cross', 'Cruce'], ['behind', 'Espalda'], ['spin', 'Giro']].map(([ty, nm]) => ({ cat: 'Cambio de dirección', name: 'Diagonal izq. → ' + nm + ' → diagonal der.', dur: 2.8,
     setup() { animPlace(H(), -5, 1.5); giveBall(H()); H().hand = -1; },
     tick(t) { ANIM.inp.move.set(0.7, 0, -0.7); once(t, 0.7, () => startMove(H(), ty, 1)); } })),
