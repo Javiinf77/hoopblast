@@ -294,7 +294,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
   </div>
   <div id="pin" class="pin"></div>
   <div id="headbar" class="headbar"><i id="headfill"></i></div>
-  <div class="hint"><span><kbd data-kb="E" data-pad="○">E</kbd>Robar</span><span><kbd data-kb="Q" data-pad="△">Q</kbd>Pase o pedir</span><span><kbd data-kb="Clic der." data-pad="L2">Clic der.</kbd>Postura</span><span><kbd data-kb="B" data-pad="L1">B</kbd><span id="camlbl">Cámara al balón</span></span><span><kbd data-kb="Esc" data-pad="Options">Esc</kbd>Pausa</span></div>
+  <div class="hint"><span><kbd data-kb="E" data-pad="○">E</kbd>Robar</span><span><kbd data-kb="Q" data-pad="△">Q</kbd><span data-kbl="Pase o pedir" data-padl="Rebote / tapón">Pase o pedir</span></span><span><kbd data-kb="Clic der." data-pad="L1">Clic der.</kbd><span data-kbl="Postura" data-padl="Cambiar jugador">Postura</span></span><span><kbd data-kb="B" data-pad="↑">B</kbd><span id="camlbl">Cámara al balón</span></span><span><kbd data-kb="Esc" data-pad="Options">Esc</kbd>Pausa</span></div>
 </div>
 <!-- ── Rótulos grandes y pequeños ── -->
 <div id="banner" class="banner"></div>
@@ -355,9 +355,10 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
       <dt>Stick derecho</dt><dd>Sin balón: cámara. Con balón: regates como en NBA 2K (mueve y suelta) con el balón en la derecha (se invierte con la izquierda): ↑ amago de cruce, → parada falsa, ↖ cruce, ← entre las piernas, ↙ por la espalda, ↓ paso atrás, girar el stick o <kbd>R3</kbd> giro. Con <kbd>R1</kbd> salen más explosivos. Tras un regate, empuja el stick izquierdo + <kbd>R1</kbd> para explotar: si el defensor ha picado, lo dejas atrás. Puedes encadenar regates pulsando el siguiente durante el anterior</dd>
       <dt><kbd>L2</kbd> en el poste</dt><dd>Cerca del aro (con o sin defensor): <kbd>L2</kbd> + stick derecho ↑ gancho, ↓ fadeaway (mantén y suelta en la franja verde), ←/→ giro de poste</dd>
       <dt><kbd>□</kbd></dt><dd>Con balón: mantén para el medidor de tiro; toque corto, amago de tiro (bandeja cerca del aro). Sin balón: tapón</dd>
-      <dt><kbd>✕</kbd> <kbd>○</kbd> <kbd>△</kbd></dt><dd>Con balón: pase directo, picado y bombeado al compañero hacia el que apuntas con el stick izquierdo (anillo blanco). Sin balón: saltar, robar y, en defensa, <kbd>△</kbd> cambia al jugador más cercano al balón</dd>
+      <dt><kbd>✕</kbd> <kbd>○</kbd> <kbd>△</kbd></dt><dd>Con balón: pase directo, picado y bombeado al compañero hacia el que apuntas con el stick izquierdo (anillo blanco). Sin balón: <kbd>✕</kbd> saltar, <kbd>○</kbd> robar y <kbd>△</kbd> salto al rebote, que se convierte en tapón si el rival está tirando o machacando cerca</dd>
       <dt>Corriendo al aro</dt><dd>Mates: <kbd>□</kbd> una mano, <kbd>△</kbd> dos manos, <kbd>○</kbd> molino, <kbd>✕</kbd> 360. Con <kbd>R1</kbd>: <kbd>□</kbd> tomahawk, <kbd>△</kbd> reverso</dd>
-      <dt><kbd>L1</kbd> <kbd>Options</kbd></dt><dd>Cámara al balón y pausa. En los menús: cruceta para moverte, <kbd>✕</kbd> aceptar, <kbd>○</kbd> volver</dd>
+      <dt><kbd>L1</kbd></dt><dd>En defensa (3 contra 3): cambiar al compañero más cercano al balón</dd>
+      <dt>Cruceta ↑ / <kbd>Options</kbd></dt><dd>Cámara al balón (en tercera persona) y pausa. En los menús: cruceta para moverte, <kbd>✕</kbd> aceptar, <kbd>○</kbd> volver</dd>
     </dl>
     <p class="note" style="color:var(--muted)">Los regates te protegen un instante: si te intentan robar justo entonces, el defensor se queda clavado.</p>
     <p class="note" style="color:var(--muted)">Moverte con normalidad no gasta energía: solo el sprint. En cuanto lo sueltas se recupera rápido, y más deprisa cuanta más te queda. Si llega a cero quedas agotado: lento, sin sprint ni giro y con peor tiro hasta que recuperes un 30 %.</p>
@@ -2363,6 +2364,13 @@ function setControlled(p) {
   if (old.rig.marker) { p.rig.marker = old.rig.marker; old.rig.marker = null; }
   p.ai.t = 0;
 }
+// △ sin balón: si el rival está tirando, machacando o acaba de soltar cerca → tapón; si no → salto al rebote
+function jumpOrBlock(p) {
+  const h = ball.holder;
+  const threat = (h && h.team !== p.team && hdist(h.pos, p.pos) < 3.2 && (h.charging || h.shotT > 0 || h.dunkSeq || !h.onGround || inLayupRange(h)))
+    || (!h && ball.shot && ball.shot.team !== p.team && (ball.guide || ball.vel.y > 0) && hdist(ball.pos, p.pos) < 3.2);
+  if (threat) p.pend.block = true; else p.pend.jump = true;
+}
 // Defensa: pasa el control al compañero más cercano al balón (distinto del actual si es posible)
 function switchToNearest() {
   let best = null, bd = 1e9;
@@ -2891,6 +2899,7 @@ function setInputMode(m) {
   if (inputMode === m) return;
   inputMode = m; document.body.classList.toggle('pad', m === 'pad');
   for (const k of document.querySelectorAll('[data-kb]')) k.textContent = m === 'pad' ? k.dataset.pad : k.dataset.kb;
+  for (const k of document.querySelectorAll('[data-kbl]')) k.textContent = m === 'pad' ? k.dataset.padl : k.dataset.kbl;
 }
 addEventListener('gamepadconnected', e => { PAD.idx = e.gamepad.index; setInputMode('pad'); if (inMatch()) banner2('Mando conectado', 'var(--gold)', 0.9); });
 addEventListener('gamepaddisconnected', e => { if (PAD.idx === e.gamepad.index) PAD.idx = null; PAD.lm = PAD.lx = PAD.ly = PAD.rx = PAD.ry = 0; PAD.r2 = PAD.square = false; setInputMode('kb'); if (inMatch()) pause(); });
@@ -2959,8 +2968,9 @@ function padFrame(dt) {
     if (down(2)) pendH.shoot = true;                                                               // □ tiro / tapón / mate
     if (down(0)) { if (dunkRange) pendH.move = 'spin'; else if (holding) pendH.pass = 'chest'; else pendH.jump = true; }       // ✕
     if (down(1)) { if (dunkRange) pendH.move = 'behind'; else if (holding) pendH.pass = 'bounce'; else pendH.steal = true; }   // ○
-    if (down(3)) { if (dunkRange) pendH.move = 'cross'; else if (holding) pendH.pass = 'lob'; else pendH.pass = 'chest'; }     // △ (sin balón: pedirlo)
-    if (down(4)) { ballCam = !ballCam; $('camlbl').textContent = ballCam ? 'Cámara libre' : 'Cámara al balón'; }   // L1
+    if (down(3)) { if (dunkRange) pendH.move = 'cross'; else if (holding) pendH.pass = 'lob'; else jumpOrBlock(human); }     // △ (sin balón: rebote / tapón)
+    if (down(4) && !holding && mode === 'match') wantSwitch = true;                                 // L1: cambiar de jugador
+    if (down(12)) { ballCam = !ballCam; $('camlbl').textContent = ballCam ? 'Cámara libre' : 'Cámara al balón'; }   // cruceta ↑
     if (down(11) && holding) pendH.move = 'spin';                                                  // R3 giro
     const proStick = holding;                                                                      // con balón el stick derecho regatea (con o sin postura)
     PAD.postShot = null;
