@@ -1423,7 +1423,9 @@ function holdTarget(p, dt) {
     } else if (t === 'retreat') { // retroceso: sigue botando en su mano, dos botes bajos
       lat = 0.38 * h0; fw = 0.32; y = R + (0.75 - R) * Math.abs(Math.cos(Math.PI * 2 * k));
     } else if (t === 'euro') {    // eurostep: balón al pecho, se lleva al lado contrario al de cada paso (protegido)
-      lat = lerp(-s * 0.26, s * 0.26, smooth(clamp((k - 0.3) / 0.4, 0, 1))); fw = 0.3; y = p.pos.y + 1.15;
+      // balón bajo, a la altura de la cadera, pasando al lado protegido; sube al final para la bandeja
+      lat = lerp(-s * 0.3, s * 0.3, smooth(clamp((k - 0.3) / 0.4, 0, 1))); fw = 0.3;
+      y = p.pos.y + (k < 0.72 ? 0.82 : lerp(0.82, 1.75, smooth((k - 0.72) / 0.28)));
     } else if (t === 'spinlay') { // bandeja con giro: balón pegado al pecho mientras gira
       lat = 0.05 * h0; fw = 0.26; y = p.pos.y + 1.15;
     } else {                      // paso atrás: bote corto y recoge bajo, en posición de tiro
@@ -1921,7 +1923,7 @@ function moveSteer(p, dt) {
 function driveSteer(p, dt) {
   const m = p.move, k = Math.min(1, m.t / m.dur), s = m.side, f = m.rim, rx = -f.z, rz = f.x;
   let ang;
-  if (m.type === 'euro') ang = k < 0.42 ? s * 0.75 : -s * 0.6;
+  if (m.type === 'euro') ang = k < 0.42 ? s * 1.0 : -s * 0.9;   // zancadas muy abiertas a cada lado
   else { ang = s * 0.35; p.spinAngle = -s * Math.PI * 2 * smooth(k); }
   const dx = f.x * Math.cos(ang) + rx * Math.sin(ang), dz = f.z * Math.cos(ang) + rz * Math.sin(ang);
   const sp = m.type === 'euro' ? m.sp0 * 0.85 : m.sp0 * 0.75, a = 1 - Math.exp(-12 * dt);
@@ -3689,7 +3691,7 @@ function animatePlayer(p, dt, T) {
   if (p.post) crouchD = 0.26;
   if (p.move) {
     const mt = p.move.type, mk = p.move.t / p.move.dur;
-    crouchD = mt === 'retreat' ? 0.22 : mt === 'postspin' || mt === 'spin' ? 0.24 : mt === 'step' ? 0.2 : mt === 'hesi' ? (p.move.t < 0.2 || !p.move.burst ? 0.0 : 0.3) : mt === 'step' ? 0.14 : mt === 'between' ? 0.3 : mt === 'cross' ? 0.3 : 0.28;
+    crouchD = mt === 'euro' ? 0.28 : mt === 'retreat' ? 0.22 : mt === 'postspin' || mt === 'spin' ? 0.24 : mt === 'step' ? 0.2 : mt === 'hesi' ? (p.move.t < 0.2 || !p.move.burst ? 0.0 : 0.3) : mt === 'step' ? 0.14 : mt === 'between' ? 0.3 : mt === 'cross' ? 0.3 : 0.28;
     crouchD *= 0.6 + 0.4 * Math.sin(Math.PI * Math.min(1, mk * 1.3));   // baja de golpe y sube al salir
   }
   if (p.fakeT > 0) crouchD = 0.04;
@@ -3796,9 +3798,11 @@ function animatePlayer(p, dt, T) {
         // eurostep: zancada larga con la pierna del lado elegido y luego con la otra cruzando
         const ph = (a, b) => (k > a && k < b) ? Math.sin(Math.PI * (k - a) / (b - a)) : 0;
         const l1 = s > 0 ? tp.lR : tp.lL, l2 = s > 0 ? tp.lL : tp.lR;
-        l1.x = -0.95 * ph(0, 0.45) + 0.3 * ph(0.4, 0.85) + cr.x; l1.k = 0.5 + 0.6 * ph(0, 0.45); l1.z = -s * 0.3 * ph(0, 0.45);
-        l2.x = 0.35 * ph(0, 0.45) - 1.0 * ph(0.38, 0.85) + cr.x; l2.k = 0.5 + 0.7 * ph(0.38, 0.85); l2.z = s * 0.3 * ph(0.38, 0.85);
-        tp.bodyZ = s * 0.18 * ph(0, 0.45) - s * 0.2 * ph(0.38, 0.85); tp.torsoX += 0.3;
+        l1.x = -1.2 * ph(0, 0.45) + 0.4 * ph(0.4, 0.85) + cr.x; l1.k = 0.5 + 0.8 * ph(0, 0.45); l1.z = -s * 0.6 * ph(0, 0.45);
+        l2.x = 0.45 * ph(0, 0.45) - 1.25 * ph(0.38, 0.85) + cr.x; l2.k = 0.5 + 0.85 * ph(0.38, 0.85); l2.z = s * 0.6 * ph(0.38, 0.85);
+        const lean = s * 0.36 * ph(0, 0.45) - s * 0.4 * ph(0.38, 0.85);   // el peso del cuerpo cae sobre la pierna de cada zancada
+        tp.bodyZ = lean; tp.torsoZ = -lean * 0.35; tp.torsoX += 0.3; tp.hipsY -= 0.08 * (ph(0, 0.45) + ph(0.38, 0.85));
+        tp.headY = -lean * 0.5;
       }
       else if (mv.type === 'spinlay') {
         // bandeja con giro: brazos recogidos con el balón, piernas cruzando al girar
