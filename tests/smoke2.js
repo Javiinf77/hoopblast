@@ -12,7 +12,7 @@ script=script.replace("'use strict';","'use strict'; window.__dbg=()=>({get stat
  .replace('function swipeMiss(p) {','function swipeMiss(p) { window.__C.miss++;')
  .replace('function startSwipe(p) {','function startSwipe(p) { if(!(p.swipeCd > 0 || p.swipeT > 0 || p.stunT > 0 || ball.holder === p)) window.__C.swipes++;')
  .replace('  p.heat += 1;','  p.heat += 1; window.__C.moves++;')
- .replace('p === human ? hf : aiThink(p, gdt)','aiThink(p, gdt)').replace('if (mode === \'match\' && ball.holder && ball.holder.team === human.team && ball.holder !== human) setControlled(ball.holder);','').replace('function pass(p, to, alley) {','function pass(p, to, alley) { window.__C.passes++;');
+ .replace("p === human ? hf : mode === 'anim' ? (ANIM.npc.get(p) || ANIM.idle) : aiThink(p, gdt)",'aiThink(p, gdt)').replace('if (mode === \'match\' && ball.holder && ball.holder.team === human.team && ball.holder !== human) setControlled(ball.holder);','').replace('function pass(p, to, alley) {','function pass(p, to, alley) { window.__C.passes++;');
 let cbs=[],tnow=0;
 new Function('window','document','THREE','performance','requestAnimationFrame','addEventListener','innerWidth','innerHeight',script)(w,w.document,THREE,{now:()=>tnow},f=>cbs.push(f),w.addEventListener.bind(w),1280,720);
 function run(sec){ for(let i=0;i<sec*60;i++){ tnow+=1000/60; const c=cbs; cbs=[]; for(const f of c){ try{f(tnow)}catch(e){console.log('FRAME ERR',e.stack);process.exit(1)} } } }
