@@ -1,26 +1,26 @@
 === smoke2.js easy
-easy state over score [16,14]
-[{"att":16,"made":7,"threes":0,"dunks":2,"alleys":0,"assists":2,"steals":12,"dodges":3,"blocks":2},{"att":8,"made":5,"threes":1,"dunks":3,"alleys":0,"assists":1,"steals":11,"dodges":0,"blocks":1}]
+easy state scored score [5,61]
+[{"att":4,"made":2,"threes":1,"dunks":0,"alleys":0,"assists":0,"steals":2,"dodges":0,"blocks":1},{"att":61,"made":29,"threes":0,"dunks":3,"alleys":0,"assists":2,"steals":34,"dodges":0,"blocks":0}]
 exhausts undefined [100,100,100,100,100,100]
-swipes 46 miss 30 moves 45 passes 0
+swipes 11 miss 5 moves 6 passes 0
 === smoke2.js normal
-normal state over score [7,16]
-[{"att":9,"made":3,"threes":0,"dunks":1,"alleys":0,"assists":0,"steals":10,"dodges":7,"blocks":0},{"att":15,"made":6,"threes":1,"dunks":3,"alleys":0,"assists":1,"steals":11,"dodges":3,"blocks":0}]
-exhausts undefined [100,100,100,60,100,100]
-swipes 52 miss 31 moves 68 passes 0
+normal state play score [0,79]
+[{"att":0,"made":0,"threes":0,"dunks":0,"alleys":0,"assists":0,"steals":0,"dodges":0,"blocks":0},{"att":60,"made":39,"threes":0,"dunks":1,"alleys":0,"assists":0,"steals":38,"dodges":0,"blocks":0}]
+exhausts undefined [100,95,100,95,95,95]
+swipes 1 miss 1 moves 1 passes 0
 === smoke2.js hard
-hard state over score [9,42]
-[{"att":10,"made":4,"threes":0,"dunks":1,"alleys":0,"assists":2,"steals":9,"dodges":5,"blocks":4},{"att":33,"made":16,"threes":7,"dunks":3,"alleys":2,"assists":7,"steals":17,"dodges":5,"blocks":2}]
-exhausts undefined [98,100,98,98,100,93]
-swipes 43 miss 19 moves 54 passes 0
+hard state play score [0,77]
+[{"att":0,"made":0,"threes":0,"dunks":0,"alleys":0,"assists":0,"steals":0,"dodges":0,"blocks":1},{"att":58,"made":38,"threes":0,"dunks":1,"alleys":0,"assists":0,"steals":40,"dodges":1,"blocks":0}]
+exhausts undefined [100,86,86,100,100,100]
+swipes 2 miss 0 moves 2 passes 0
 === test9.js
 carga 0.55 0/12
 carga 0.68 0/12
 carga 0.74 6/12
 carga 0.8 12/12
-carga 0.86 8/12
-carga 0.92 2/12
-carga 1.05 0/12
+carga 0.86 6/12
+carga 0.92 3/12
+carga 1.05 2/12
 mate one 3/3 dunkSeq cleared true y 0.00
 mate two 3/3 dunkSeq cleared true y 0.00
 mate tomahawk 3/3 dunkSeq cleared true y 0.00
@@ -42,56 +42,56 @@ regate KeyC step
 === test9b.js
 chest   dist 6 receptor quieto -> recibido en 0.50 s
 chest   dist 10 receptor quieto -> recibido en 0.90 s
-chest   dist 14 receptor quieto -> recibido en 1.25 s
-chest   dist 8 receptor corriendo -> recibido en 0.65 s
-chest   dist 12 receptor corriendo -> recibido en 1.05 s
+chest   dist 14 receptor quieto -> recibido en 1.30 s
+chest   dist 8 receptor corriendo -> recibido en 0.70 s
+chest   dist 12 receptor corriendo -> recibido en 1.10 s
 bounce  dist 6 receptor quieto -> recibido en 0.60 s
 bounce  dist 10 receptor quieto -> recibido en 1.00 s
-bounce  dist 14 receptor quieto -> recibido en 1.45 s
+bounce  dist 14 receptor quieto -> recibido en 1.40 s
 bounce  dist 8 receptor corriendo -> recibido en 0.80 s
-bounce  dist 12 receptor corriendo -> NO
-lob     dist 6 receptor quieto -> recibido en 1.10 s
-lob     dist 10 receptor quieto -> NO
-lob     dist 14 receptor quieto -> NO
-lob     dist 8 receptor corriendo -> recibido en 1.25 s
+bounce  dist 12 receptor corriendo -> recibido en 1.25 s
+lob     dist 6 receptor quieto -> NO
+lob     dist 10 receptor quieto -> recibido en 1.45 s
+lob     dist 14 receptor quieto -> recibido en 1.95 s
+lob     dist 8 receptor corriendo -> NO
 lob     dist 12 receptor corriendo -> recibido en 1.65 s
 === testblock.js
 distancia 1
   pulsar 0.45 s antes de soltar -> 0/4
   pulsar 0.36 s antes de soltar -> 0/4
-  pulsar 0.30 s antes de soltar -> 4/4
-  pulsar 0.24 s antes de soltar -> 4/4
-  pulsar 0.18 s antes de soltar -> 4/4
-  pulsar 0.12 s antes de soltar -> 4/4
-  pulsar 0.06 s antes de soltar -> 4/4
+  pulsar 0.30 s antes de soltar -> 0/4
+  pulsar 0.24 s antes de soltar -> 0/4
+  pulsar 0.18 s antes de soltar -> 0/4
+  pulsar 0.12 s antes de soltar -> 0/4
+  pulsar 0.06 s antes de soltar -> 0/4
   pulsar 0.00 s antes de soltar -> 0/4
   pulsar -0.08 s antes de soltar -> 0/4
 distancia 1.4
   pulsar 0.45 s antes de soltar -> 0/4
   pulsar 0.36 s antes de soltar -> 0/4
   pulsar 0.30 s antes de soltar -> 0/4
-  pulsar 0.24 s antes de soltar -> 4/4
-  pulsar 0.18 s antes de soltar -> 4/4
-  pulsar 0.12 s antes de soltar -> 4/4
-  pulsar 0.06 s antes de soltar -> 4/4
+  pulsar 0.24 s antes de soltar -> 0/4
+  pulsar 0.18 s antes de soltar -> 0/4
+  pulsar 0.12 s antes de soltar -> 0/4
+  pulsar 0.06 s antes de soltar -> 0/4
   pulsar 0.00 s antes de soltar -> 0/4
-  pulsar -0.08 s antes de soltar -> 0/4
+  pulsar -0.08 s antes de soltar -> 1/4
 tras fallar, stun al aterrizar: visto antes
 mate one taponados 6/8
-mate two taponados 5/8
-mate windmill taponados 7/8
-mate spin360 taponados 8/8
+mate two taponados 4/8
+mate windmill taponados 8/8
+mate spin360 taponados 7/8
 === testpad.js
 foco en play modo pad
 estado countdown entrenamiento? false
 estado tras cuenta atrás play
-stick 30% -> velocidad 2.38
-stick 60% -> velocidad 3.40 energía 1.00
-stick 100% -> velocidad 0.00
+stick 30% -> velocidad 0.90
+stick 60% -> velocidad 5.40 energía 1.00
+stick 100% -> velocidad 5.40
 R2 sprint -> velocidad 0.00
 arranque W: 0.1s/0.2s/0.3s/0.5s -> 8.34 / 8.49 / 8.46 / 8.40
-giro 180º: frenada con apoyo false | en 0.55 s ya corre al revés
-curva 90º corriendo: avanza 0.41 m en 0.12 s
+giro 180º: frenada con apoyo false | en 0.60 s ya corre al revés
+curva 90º corriendo: avanza -0.65 m en 0.17 s
 curva 90º esprintando: avanza -1.50 m en 0.25 s
 RS derecha      -> nada
 RS izquierda    -> nada
@@ -102,7 +102,7 @@ RS abajo-izq    -> nada
 R3 -> spin
 □ mantenido: cargando true carga 0.59
 □ soltado: balón en el aire true
-vibraciones 2
+vibraciones 0
 === testpad2.js
 mando □     -> one
 mando △     -> two
@@ -112,8 +112,8 @@ mando R1+□  -> tomahawk
 mando R1+△  -> reverse
 === teststance3.js
 correr 5.08 | R1 sprint 7.82
-L2 al correr con balón -> velocidad 2.58 postura true
-en postura ofensiva moviéndose -> 3.15
+L2 al correr con balón -> velocidad 2.26 postura true
+en postura ofensiva moviéndose -> 1.85
 RS con balón sin L2 -> regate: between | cámara movida false
 — balón en mano derecha
   L2 + RS ↑ -> inout (lado -1)
@@ -143,10 +143,10 @@ parada falsa: velocidad durante la parada 1.86
   explosión 8.80 | combos 1,2,3,4
    straight     0/12
    cross        1/12
-   cross+exp    9/12
-   between+exp  5/12
+   cross+exp    7/12
+   between+exp  1/12
    hesi+exp     11/12
-   inout+exp    8/12
+   inout+exp    9/12
 === testdrib3.js
 cruce -> cross
   sin explotar, velocidad tras el cruce 2.66
@@ -157,14 +157,14 @@ piernas → explosión 8.80 | combos 1,2,3
 parada falsa: velocidad durante la parada 1.86
   explosión 8.80 | combos 1,2,3,4
    straight     0/12
-   cross        1/12
+   cross        0/12
    cross+exp    0/12
    between+exp  0/12
-   hesi+exp     7/12
-   inout+exp    10/12
+   hesi+exp     8/12
+   inout+exp    9/12
 === testfake.js
 amago activo tras toque corto: true
-amago de tiro vs defensor IA normal: picó y saltó 8/12
+amago de tiro vs defensor IA normal: picó y saltó 3/12
 === traintest.js
 mode train holder human true hidden others true
 {"rival":false,"rivalHoldT":0,"att":6,"made":4,"perf":4,"a3":0,"m3":0,"streak":2,"best":2,"pending":false,"pending3":false,"freeT":0,"madeT":0} panel 4/6 2
@@ -172,22 +172,22 @@ after Q holder human true
 mode match others visible true
 match state play
 === energytest.js
-sprint 2s               80%  vel 5.4 85
-sprint 4s              100%  vel 5.4 65
-sprint 6s (sigue)      100%  vel 5.4 21
-forzando agotado 8s    100%  vel 5.4 Agotado
-corre agotado +4s      100%  vel 5.4 34
-quieto 2s              100%  vel 3.6 81
-quieto 5s              100%  vel 0.0 100
-quieto 8s               92%  vel 8.0 100
+sprint 2s               60%  vel 0.0 60
+sprint 4s               42%  vel 7.8 42
+sprint 6s (sigue)       26%  vel 5.4 72
+forzando agotado 8s     54%  vel 7.7 28
+corre agotado +4s       84%  vel 5.4 100
+quieto 2s              100%  vel 5.0 100
+quieto 5s              100%  vel 5.4 100
+quieto 8s              100%  vel 5.4 100
 corre normal 6s        100%  vel 5.4 100
-corre normal 16s        95%  vel 8.5 100
+corre normal 16s        87%  vel 1.7 100
 corre normal 31s       100%  vel 5.4 100
 quieto 3s              100%  vel 5.4 100
-mover normal 3s desde 50% 100%  vel 5.4 100
-sprint 2s              100%  vel 5.4 77
-soltar sprint 2s       100%  vel 5.4 100
+mover normal 3s desde 50%  99%  vel 3.0 100
+sprint 2s               90%  vel 8.5 56
+soltar sprint 2s        54%  vel 5.4 100
 === testctl.js
-apuntando a la derecha (D) + Q -> recibe el jugador 2 (z=5.0) | ahora controlas al 2
-apuntando a la izquierda (A) + Q -> recibe el jugador 0 (z=0.0) | ahora controlas al 0
+apuntando a la derecha (D) + Q -> recibe el jugador 2 (z=5.1) | ahora controlas al 2
+apuntando a la izquierda (A) + Q -> recibe el jugador 0 (z=-0.8) | ahora controlas al 0
 defensa: Q cambia del jugador 0 al 2 (el más cercano al balón es el 2)
