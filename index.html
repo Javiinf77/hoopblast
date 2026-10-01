@@ -3601,7 +3601,7 @@ const camPos = new V3(-10, 2.6, 0), camLook = new V3(), _cw = new V3(), _cl = ne
 function updateCamera(dt, T) {
   if (state === 'custom') {
     const w = innerWidth, near = w < 800;
-    camera.position.set(near ? 0 : -0.95, 1.3, 3.7); camera.lookAt(near ? 0 : -0.95, 1.05, 0);
+    camera.position.set(near ? 0 : -0.95, 1.45, 3.9); camera.lookAt(near ? 0 : -0.95, 1.15, 0);
     camera.fov = 40; camera.updateProjectionMatrix(); return;
   }
   if (state === 'menu' || state === 'over') {
