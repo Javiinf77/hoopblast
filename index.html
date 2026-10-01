@@ -1663,7 +1663,10 @@ function updatePlayer(p, inp, dt) {
     const head = sp > 1.5 ? Math.atan2(p.vel.x, p.vel.z) : null;
     const turn = head !== null && p.headPrev !== undefined && p.headPrev !== null ? -wrapA(head - p.headPrev) / dt : 0;
     p.headPrev = head;
-    const wrongSide = lat * p.hand < -0.45 || turn * p.hand < -1.6;   // vas (o giras) hacia el lado contrario al del balón
+    const rim = hoops[p.attackSide].rimC, rx = rim.x - p.pos.x, rz = rim.z - p.pos.z, rl = Math.hypot(rx, rz) || 1;
+    const mvL = Math.hypot(move.x, move.z), backStick = mvL > 0.3 && (move.x * rx + move.z * rz) / (mvL * rl) < -0.3;
+    const calm = p.plantT <= 0 && !backStick && !inp.shootHold && Math.abs(turn) < 7;   // nada de cambios en medias vueltas, al tirar o con el stick atrás
+    const wrongSide = calm && (lat * p.hand < -0.45 || turn * p.hand < -1.6);   // vas (o giras) hacia el lado contrario al del balón
     if (wrongSide) { p.swapT = (p.swapT || 0) + dt; if (p.swapT > 0.1) { startSwap(p, -p.hand); p.swapT = 0; } } else p.swapT = 0;
   }
   // regate: ventanas de explosión, secuencias y "superado"
@@ -1808,6 +1811,7 @@ function playersCollide(a, b) {
    ============================================================================== */
 // Cambio rápido de mano: el balón pasa por delante a la otra mano en 0,18 s (sin coste ni recarga).
 // Lo usan los cambios de dirección y los regates que necesitan el balón en la otra mano.
+function finishSwap(p) { if (p.move && p.move.type === 'swap') { p.hand = p.move.side; p.move = null; ball.phase = 0; } }
 function startSwap(p, side) {
   if (ball.holder !== p || p.move || !p.onGround || p.charging || p.shotT > 0 || p.stunT > 0 || p.inbounding || side === p.hand) return false;
   p.move = { type: 'swap', t: 0, dur: 0.18, side, from: p.hand, burst: false, static: true };
@@ -1817,6 +1821,7 @@ function startSwap(p, side) {
 // Inicia un regate (si se puede): coste, protección, impulso y reacción del defensor.
 // El lado es absoluto (hacia dónde va el balón). Si el balón ya está en esa mano, primero se cambia rápido de mano y luego se hace el regate.
 function startMove(p, type, side, momentum) {
+  finishSwap(p);
   const M = CFG.moves[type];
   if (!M || ball.holder !== p || !p.onGround || p.charging || p.shotT > 0 || p.stunT > 0 || p.move || p.inbounding || p.moveCd[type] > 0) return false;
   if (p.stamina < M.cost || (p.exhausted && (type === 'spin' || type === 'step'))) return false;
@@ -2674,6 +2679,7 @@ function handleActions(p, inp, dt) {
     else if (p.isHuman && mode === 'match' && !holding) wantSwitch = true;    // en defensa: cambiar al más cercano al balón
   }
   if (!holding || p.stunT > 0) { p.charging = false; p.charge = 0; return; }
+  if (inp.shootPress || inp.shootHold || inp.postShot) finishSwap(p);   // tirar (o paso atrás) no espera al cambio de mano
   if (p.move || p.inbounding || p.fakeT > 0) return;
   // tiro: toque cerca del aro = bandeja; mantener = medidor de tiro
   // eurostep / bandeja con giro: corriendo hacia la canasta, □ y otra vez □ (rápido = giro; con algo de pausa = eurostep)
@@ -2687,7 +2693,8 @@ function handleActions(p, inp, dt) {
   if (p.isHuman && !p.charging && inp.shootPress && p.onGround && !inp.postShot) {
     const c = hoops[p.attackSide].rimC, ax = c.x - p.pos.x, az = c.z - p.pos.z, al = Math.hypot(ax, az) || 1;
     const towards = (p.vel.x * ax + p.vel.z * az) / al;
-    if (towards > 3.3 && al > 3.6 && al < 6.8 && p.moveCd.euro <= 0) {
+    const mmd = Math.hypot(inp.move.x, inp.move.z), stickFwd = mmd > 0.3 && (inp.move.x * ax + inp.move.z * az) / (mmd * al) > 0.3;
+    if (towards > 3.3 && stickFwd && al > 3.6 && al < 6.8 && p.moveCd.euro <= 0) {   // (con el stick hacia atrás es paso atrás, no eurostep)
       const rx = -az / al, rz = ax / al, mm = Math.hypot(inp.move.x, inp.move.z), lat = mm > 0 ? (inp.move.x * rx + inp.move.z * rz) / mm : 0;
       p.drive = { t: 0, side: Math.abs(lat) > 0.25 ? Math.sign(lat) : p.hand };
       return;
