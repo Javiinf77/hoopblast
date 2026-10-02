@@ -1092,7 +1092,9 @@ function miiHead(head, L, skinM, hairM, accM, M) {
   add(miiGeo('face', L.miiHead, true), face, false);
   add(miiGeo('nose', L.miiNose), skinM, false);
   const nh = MII_DATA.hair.length;
-  add(miiGeo('hair', ((L.miiHair % nh) + nh) % nh), L.miiHair >= nh - 2 ? accM : hairM, true);   // los dos últimos son gorra y gorro
+  const hm = add(miiGeo('hair', ((L.miiHair % nh) + nh) % nh), L.miiHair >= nh - 2 ? accM : hairM, true);   // los dos últimos son gorra y gorro
+  // 4 % más grande: sin esto el depth test favorece a la cabeza y solo se ve el reborde; también cubre la coronilla
+  if (hm && L.miiHair < nh - 2) hm.scale.setScalar(1.04);
   if (L.miiBeard >= 0) add(miiGeo('beard', L.miiBeard), hairM, true);
 }
 // Construye el muñeco 3D de un jugador. look = aspecto personalizado (solo el humano).
