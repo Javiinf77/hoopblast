@@ -1,5 +1,5 @@
 const {JSDOM}=require('jsdom'); const fs=require('fs');
-const html=fs.readFileSync((process.env.HOOPBLAST || require('path').join(__dirname, '..', 'index.html')),'utf8');
+const html=fs.readFileSync('/home/claude/reorg_out.html','utf8');
 let script=html.match(/<script>([\s\S]*?)<\/script>/)[1];
 const dom=new JSDOM(html.replace(/<script[\s\S]*?<\/script>/g,''),{pretendToBeVisual:true});
 const w=dom.window; const THREE=require('three');
@@ -28,5 +28,5 @@ let t=0; while(t<240 && d.state!=='over'){ run(0.25); t+=0.25; for(const p of P)
 console.log('estado', d.state, '| marcador', JSON.stringify(d.score), '| x mínima de cualquier jugador', minX.toFixed(2), '(medio campo = 0) | balones limpiados', clears);
 // tras cada canasta: ¿quién saca y desde dónde?
 let checks=0, ok=0, lastScore=JSON.stringify(d.score), t2=0;
-while(t2<200 && d.state!=='over'){ run(0.1); t2+=0.1; const sc=JSON.stringify(d.score); if(sc!==lastScore){ const prevS=JSON.parse(lastScore), now=JSON.parse(sc); const scorer = now[0]>prevS[0]?0:1; lastScore=sc; let w=0; while(d.state!=='play' && w<5){ run(0.1); w+=0.1; } const h=d.ball.holder; checks++; if(h && h.team===1-scorer && Math.hypot(h.pos.x-rim.x,h.pos.z-rim.z)>7) ok++; } }
+while(t2<200 && d.state!=='over'){ run(0.1); t2+=0.1; const sc=JSON.stringify(d.score); if(sc!==lastScore){ const prevS=JSON.parse(lastScore), now=JSON.parse(sc); const scorer = now[0]>prevS[0]?0:1; lastScore=sc; let w=0; while(d.state!=='play' && w<5){ run(0.1); w+=0.1; } const h=d.ball.holder; checks++; if(h && h.team===1-scorer && Math.hypot(h.pos.x-rim.x,h.pos.z-rim.z)>7) ok++; else console.log('   saque raro: anotó',scorer,'| tiene el balón', h?('equipo '+h.team+' a '+Math.hypot(h.pos.x-rim.x,h.pos.z-rim.z).toFixed(1)+' m'):'nadie', '| estado', d.state); } }
 console.log('saques tras canasta:', ok+'/'+checks, 'los hace el equipo que recibió la canasta, desde fuera del triple');

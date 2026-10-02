@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  HOOPBLAST 3v3 — versión 0.2 alpha
+  HOOPBLAST 3v3 — versión 0.3 alpha
   Baloncesto 3v3 en un único archivo: Three.js r128 + cel-shading, física propia del balón, regates estilo NBA 2K,
   mando PS4, IA, entrenamiento y vestuario. Sin recursos externos salvo Three.js y fuentes de Google.
   Estructura del código: ver el ÍNDICE al inicio del código JavaScript, más abajo (secciones §01–§31).
@@ -312,7 +312,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
 <section id="menu" class="overlay">
   <div class="col">
     <h1 class="title">HOOPBLAST<small>3v3</small></h1>
-    <span class="version">v0.2 alpha</span>
+    <span class="version">v0.3 alpha</span>
     <div class="split"></div>
     <p class="lead">Baloncesto tres contra tres en una jaula. Protege el balón con el cuerpo, rompe tobillos con tus regates y roba con un manotazo en el momento justo.</p>
     <div class="row">
@@ -451,7 +451,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 /* ==============================================================================
-   HOOPBLAST 3v3 — ÍNDICE DEL CÓDIGO (versión 0.2 alpha)
+   HOOPBLAST 3v3 — ÍNDICE DEL CÓDIGO (versión 0.3 alpha)
    Cada sección empieza con «§NN». Para ir a una sección busca «§NN» (p. ej. «§13»).
    Las funciones de cada sección se listan en su cabecera.
    ==============================================================================
@@ -1849,8 +1849,8 @@ function playersCollide(a, b) {
    §13 REGATES
    Regates (cruce, entre piernas, espalda, giro, retroceso, pasos atrás y lateral, eurostep, bandeja con giro, poste),
    cambios de dirección, reacción del defensor, explosión tras el regate y combos.
-   Funciones: startMove, provokeDefenders, comboCheck, explode, mirrorDir, moveSteer, driveSteer,
-     pivotSpin, stepBackSteer, hesiBurst, endMove, sideFromInput
+   Funciones: finishSwap, startSwap, startMove, provokeDefenders, comboCheck, explode, mirrorDir,
+     moveSteer, driveSteer, pivotSpin, stepBackSteer, hesiBurst, endMove, sideFromInput
    ============================================================================== */
 // Cambio rápido de mano: el balón pasa por delante a la otra mano en 0,18 s (sin coste ni recarga).
 // Lo usan los cambios de dirección y los regates que necesitan el balón en la otra mano.
@@ -2168,7 +2168,7 @@ function resolveSwipe(p) {
 /* ==============================================================================
    §15 POSESIÓN Y MARCADOR
    Recoger balones sueltos/pases, puntuación, estadísticas y canasta.
-   Funciones: tryPickup, onScore
+   Funciones: shotCatchable, tryPickup, updateClear, onScore
    ============================================================================== */
 // Asigna el balón suelto/pasado al jugador más cercano que pueda cogerlo.
 // Un tiro en vuelo no se puede coger (ni atacantes ni defensores) hasta que toque aro o tablero,
@@ -2495,7 +2495,7 @@ function stepDunk(p, dt) {
 /* ==============================================================================
    §18 PASES
    Pase directo, picado y bombeado; elección del receptor.
-   Funciones: pass, bestPassTarget, setControlled, jumpOrBlock, switchToNearest
+   Funciones: pass, cyclePassTarget, bestPassTarget, setControlled, jumpOrBlock, switchToNearest
    ============================================================================== */
 // Pase directo, picado o bombeado (alley-oop si procede).
 function pass(p, to, alley, type) {
@@ -3291,7 +3291,7 @@ function padFrame(dt) {
    §24 FLUJO DE PARTIDO
    Estados (menú, cuenta atrás, juego, canasta, pausa, final), saque inicial, saque de fondo y fin de posesión.
    Funciones: resetEntities, kickoff, startPlay, startMatch, afterScore, bestInboundTarget,
-     setupInbound, shotClockViolation, endGame, pause, resume, togglePause, toMenu
+     setupCheck, setupInbound, shotClockViolation, endGame, pause, resume, togglePause, toMenu
    ============================================================================== */
 let state = 'menu', prevState = 'play', stateT = 0, lastCount = 0;
 let hitstop = 0, slowT = 0, timeScale = 1, shake = 0, menuKickT = 0;

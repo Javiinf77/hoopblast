@@ -50,3 +50,41 @@
 **Técnico**
 - Código organizado en 31 secciones comentadas; pruebas de regresión con referencia.
 - Corregido: el juego se colgaba cuando un jugador se agotaba.
+
+## 0.3 alpha
+**Jugabilidad y mecánicas**
+- Partido en media pista (3x3): una sola canasta, saque fuera del triple tras cada canasta, regla de sacar el balón fuera del triple tras cambiar la posesión.
+- Bote muerto tras el amago de tiro: no puedes volver a botar, solo pasar, tirar o pivotar. Amago fluido (0,3 s, tiro y pase al instante).
+- Tiros en vuelo no interceptables hasta que toquen aro o tablero.
+- Paso atrás (LS ↓ + □) y paso lateral esprintando (correr de lado + □) con tiro encadenado.
+- Eurostep (□ + □ con pausa) y bandeja con giro (□ + □ seguidos) corriendo hacia la canasta.
+- Retroceso con bote (RS ↓ / tecla C): gana espacio sin dejar de botar.
+
+**Regates y mano libre**
+- La mano del balón ya no es fija: los regates usan direcciones absolutas y el cambio de mano es automático (incluso mientras el cuerpo gira).
+- Cruce, entre las piernas, espalda y giro reflejan la dirección (diagonal izquierda → diagonal derecha).
+- Stick derecho más estricto (a fondo, ventana ±17°, giro con vuelta completa); regates en el sitio al estar parado.
+- Eliminadas la parada falsa y el amago de cruce.
+
+**Energía y sobresfuerzo**
+- Sobresfuerzo: 3 cargas azules recargables (9 s con energía llena, 23 s casi vacía). La explosión tras regate gasta una carga y añade un dash +17 % con partículas azules. Sin carga, el regate sale pero sin el impulso extra.
+
+**Pase y selección de receptor**
+- Pases más rápidos (directo ~15,5 m/s, picado ~12,5 m/s). L1 (E en teclado) elige el receptor con balón (anillo dorado).
+- Robar pases del rival: algo más de alcance al interceptar.
+
+**Defensa y contacto físico**
+- Postura (L2) ocupa más espacio; frena al atacante pegado (~15 % menos avance).
+- En el poste: empujar hunde al defensor, cansa más al atacante; el defensor en postura aguanta más.
+
+**Mando y controles**
+- △ sin balón: salto al rebote (o tapón si el rival tira cerca). L1 sin balón: cambiar de jugador.
+- Cámara de retransmisión estilo NBA 2K por defecto (elegible en menú y pausa).
+
+**Animaciones corregidas (modo Animaciones)**
+- Eurostep: zancadas muy abiertas, peso a los lados, balón bajo que sube a la bandeja.
+- Paso atrás: retroceso con saltito, tiro levantándose mientras saltas.
+- Por la espalda (con y sin bote, ambas direcciones): el balón rodea el cuerpo por fuera.
+- Giro: sobre el pie de eje fijo (<1,5 cm de desviación), media vuelta del stick.
+- Giro de poste: mismo mecanismo de eje, balón por fuera.
+- Rebote: el balón se atrae hacia las manos en el aire y baja al pecho.
