@@ -221,6 +221,12 @@ button:focus-visible{ outline:3px solid var(--gold); outline-offset:3px; }
 .actl .cbtn{ flex:0 0 auto; height:34px; padding:0 12px; font-size:14px; }
 .actl .cbtn[aria-pressed="true"]{ background:var(--chalk); color:var(--ink); }
 .ahint{ position:absolute; right:20px; top:12px; margin:0; font-size:13px; font-weight:600; color:var(--muted); text-shadow:0 1px 2px #000; }
+/* ── Sobresfuerzo: 3 cargas azules ── */
+.dashes{ display:flex; align-items:center; gap:5px; margin-top:6px; }
+.dashes span{ font-weight:700; font-size:13px; color:#7fd7ff; margin-right:4px; }
+.dashes i{ position:relative; flex:0 0 34px; height:8px; border-radius:4px; background:rgba(127,215,255,.18); overflow:hidden; }
+.dashes b{ position:absolute; left:0; top:0; bottom:0; width:0; background:#4fb8ff; border-radius:4px; }
+.dashes b.full{ background:#7fd7ff; box-shadow:0 0 8px #4fb8ff; }
 /* ── Indicador de postura (L2) ── */
 .stancelbl{ display:flex; align-items:center; gap:6px; font-weight:700; font-size:14px; color:var(--muted); }
 .stancelbl.on{ color:var(--gold); }
@@ -274,6 +280,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
     <div id="energy" class="energy">
       <div class="elabel"><span>Energía</span><b id="estate">100</b></div>
       <div class="ebar"><i id="eghost"></i><i id="efill"></i><span class="tick" style="left:30%"></span></div>
+      <div class="dashes" title="Sobresfuerzo: explosión tras regate"><span>Sobresfuerzo</span><i><b id="dash0"></b></i><i><b id="dash1"></b></i><i><b id="dash2"></b></i></div>
     </div>
     <div class="gauge"><span>Robo</span><div class="bar"><i id="stealbar"></i></div></div>
     <div class="gauge"><span>Tapón</span><div class="bar"><i id="blockbar"></i></div></div>
@@ -344,7 +351,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
       <dt>Poste</dt><dd>Con balón, mantén clic derecho cerca del aro (a menos de 6 m, o de 7 m si tienes un defensor pegado): te pones de espaldas y, si hay defensor, le empujas hacia atrás. Mantén <kbd>G</kbd> para gancho o <kbd>C</kbd> para fadeaway y suelta para tirar; <kbd>F</kbd> giro de poste</dd>
       <dt>Reglas 3x3</dt><dd>Media pista. Tras cada canasta saca el otro equipo desde fuera del triple. Tras un rebote defensivo o un robo, hay que sacar el balón fuera del triple antes de poder anotar</dd>
       <dt>Eurostep / bandeja con giro</dt><dd>Corriendo hacia la canasta (de 3,6 a 6,8 m): clic + clic con una pequeña pausa = eurostep; clic + clic casi seguidos = bandeja con giro. El lado lo marca A/D (o tu mano de bote)</dd>
-      <dt>Explosión</dt><dd>Justo después de un regate, dirección + <kbd>Mayús</kbd>: sales disparado. Un regate sirve para provocar al defensor; la explosión es lo que lo supera</dd>
+      <dt>Explosión</dt><dd>Gasta una de las 3 cargas azules de sobresfuerzo (se recargan despacio, más rápido con la energía alta). Justo después de un regate, dirección + <kbd>Mayús</kbd>: sales disparado. Un regate sirve para provocar al defensor; la explosión es lo que lo supera</dd>
       <dt>Corriendo al aro</dt><dd>Mates: clic una mano, <kbd>F</kbd> dos manos, <kbd>R</kbd> molino, <kbd>X</kbd> 360. Con Mayús: clic tomahawk, <kbd>F</kbd> reverso. Saltando junto al aro, clic también machaca</dd>
       <dt>Clic sin balón</dt><dd>Tapón: saltas con el brazo arriba. Acierta el momento en que el rival suelta (o sube a machacar) y el balón sale volando. Si fallas, te recuperas más lento. Tocar un balón que ya baja al aro es interferencia: canasta para el rival</dd>
       <dt><kbd>E</kbd></dt><dd>Manotazo para robar. Si aciertas, el rival queda aturdido. Si fallas, te desequilibras un instante y tienes que esperar para repetir</dd>
@@ -564,11 +571,14 @@ const CFG = {
     step:    { dur: 0.62, prot: 0.18, cd: 1.3, cost: 0.08 },   // paso atrás en dos apoyos (tiro más fácil justo después)
     heatDecay: 0.8, heatPenalty: 0.4,
     // la clave del regate: un movimiento provoca la reacción del defensor y después EXPLOTAS con stick izquierdo + sprint
-    explodeWin: 0.4, burstSpeed: 8.8, burstTime: 0.55, burstCost: 0.05, chainGap: 0.45, queueAt: 0.4
+    explodeWin: 0.4, burstSpeed: 9.6, burstTime: 0.5, burstCost: 0, chainGap: 0.45, queueAt: 0.4
   },
   // Tiro: mantén para cargar el medidor y suelta en la franja verde. La dirección al aro es automática.
   shot: { fill: 0.85, sweet: 0.8, late: 1.15, three: 6.75, layup: 2.6, fakeMax: 0.2, fakeDur: 0.3, fakeCd: 0.25 },
   // Pases: velocidad de vuelo (m/s) y gravedad reducida para que el directo y el picado vayan tensos pero sin ser instantáneos
+  // Sobresfuerzo (como en Rematch): 3 cargas azules; la explosión tras un regate gasta una.
+  // Se recargan de una en una: 9 s con la energía llena, hasta ~26 s si vas casi vacío.
+  dash: { max: 3, recharge: 9, lowMul: 0.35 },
   pass: { magnet: 5.5, chestSpeed: 15.5, bounceSpeed: 12.5, lobTime: 0.45, lobSpeed: 13, chestG: 0.22, bounceG: 0.55, lockTime: 4 },
   // Tapón (clic sin balón): salto con ventana activa, igual que el robo tiene su momento justo
   block: { dur: 0.6, winStart: 0.1, winEnd: 0.36, sweetStart: 0.18, sweetEnd: 0.3, reach: 0.45, reachSweet: 0.7,
@@ -1552,6 +1562,10 @@ function updateEnergy(p, wantSprint, dt) {
   else rate = (p.pushT > 0 ? 0 : regen) * (hs > 0.5 ? E.moveRegenMul : 1);   // empujando en el poste no se recupera
   p.stamina = clamp(p.stamina + rate * dt, 0, 1);
   p.energyRate = rate;
+  // sobresfuerzo: recarga lenta, más rápida cuanta más energía tienes
+  const DS = CFG.dash;
+  if (p.dash === undefined) p.dash = DS.max;
+  if (p.dash < DS.max) p.dash = Math.min(DS.max, p.dash + dt / DS.recharge * (DS.lowMul + (1 - DS.lowMul) * p.stamina));
   if (p.stamina <= 0.001) exhaust(p);
   if (p.exhausted && p.stamina >= E.recover) { p.exhausted = false; if (p === human) banner2('Recuperado', '#4fe08a', 0.9); }
 }
@@ -1682,7 +1696,7 @@ function updatePlayer(p, inp, dt) {
   // regate: ventanas de explosión, secuencias y "superado"
   p.explodeWin = Math.max(0, p.explodeWin - dt); p.burstT = Math.max(0, p.burstT - dt); p.chainT += dt;
   if (p.reactT > 0) p.reactT = Math.max(0, p.reactT - dt);
-  if (holdingB && !p.move && p.explodeWin > 0 && sprint && hasDir && Math.hypot(move.x, move.z) > 0.5 && p.onGround && !p.exhausted) explode(p, move);
+  if (holdingB && !p.move && p.explodeWin > 0 && sprint && hasDir && Math.hypot(move.x, move.z) > 0.5 && p.onGround && !p.exhausted && (p.dash || 0) >= 1) explode(p, move);
   if (p.burstT > 0) maxSp = Math.max(maxSp, C.sprint * 1.1);
   if (p.beat) {
     p.beat.t -= dt;
@@ -1942,11 +1956,14 @@ function comboCheck(p) {
 }
 
 // Explosión tras un regate: arrancada a gran velocidad.
+const _bp = new V3();
 function explode(p, move) {
   const D = CFG.moves, l = Math.hypot(move.x, move.z) || 1;
   p.burstDir = { x: move.x / l, z: move.z / l };
   p.burstT = D.burstTime; p.explodeWin = 0; p.plantT = 0;
-  spend(p, D.burstCost);
+  p.dash = Math.max(0, (p.dash || 0) - 1);                     // gasta una carga de sobresfuerzo
+  burst(_bp.set(p.pos.x, 0.35, p.pos.z), CFG.colors.blue, 28, 5);   // destello azul en los pies
+  for (let i = 1; i <= 3; i++) burst(_bp.set(p.pos.x - p.burstDir.x * i * 0.25, 0.6, p.pos.z - p.burstDir.z * i * 0.25), 0x7fd7ff, 6, 2.5);
   // quien se había enganchado con el regate se queda un poco más clavado
   let near = null, nd = 1e9;
   for (const o of live) {
@@ -2040,7 +2057,7 @@ function hesiBurst(p, move) {
       if (involvesHuman(p, o)) { banner2('¡Ha picado!', teamColor(p.team)); sfx('dodge'); }
     }
   }
-  explode(p, move);
+  if ((p.dash || 0) >= 1) explode(p, move);
   p.move.t = Math.max(p.move.t, p.move.dur - 0.05);
 }
 
@@ -2954,7 +2971,7 @@ function aiThink(me, dt) {
       else st.target.set(atk.x - s * 2.2, 0, clamp(blocker.pos.z + (me.pos.z >= blocker.pos.z ? 1 : -1) * 3.5, -9, 9));
     }
     moveTo(me, st.target, out);
-    out.sprint = (me.stamina > 0.45 && d > 9 && fd > 3) || (me.explodeWin > 0 && me.stamina > 0.15);   // tras un regate, explota
+    out.sprint = (me.stamina > 0.45 && d > 9 && fd > 3) || (me.explodeWin > 0 && me.stamina > 0.15 && (me.dash || 0) >= 1);   // tras un regate, explota (si le queda sobresfuerzo)
     return out;
   }
   st.dunk = false; st.wasAir = false; st.countered = false;
@@ -3284,7 +3301,7 @@ function resetEntities() {
   if (human !== players[0]) { const m = mode; mode = 'match'; setControlled(players[0]); mode = m; }
   const spots = [[-5, 0], [-9, -5.5], [-9, 5.5]];
   for (const p of players) {
-    p.deadDribble = false;
+    p.deadDribble = false; p.dash = CFG.dash.max;
     const sp = spots[p.idx], s = p.team === 0 ? 1 : -1;
     p.home.set(sp[0] * s, 0, sp[1]); p.pos.copy(p.home);
     p.vel.set(0, 0, 0); p.stunT = p.ctrlT = p.charge = p.swipeT = p.swipeCd = p.lungeT = p.protectT = p.heat = 0;
@@ -3704,6 +3721,8 @@ function energyColor(e) {
 // Barra de energía, estela de gasto y mini barra sobre la cabeza.
 function updateEnergyHUD() {
   const e = human.stamina, col = energyColor(e);
+  const dsh = human.dash === undefined ? CFG.dash.max : human.dash;
+  for (let i = 0; i < 3; i++) { const el = $('dash' + i), f = clamp(dsh - i, 0, 1); el.style.width = (f * 100).toFixed(0) + '%'; el.classList.toggle('full', f >= 1); }
   eGhost = e > eGhost ? e : lerp(eGhost, e, 0.035);   // barra fantasma: muestra lo que acabas de gastar
   const fill = $('efill'), box = $('energy');
   fill.style.width = (e * 100).toFixed(1) + '%';
@@ -4514,7 +4533,7 @@ function animPlace(p, x, z, yaw) {
   p.throwT = 0; p.stamina = 1; p.exhausted = false; p.reactT = 0; p.pickupCd = 0; p.land = 0; p.hand = 1;
   p.heat = 0; p.chain = []; p.chainT = 9; p.cutT = 0; p.swatT = 0; p.fakeCd = 0; p.stepT = 0; p.callT = 0; p.protectT = 0;
   p.speedMul = 1; p.guarded = false; p.stance = false; p.post = false; p.blockDone = false; p.blockMissLand = false; p.beat = null;
-  p.anim = 0; p.rebT = 0; p.dirOverride = null; p.autoShot = false; p.drive = null; p.deadDribble = false;   // fase de la zancada y rebote
+  p.anim = 0; p.rebT = 0; p.dirOverride = null; p.autoShot = false; p.drive = null; p.deadDribble = false; p.dash = CFG.dash.max;   // fase de la zancada y rebote
   for (const k in p.moveCd) p.moveCd[k] = 0;
   for (const k in p.pend) p.pend[k] = k === 'move' ? null : false;
 }
