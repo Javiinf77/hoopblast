@@ -1,4 +1,4 @@
-const base=require('fs').readFileSync('testanim.js','utf8').split("console.log('modo'")[0];
+const base=require('fs').readFileSync(require('path').join(__dirname,'testanim.js'),'utf8').split("console.log('modo'")[0];
 eval(base + `
 const V=d.human.pos.constructor; const pick=(name)=>[...w.document.querySelectorAll('#animList button')].find(b=>b.textContent===name);
 function low(name){ pick(name).click(); $('animPause').click(); const h=d.human, r=h.rig; let mn=9, f0=0; const tot=Math.round(d.ANIMS[d.ANIM.cur].dur*60);

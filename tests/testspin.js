@@ -1,4 +1,4 @@
-const base=require('fs').readFileSync('testanim.js','utf8').split("console.log('modo'")[0];
+const base=require('fs').readFileSync(require('path').join(__dirname,'testanim.js'),'utf8').split("console.log('modo'")[0];
 eval(base + `
 const pick=(name)=>[...w.document.querySelectorAll('#animList button')].find(b=>b.textContent===name);
 for (const n of ['Giro (der. → izq.)','Giro (izq. → der.)','Diagonal izq. → Giro → diagonal der.']) { pick(n).click(); $('animPause').click(); const h=d.human; let p0=null, p1=null;
