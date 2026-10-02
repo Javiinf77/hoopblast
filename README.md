@@ -3,7 +3,7 @@
 Baloncesto 3 contra 3 arcade en el navegador, con estética cel-shading inspirada en Rematch y controles de regate inspirados en NBA 2K.
 Todo el juego está en **un solo archivo** (`index.html`): sin instalación y sin recursos externos, salvo Three.js y las fuentes de Google.
 
-**Versión actual: 0.2 alpha** · [Qué incluye](CHANGELOG.md)
+**Versión actual: 0.3 alpha** · [Qué incluye](CHANGELOG.md)
 
 ## Jugar
 - Abre `index.html` en Chrome, Edge o Firefox de escritorio.

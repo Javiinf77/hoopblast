@@ -1,5 +1,5 @@
 const {JSDOM}=require('jsdom'); const fs=require('fs');
-const html=fs.readFileSync(process.env.HOOPBLAST||require('path').join(__dirname,'..','index.html'),'utf8');
+const html=fs.readFileSync(process.env.HOOPBLAST||'/home/claude/reorg_out.html','utf8');
 let script=html.match(/<script>([\s\S]*?)<\/script>/)[1];
 const dom=new JSDOM(html.replace(/<script[\s\S]*?<\/script>/g,''),{pretendToBeVisual:true, url:'https://example.org/'});
 const w=dom.window; const THREE=require('three');
