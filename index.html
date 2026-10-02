@@ -178,7 +178,7 @@ button:focus-visible{ outline:3px solid var(--gold); outline-offset:3px; }
 .chead h2{ margin:0; font-family:Anton,Impact,sans-serif; font-weight:400; font-size:34px; letter-spacing:.02em; }
 .chead span{ font-size:13px; font-weight:600; color:var(--muted); }
 .ctabs{ display:flex; gap:4px; padding:0 14px; border-bottom:1px solid var(--line); }
-.ctab{ flex:1; font:inherit; font-weight:800; font-size:14px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted);
+.ctab{ flex:1; font:inherit; font-weight:800; font-size:12px; letter-spacing:.03em; text-transform:uppercase; color:var(--muted);
   background:none; border:0; border-bottom:3px solid transparent; padding:10px 4px 9px; cursor:pointer; }
 .ctab[aria-selected="true"]{ color:var(--chalk); border-bottom-color:var(--gold); }
 .cbody{ padding:8px 22px 12px; overflow:auto; }
@@ -312,7 +312,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
 <section id="menu" class="overlay">
   <div class="col">
     <h1 class="title">HOOPBLAST<small>3v3</small></h1>
-    <span class="version">v0.3 alpha · 2 oct 2026 · 13:54</span>
+    <span class="version">v0.3 alpha · 2 oct 2026 · 14:06</span>
     <div class="split"></div>
     <p class="lead">Baloncesto tres contra tres en una jaula. Protege el balón con el cuerpo, rompe tobillos con tus regates y roba con un manotazo en el momento justo.</p>
     <div class="row">
@@ -986,7 +986,8 @@ const PATTERNS = [['liso', 'Liso'], ['rayas', 'Rayas'], ['franja', 'Franja'], ['
 const HAIRSTYLES = [['corto', 'Corto'], ['rapado', 'Rapado'], ['afro', 'Afro'], ['rastas', 'Rastas'], ['mono', 'Moño'], ['cresta', 'Cresta'], ['coleta', 'Coleta'], ['calvo', 'Calvo']];
 const DEFAULT_LOOK = { skin: '#f1c7a0', pattern: 'liso', c1: '#2f6bff', c2: '#1f4fd6', detail: '#ffffff', number: 7,
   hair: 'corto', hairColor: '#1b1410', headband: true, sleeve: 'none', wrist: 'both', elbow: 'none', knee: 'none', socks: 'bajos',
-  acc: '#ffc61a', shoes: '#ffc61a', miiHead: 0, miiHair: 0, miiNose: 0, miiBeard: -1, eyes: 0, brows: 0, mouth: 0 };
+  acc: '#ffc61a', shoes: '#ffc61a', miiHead: 0, miiHair: 0, miiNose: 0, miiBeard: -1, eyes: 0, brows: 0, mouth: 0,
+  eyeColor: '#3b2a1e', glasses: 0, glassColor: '#1a1420', stache: 0, mark: 0 };
 
 // Textura de la camiseta según el estampado y colores del aspecto.
 function jerseyTex(L) {
@@ -1074,36 +1075,150 @@ function miiGeo(kind, i, faceUV) {
   }
   return (miiGeoCache[key] = g);
 }
-// Cara pintada por código: ojos, cejas y boca (varios estilos)
+// ---- Catálogo de la cara (diseños propios, dibujados por código) ----
+const EYE_NAMES = ['Redondos', 'Punto', 'Felices', 'Dormidos', 'Enfadados', 'Almendra', 'Grandes', 'Felinos', 'Estrechos', 'Sorpresa',
+  'Cansados', 'Decididos', 'Cerrados', 'Cuentas', 'Pestañas', 'Chispa'];
+const BROW_NAMES = ['Arco fino', 'Arco grueso', 'Rectas', 'Enfadadas', 'Preocupadas', 'Pobladas', 'Cortas', 'Arco alto', 'Cejijunta', 'Sin cejas'];
+const MOUTH_NAMES = ['Sonrisa', 'Sonrisa abierta', 'Recta', 'Pequeña', 'Ladeada', 'Triste', 'Carcajada', 'Lengua fuera', 'Dientes apretados',
+  'Ondulada', 'Gatuna', 'Sorpresa', 'Silbido', 'Mellada'];
+const GLASS_NAMES = ['Sin gafas', 'Redondas', 'Cuadradas', 'Finas', 'Aviador', 'De sol', 'Media montura', 'Deportivas', 'Protectoras'];
+const STACHE_NAMES = ['Sin bigote', 'Fino', 'Grueso', 'Manillar', 'Chevron', 'Lápiz', 'Morsa'];
+const MARK_NAMES = ['Nada', 'Pecas', 'Colorete', 'Lunar', 'Pintura de deportista', 'Pecas y colorete', 'Tirita'];
+const EYE_COLORS = ['#3b2a1e', '#5a3a22', '#2d6fd8', '#3a9a4a', '#6b7280', '#b07a2a', '#111111', '#7a3fb8'];
+const GLASS_COLORS = ['#1a1420', '#c0392b', '#2f6bff', '#d4a017', '#f3f5ff', '#7a4a2a', '#2bb673', '#ff5fa2'];
+// Cara pintada por código en una textura transparente que se pega sobre la parte frontal de la cabeza.
+// Coordenadas: u = horizontal (0,5 = centro), v = vertical (0,5 = altura de los ojos). Lienzo de 512 px.
 function miiFaceTex(L) {
-  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
-  const X = u => u * 256, Y = v => (1 - v) * 256, ink = '#1a1420';
-  g.lineCap = 'round';
+  const S = 512, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d');
+  const X = u => u * S, Y = v => (1 - v) * S, ink = '#1a1420', hair = L.hairColor, iris = L.eyeColor || EYE_COLORS[0];
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  const ell = (x, y, rx, ry, rot, fill, stroke, lw) => { g.beginPath(); g.ellipse(x, y, rx, ry, rot || 0, 0, Math.PI * 2); if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw || 6; g.stroke(); } };
+  const line = (pts, col, lw) => { g.beginPath(); g.moveTo(pts[0], pts[1]); for (let k = 2; k < pts.length; k += 2) g.lineTo(pts[k], pts[k + 1]); g.strokeStyle = col; g.lineWidth = lw; g.stroke(); };
+  const arc = (x, y, r, a0, a1, col, lw) => { g.beginPath(); g.arc(x, y, r, a0, a1); g.strokeStyle = col; g.lineWidth = lw; g.stroke(); };
+  const pupil = (x, y, ir, pr) => { ell(x, y, ir, ir * 1.15, 0, iris); ell(x, y, pr, pr * 1.15, 0, ink); ell(x - ir * 0.35, y - ir * 0.4, ir * 0.28, ir * 0.28, 0, '#fff'); };
+  // ---- ojos ----
+  const eye = (s, ex, ey) => {
+    const t = L.eyes | 0;
+    g.save();
+    switch (t) {
+      case 0: ell(ex, ey, 26, 32, 0, '#fff', ink, 7); pupil(ex + s * 3, ey + 4, 15, 8); break;
+      case 1: ell(ex, ey, 11, 15, 0, ink); ell(ex - 3, ey - 5, 3.5, 3.5, 0, '#fff'); break;
+      case 2: arc(ex, ey + 14, 22, Math.PI * 1.15, Math.PI * 1.85, ink, 9); break;
+      case 3: g.beginPath(); g.ellipse(ex, ey, 27, 20, 0, 0, Math.PI); g.closePath(); g.fillStyle = '#fff'; g.fill(); g.save(); g.clip(); pupil(ex, ey + 6, 14, 8); g.restore();
+        line([ex - 29, ey, ex + 29, ey], ink, 8); break;
+      case 4: ell(ex, ey + 4, 25, 25, 0, '#fff', ink, 7); pupil(ex + s * 2, ey + 8, 14, 8);
+        g.beginPath(); g.moveTo(ex - s * 34, ey - 30); g.lineTo(ex + s * 32, ey - 4); g.lineTo(ex + s * 32, ey - 34); g.closePath(); g.fillStyle = L.skin; g.fill();
+        line([ex - s * 32, ey - 28, ex + s * 30, ey - 6], ink, 8); break;
+      case 5: g.beginPath(); g.moveTo(ex - 32, ey); g.quadraticCurveTo(ex, ey - 34, ex + 32, ey); g.quadraticCurveTo(ex, ey + 26, ex - 32, ey); g.closePath();
+        g.fillStyle = '#fff'; g.fill(); g.save(); g.clip(); pupil(ex, ey + 2, 15, 8); g.restore(); g.strokeStyle = ink; g.lineWidth = 6; g.stroke(); break;
+      case 6: ell(ex, ey, 32, 38, 0, '#fff', ink, 7); pupil(ex + s * 2, ey + 4, 22, 11); ell(ex + 8, ey + 12, 5, 5, 0, '#fff'); break;
+      case 7: g.beginPath(); g.moveTo(ex - s * 30, ey + 6); g.quadraticCurveTo(ex, ey - 30, ex + s * 34, ey - 10); g.quadraticCurveTo(ex, ey + 24, ex - s * 30, ey + 6); g.closePath();
+        g.fillStyle = '#fff'; g.fill(); g.save(); g.clip(); pupil(ex, ey, 14, 5); g.restore(); g.strokeStyle = ink; g.lineWidth = 6; g.stroke();
+        line([ex + s * 32, ey - 10, ex + s * 46, ey - 22], ink, 6); break;
+      case 8: ell(ex, ey, 30, 11, 0, '#fff', ink, 6); g.save(); g.beginPath(); g.ellipse(ex, ey, 30, 11, 0, 0, Math.PI * 2); g.clip(); pupil(ex, ey, 11, 6); g.restore(); break;
+      case 9: ell(ex, ey, 30, 32, 0, '#fff', ink, 6); ell(ex, ey + 2, 7, 7, 0, ink); break;
+      case 10: ell(ex, ey, 25, 28, 0, '#fff', ink, 6); pupil(ex, ey + 4, 14, 8); line([ex - 27, ey - 4, ex + 27, ey - 4], ink, 7);
+        arc(ex, ey + 22, 20, Math.PI * 0.15, Math.PI * 0.85, '#8a6a5a', 4); break;
+      case 11: g.save(); g.beginPath(); g.rect(ex - 40, ey - 12, 80, 60); g.clip(); ell(ex, ey + 4, 26, 26, 0, '#fff', ink, 6); pupil(ex, ey + 8, 15, 8); g.restore();
+        line([ex - 30, ey - 12, ex + 30, ey - 12], ink, 9); break;
+      case 12: arc(ex, ey - 8, 24, Math.PI * 0.15, Math.PI * 0.85, ink, 8); line([ex - s * 26, ey + 2, ex - s * 36, ey - 6], ink, 5); break;
+      case 13: ell(ex, ey, 9, 9, 0, ink); ell(ex - 3, ey - 3, 3, 3, 0, '#fff'); break;
+      case 14: ell(ex, ey, 25, 30, 0, '#fff', ink, 7); pupil(ex, ey + 4, 15, 8);
+        for (const k of [-0.6, 0, 0.6]) line([ex + s * 18 * Math.sin(k + 0.6), ey - 28, ex + s * 26 * Math.sin(k + 0.7), ey - 42], ink, 5); break;
+      default: { ell(ex, ey, 27, 32, 0, '#fff', ink, 7); pupil(ex, ey + 4, 17, 9);
+        g.fillStyle = '#fff'; g.beginPath(); const sx = ex - 6, sy = ey - 6;
+        for (let k = 0; k < 8; k++) { const r = k % 2 ? 3 : 9, a = k * Math.PI / 4; g.lineTo(sx + Math.cos(a) * r, sy + Math.sin(a) * r); } g.closePath(); g.fill(); }
+    }
+    g.restore();
+  };
+  // ---- cejas ----
+  const brow = (s, ex, by) => {
+    const t = L.brows | 0, col = hair;
+    switch (t) {
+      case 0: arc(ex, by + 34, 34, Math.PI * 1.28, Math.PI * 1.72, col, 7); break;
+      case 1: arc(ex, by + 34, 34, Math.PI * 1.25, Math.PI * 1.75, col, 15); break;
+      case 2: line([ex - 28, by, ex + 28, by], col, 10); break;
+      case 3: line([ex - s * 30, by - 12, ex + s * 28, by + 10], col, 11); break;      // entrecejo abajo
+      case 4: line([ex - s * 30, by + 8, ex + s * 28, by - 12], col, 9); break;       // entrecejo arriba
+      case 5: g.fillStyle = col; g.beginPath(); g.ellipse(ex, by, 32, 12, s * -0.1, 0, Math.PI * 2); g.fill(); break;
+      case 6: line([ex - 10, by, ex + 14, by - 2], col, 10); break;
+      case 7: arc(ex, by + 44, 40, Math.PI * 1.22, Math.PI * 1.78, col, 9); break;
+      case 8: line([ex - s * 30, by, ex + s * 50, by + 4], col, 12); break;             // cejijunta: se unen en el centro
+      default: break;
+    }
+  };
+  const eyeV = 0.5, du = 0.13;
   for (const s of [-1, 1]) {
-    const ex = X(0.5 + s * 0.13), ey = Y(0.5);
-    // ojos
-    g.fillStyle = '#fff'; g.strokeStyle = ink; g.lineWidth = 4;
-    if (L.eyes === 1) { g.beginPath(); g.ellipse(ex, ey, 11, 15, 0, 0, 7); g.fillStyle = ink; g.fill(); }
-    else if (L.eyes === 2) { g.beginPath(); g.arc(ex, ey + 6, 13, Math.PI * 1.1, Math.PI * 1.9); g.lineWidth = 6; g.stroke(); }
-    else if (L.eyes === 3) { g.beginPath(); g.ellipse(ex, ey, 18, 12, s * 0.15, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#3a6fd8'; g.beginPath(); g.arc(ex, ey, 8, 0, 7); g.fill(); g.fillStyle = ink; g.beginPath(); g.arc(ex, ey, 4, 0, 7); g.fill(); }
-    else { g.beginPath(); g.ellipse(ex, ey, 14, 17, 0, 0, 7); g.fill(); g.stroke(); g.fillStyle = ink; g.beginPath(); g.ellipse(ex + s * 2, ey + 2, 8, 11, 0, 0, 7); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(ex + s * 2 - 3, ey - 3, 3, 0, 7); g.fill(); }
-    // cejas
-    g.strokeStyle = L.hairColor; g.lineWidth = L.brows === 2 ? 9 : 6;
-    g.beginPath();
-    const by = Y(0.6);
-    if (L.brows === 1) { g.moveTo(ex - 16, by + s * 5); g.lineTo(ex + 16, by - s * 5); }
-    else g.arc(ex, by + 18, 20, Math.PI * 1.25, Math.PI * 1.75);
-    g.stroke();
+    const ex = X(0.5 + s * du), ey = Y(eyeV);
+    eye(s, ex, ey); brow(s, ex, Y(0.605));
   }
-  // boca
-  g.strokeStyle = ink; g.lineWidth = 5; g.fillStyle = '#b8323f';
-  const mx = X(0.5), my = Y(0.27);
-  g.beginPath();
-  if (L.mouth === 1) { g.arc(mx, my - 8, 22, Math.PI * 0.15, Math.PI * 0.85); g.closePath(); g.fill(); g.stroke(); }
-  else if (L.mouth === 2) { g.moveTo(mx - 16, my); g.lineTo(mx + 16, my); g.stroke(); }
-  else if (L.mouth === 3) { g.ellipse(mx, my, 8, 10, 0, 0, 7); g.fill(); g.stroke(); }
-  else { g.arc(mx, my - 12, 20, Math.PI * 0.2, Math.PI * 0.8); g.stroke(); }
-  const t = new THREE.CanvasTexture(c); return t;
+  // ---- boca ----
+  const mx = X(0.5), my = Y(0.27), red = '#b8323f', teeth = '#fffaf0';
+  switch (L.mouth | 0) {
+    case 0: arc(mx, my - 26, 36, Math.PI * 0.22, Math.PI * 0.78, ink, 8); break;
+    case 1: g.beginPath(); g.arc(mx, my - 18, 40, Math.PI * 0.12, Math.PI * 0.88); g.closePath(); g.fillStyle = red; g.fill();
+      g.save(); g.clip(); g.fillStyle = teeth; g.fillRect(mx - 40, my - 4, 80, 12); g.restore(); g.strokeStyle = ink; g.lineWidth = 7; g.stroke(); break;
+    case 2: line([mx - 30, my, mx + 30, my], ink, 8); break;
+    case 3: ell(mx, my, 12, 9, 0, red, ink, 6); break;
+    case 4: g.beginPath(); g.moveTo(mx - 30, my + 2); g.quadraticCurveTo(mx + 6, my + 10, mx + 32, my - 12); g.strokeStyle = ink; g.lineWidth = 8; g.stroke(); break;
+    case 5: arc(mx, my + 30, 32, Math.PI * 1.25, Math.PI * 1.75, ink, 8); break;
+    case 6: g.beginPath(); g.moveTo(mx - 42, my - 12); g.lineTo(mx + 42, my - 12); g.quadraticCurveTo(mx, my + 52, mx - 42, my - 12); g.closePath(); g.fillStyle = red; g.fill();
+      g.save(); g.clip(); g.fillStyle = teeth; g.fillRect(mx - 44, my - 14, 88, 12); ell(mx, my + 26, 18, 10, 0, '#ff7a85'); g.restore(); g.strokeStyle = ink; g.lineWidth = 7; g.stroke(); break;
+    case 7: arc(mx, my - 22, 32, Math.PI * 0.2, Math.PI * 0.8, ink, 8); ell(mx + 6, my + 14, 13, 15, 0, '#ff7a85', ink, 5); line([mx + 6, my + 4, mx + 6, my + 20], '#d4505e', 3); break;
+    case 8: g.fillStyle = teeth; g.fillRect(mx - 34, my - 12, 68, 24); g.strokeStyle = ink; g.lineWidth = 6; g.strokeRect(mx - 34, my - 12, 68, 24);
+      line([mx - 34, my, mx + 34, my], ink, 4); for (const k of [-17, 0, 17]) line([mx + k, my - 12, mx + k, my + 12], ink, 3); break;
+    case 9: g.beginPath(); g.moveTo(mx - 34, my); for (let k = 0; k <= 8; k++) g.lineTo(mx - 34 + k * 8.5, my + (k % 2 ? -8 : 4)); g.strokeStyle = ink; g.lineWidth = 7; g.stroke(); break;
+    case 10: arc(mx - 13, my - 4, 13, Math.PI * 0.05, Math.PI * 0.95, ink, 7); arc(mx + 13, my - 4, 13, Math.PI * 0.05, Math.PI * 0.95, ink, 7); break;
+    case 11: ell(mx, my + 4, 18, 24, 0, red, ink, 7); ell(mx, my + 14, 10, 7, 0, '#ff7a85'); break;
+    case 12: ell(mx + 10, my, 10, 10, 0, red, ink, 6); arc(mx + 10, my, 18, Math.PI * 0.9, Math.PI * 1.1, ink, 4); break;
+    default: g.beginPath(); g.arc(mx, my - 18, 38, Math.PI * 0.14, Math.PI * 0.86); g.closePath(); g.fillStyle = red; g.fill();
+      g.save(); g.clip(); g.fillStyle = teeth; g.fillRect(mx - 40, my - 4, 80, 12); g.fillStyle = red; g.fillRect(mx - 3, my - 4, 6, 12); g.restore();
+      g.strokeStyle = ink; g.lineWidth = 7; g.stroke();
+  }
+  // ---- bigote ----
+  const sy = Y(0.335), hc = hair;
+  g.fillStyle = hc; g.strokeStyle = hc;
+  switch (L.stache | 0) {
+    case 1: line([mx - 30, sy + 4, mx - 4, sy - 2], hc, 5); line([mx + 4, sy - 2, mx + 30, sy + 4], hc, 5); break;
+    case 2: g.beginPath(); g.ellipse(mx - 18, sy, 22, 10, 0.15, 0, Math.PI * 2); g.ellipse(mx + 18, sy, 22, 10, -0.15, 0, Math.PI * 2); g.fill(); break;
+    case 3: g.beginPath(); g.ellipse(mx - 16, sy, 18, 8, 0, 0, Math.PI * 2); g.ellipse(mx + 16, sy, 18, 8, 0, 0, Math.PI * 2); g.fill();
+      arc(mx - 38, sy - 8, 8, Math.PI * 0.2, Math.PI * 1.1, hc, 6); arc(mx + 38, sy - 8, 8, -Math.PI * 0.1, Math.PI * 0.8, hc, 6); break;
+    case 4: g.beginPath(); g.moveTo(mx - 34, sy + 10); g.lineTo(mx, sy - 10); g.lineTo(mx + 34, sy + 10); g.lineTo(mx, sy + 2); g.closePath(); g.fill(); break;
+    case 5: line([mx - 24, sy, mx + 24, sy], hc, 4); break;
+    case 6: g.beginPath(); g.moveTo(mx - 40, sy + 26); g.quadraticCurveTo(mx - 30, sy - 14, mx, sy - 8); g.quadraticCurveTo(mx + 30, sy - 14, mx + 40, sy + 26);
+      g.quadraticCurveTo(mx, sy + 6, mx - 40, sy + 26); g.fill(); break;
+  }
+  // ---- detalles ----
+  const cheek = s => [X(0.5 + s * 0.17), Y(0.37)];
+  const m = L.mark | 0;
+  if (m === 1 || m === 5) for (const s of [-1, 1]) { const [cx, cy] = cheek(s); for (const [ox, oy] of [[-10, -4], [4, 2], [-2, 12], [12, -8], [10, 10]]) ell(cx + ox * s, cy + oy, 3, 3, 0, '#9a5a3a'); }
+  if (m === 2 || m === 5) for (const s of [-1, 1]) { const [cx, cy] = cheek(s); ell(cx, cy + 4, 24, 13, 0, 'rgba(255,90,110,0.45)'); }
+  if (m === 3) ell(X(0.5 + 0.2), Y(0.3), 5, 5, 0, '#3a2418');
+  if (m === 4) for (const s of [-1, 1]) { const ex = X(0.5 + s * du); g.fillStyle = '#141414'; g.fillRect(ex - 22, Y(eyeV) + 40, 44, 12); }
+  if (m === 6) { g.save(); g.translate(X(0.5 - 0.19), Y(0.37)); g.rotate(-0.5); g.fillStyle = '#f4d7b5'; g.fillRect(-26, -9, 52, 18); g.fillStyle = '#e8c39c'; g.fillRect(-9, -9, 18, 18);
+    g.strokeStyle = '#c9a07a'; g.lineWidth = 2; g.strokeRect(-26, -9, 52, 18); g.restore(); }
+  // ---- gafas (encima de todo) ----
+  const gt = L.glasses | 0, gc = L.glassColor || GLASS_COLORS[0];
+  if (gt) {
+    const ey = Y(eyeV), lx = X(0.5 - du), rx = X(0.5 + du);
+    const lens = (x, w, h, r, tint) => { g.beginPath(); if (g.roundRect) g.roundRect(x - w, ey - h, w * 2, h * 2, r); else g.rect(x - w, ey - h, w * 2, h * 2);
+      if (tint) { g.fillStyle = tint; g.fill(); } g.strokeStyle = gc; g.lineWidth = 7; g.stroke(); };
+    const bridge = (y, w) => line([lx + 30, y, rx - 30, y], gc, w || 6);
+    switch (gt) {
+      case 1: ell(lx, ey, 36, 36, 0, 'rgba(200,230,255,0.18)', gc, 7); ell(rx, ey, 36, 36, 0, 'rgba(200,230,255,0.18)', gc, 7); bridge(ey - 6); break;
+      case 2: lens(lx, 40, 32, 6, 'rgba(200,230,255,0.18)'); lens(rx, 40, 32, 6, 'rgba(200,230,255,0.18)'); bridge(ey - 8); break;
+      case 3: lens(lx, 40, 20, 4, 'rgba(200,230,255,0.15)'); lens(rx, 40, 20, 4, 'rgba(200,230,255,0.15)'); bridge(ey - 4, 4); break;
+      case 4: for (const x of [lx, rx]) { g.beginPath(); g.moveTo(x - 40, ey - 26); g.lineTo(x + 40, ey - 26); g.quadraticCurveTo(x + 40, ey + 40, x, ey + 36); g.quadraticCurveTo(x - 40, ey + 34, x - 40, ey - 26); g.closePath();
+          g.fillStyle = 'rgba(120,80,30,0.45)'; g.fill(); g.strokeStyle = gc; g.lineWidth = 5; g.stroke(); } bridge(ey - 26, 5); break;
+      case 5: for (const x of [lx, rx]) ell(x, ey + 2, 42, 32, 0, 'rgba(20,20,30,0.92)', gc, 7); bridge(ey - 10, 8); break;
+      case 6: for (const x of [lx, rx]) { line([x - 40, ey - 18, x + 40, ey - 18], gc, 9); arc(x, ey - 18, 40, 0.1, Math.PI - 0.1, 'rgba(0,0,0,0.25)', 2); } bridge(ey - 18, 6); break;
+      case 7: g.beginPath(); g.moveTo(lx - 48, ey - 20); g.lineTo(rx + 48, ey - 20); g.lineTo(rx + 40, ey + 22); g.quadraticCurveTo(X(0.5), ey + 10, lx - 40, ey + 22); g.closePath();
+        g.fillStyle = 'rgba(255,120,40,0.55)'; g.fill(); g.strokeStyle = gc; g.lineWidth = 7; g.stroke(); break;
+      default: lens(lx, 44, 34, 18, 'rgba(180,240,255,0.3)'); lens(rx, 44, 34, 18, 'rgba(180,240,255,0.3)'); bridge(ey, 10);
+        line([lx - 44, ey, X(0.02), ey - 4], gc, 10); line([rx + 44, ey, X(0.98), ey - 4], gc, 10);
+    }
+  }
+  const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t;
 }
 // Monta cabeza, cara, pelo, nariz y barba estilo Mii dentro del grupo "head"
 function miiHead(head, L, skinM, hairM, accM, M) {
@@ -1126,7 +1241,10 @@ function makeRig(team, idx, isHuman, look) {
     skin: hex(SKINS[(team * 3 + idx) % 6]), c1: hex(teamCol), c2: team === 0 ? '#1f4fd6' : '#d92c5a', detail: '#ffffff',
     number: NUMS[team][idx], hairColor: hex(HAIRS[(team * 3 + idx) % 6]), hair: ['corto', 'rapado', 'afro', 'corto', 'mono', 'rastas'][(team * 3 + idx) % 6],
     acc: '#ffffff', shoes: '#f4f4f8', wrist: 'both',
-    miiHead: (team * 3 + idx) % 8, miiHair: [3, 11, 20, 27, 35, 44][(team * 3 + idx) % 6], miiNose: (team * 3 + idx) % 10, miiBeard: idx === 2 ? team : -1, eyes: idx % 4, brows: team % 3, mouth: (idx + team) % 4 });
+    miiHead: (team * 3 + idx) % 8, miiHair: [3, 11, 20, 27, 35, 44][(team * 3 + idx) % 6], miiNose: (team * 3 + idx) % 10, miiBeard: idx === 2 ? team : -1,
+    eyes: [0, 5, 6, 11, 14, 7][(team * 3 + idx) % 6], brows: [0, 1, 2, 3, 5, 7][(team * 2 + idx) % 6], mouth: [0, 4, 1, 2, 13, 9][(team * 3 + idx) % 6],
+    eyeColor: EYE_COLORS[(team * 3 + idx * 2) % EYE_COLORS.length], glasses: idx === 1 && team === 1 ? 7 : 0, glassColor: '#1a1420',
+    stache: idx === 2 && team === 0 ? 2 : 0, mark: team === 1 && idx === 0 ? 4 : idx === 1 && team === 0 ? 1 : 0 });
   const skinM = toon(L.skin), hairM = toon(L.hairColor);
   const jerseyM = toon(0xffffff, { map: jerseyTex(L) }), trimM = toon(L.detail), shortsM = toon(0xffffff, { map: shortsTex(L) }), shortsFlatM = toon(L.c1);
   const shoeM = toon(L.shoes), soleM = toon(0x1a1d33), accM = toon(L.acc), sockM = toon(0xffffff);
@@ -3257,7 +3375,7 @@ function padFrame(dt) {
     if (down(9) && state === 'paused') resume();
     if (state === 'custom') {
       previewYaw += rx * 2.5 * dt;
-      if (down(4) || down(5)) { custTab = (custTab + (down(5) ? 1 : 3)) % 4; buildCustomForm('ctab' + custTab); }   // L1/R1: pestañas
+      if (down(4) || down(5)) { const nt = custTabs().length; custTab = (custTab + (down(5) ? 1 : nt - 1)) % nt; buildCustomForm('ctab' + custTab); }   // L1/R1: pestañas
     }
   } else if (inMatch() && mode !== 'anim') {
     if (down(9)) { pause(); PAD.prev = gp.buttons.map(x => x.pressed); return; }
@@ -3622,8 +3740,9 @@ let custTab = 0;
 function custTabs() {
   const SIDES = [['none', 'No'], ['left', 'Izquierda'], ['right', 'Derecha'], ['both', 'Ambos']];
   return [
-    ['Cabeza', [['Piel', 'color', 'skin', SKIN_TONES], ['Cara', 'num', 'miiHead', MII_DATA.head.length], ['Ojos', 'num', 'eyes', 4],
-      ['Cejas', 'num', 'brows', 3], ['Boca', 'num', 'mouth', 4], ['Nariz', 'num', 'miiNose', MII_DATA.nose.length]]],
+    ['Cabeza', [['Piel', 'color', 'skin', SKIN_TONES], ['Forma', 'num', 'miiHead', MII_DATA.head.length], ['Nariz', 'num', 'miiNose', MII_DATA.nose.length]]],
+    ['Cara', [['Ojos', 'named', 'eyes', EYE_NAMES], ['Color de ojos', 'color', 'eyeColor', EYE_COLORS], ['Cejas', 'named', 'brows', BROW_NAMES], ['Boca', 'named', 'mouth', MOUTH_NAMES]]],
+    ['Extras', [['Gafas', 'named', 'glasses', GLASS_NAMES], ['Montura', 'color', 'glassColor', GLASS_COLORS], ['Bigote', 'named', 'stache', STACHE_NAMES], ['Detalles', 'named', 'mark', MARK_NAMES]]],
     ['Pelo', [['Peinado', 'num', 'miiHair', MII_DATA.hair.length], ['Color', 'color', 'hairColor', HAIR_COLORS], ['Barba', 'num', 'miiBeard', MII_DATA.beard.length, -1]]],
     ['Equipación', [['Estampado', 'list', 'pattern', PATTERNS], ['Principal', 'color', 'c1', KIT_COLORS], ['Secundario', 'color', 'c2', KIT_COLORS],
       ['Detalles', 'color', 'detail', KIT_COLORS], ['Dorsal', 'dorsal', 'number'], ['Zapatillas', 'color', 'shoes', KIT_COLORS]]],
@@ -3657,8 +3776,8 @@ function buildCustomForm(focusId) {
     } else {
       // selector ◀ valor ▶ para números, listas y lados
       const lo = type === 'num' ? (min || 0) : 0, n = type === 'num' ? opts : type === 'dorsal' ? 100 : opts.length;
-      const idx = type === 'list' ? Math.max(0, opts.findIndex(o => o[0] === myLook[key])) : myLook[key];
-      const show = type === 'list' ? opts[idx][1] : type === 'dorsal' ? String(idx) : idx < 0 ? 'Ninguna' : (idx + 1) + '<small>/ ' + n + '</small>';
+      const idx = type === 'list' ? Math.max(0, opts.findIndex(o => o[0] === myLook[key])) : (myLook[key] | 0);
+      const show = type === 'list' ? opts[idx][1] : type === 'named' ? opts[idx] + '<small>' + (idx + 1) + '/' + n + '</small>' : type === 'dorsal' ? String(idx) : idx < 0 ? 'Ninguna' : (idx + 1) + '<small>/ ' + n + '</small>';
       const box = document.createElement('div'); box.className = 'cstep'; row.appendChild(box);
       const step = dir => {
         const span = n - lo, v = ((idx - lo + dir) % span + span) % span + lo;
@@ -4529,7 +4648,7 @@ $('custRand').addEventListener('click', () => {
   const pick = a => a[Math.floor(Math.random() * a.length)];
   const sd = () => pick(['none', 'none', 'left', 'right', 'both']);
   Object.assign(myLook, { skin: pick(SKIN_TONES), pattern: pick(PATTERNS)[0], c1: pick(KIT_COLORS), c2: pick(KIT_COLORS), detail: pick(KIT_COLORS),
-    hair: pick(HAIRSTYLES)[0], hairColor: pick(HAIR_COLORS), miiHead: Math.floor(Math.random() * MII_DATA.head.length), miiHair: Math.floor(Math.random() * MII_DATA.hair.length), miiNose: Math.floor(Math.random() * MII_DATA.nose.length), miiBeard: Math.floor(Math.random() * 5) - 2 < 0 ? -1 : Math.floor(Math.random() * 3), eyes: Math.floor(Math.random() * 4), brows: Math.floor(Math.random() * 3), mouth: Math.floor(Math.random() * 4), sleeve: sd(), wrist: sd(), elbow: sd(), knee: sd(),
+    hair: pick(HAIRSTYLES)[0], hairColor: pick(HAIR_COLORS), miiHead: Math.floor(Math.random() * MII_DATA.head.length), miiHair: Math.floor(Math.random() * MII_DATA.hair.length), miiNose: Math.floor(Math.random() * MII_DATA.nose.length), miiBeard: Math.floor(Math.random() * 5) - 2 < 0 ? -1 : Math.floor(Math.random() * 3), eyes: Math.floor(Math.random() * EYE_NAMES.length), brows: Math.floor(Math.random() * BROW_NAMES.length), mouth: Math.floor(Math.random() * MOUTH_NAMES.length), eyeColor: pick(EYE_COLORS), glasses: Math.random() < 0.35 ? 1 + Math.floor(Math.random() * (GLASS_NAMES.length - 1)) : 0, glassColor: pick(GLASS_COLORS), stache: Math.random() < 0.3 ? 1 + Math.floor(Math.random() * (STACHE_NAMES.length - 1)) : 0, mark: Math.random() < 0.4 ? Math.floor(Math.random() * MARK_NAMES.length) : 0, sleeve: sd(), wrist: sd(), elbow: sd(), knee: sd(),
     socks: pick(['bajos', 'altos']), acc: pick(KIT_COLORS), shoes: pick(KIT_COLORS), number: Math.floor(Math.random() * 100) });
   applyLook(); buildCustomForm();
 });
