@@ -312,7 +312,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
 <section id="menu" class="overlay">
   <div class="col">
     <h1 class="title">HOOPBLAST<small>3v3</small></h1>
-    <span class="version">v0.3 alpha · 2 oct 2026 · 14:06</span>
+    <span class="version">v0.3 alpha · 3 oct 2026 · 18:26</span>
     <div class="split"></div>
     <p class="lead">Baloncesto tres contra tres en una jaula. Protege el balón con el cuerpo, rompe tobillos con tus regates y roba con un manotazo en el momento justo.</p>
     <div class="row">
@@ -1528,9 +1528,10 @@ function holdTarget(p, dt) {
   else if (p.charging || p.shotT > 0) {
     const k = p.shotT > 0 ? 1 : smooth(Math.min(1, p.charge / CFG.shot.sweet));
     if (p.shotKind === 'hook') {
-      // gancho: el balón baja a la cadera del lado alejado y sube en arco con el brazo estirado
-      const a = k * Math.PI * 0.55;
-      fw = 0.08; lat = p.hand * (0.26 + 0.22 * Math.sin(a + 0.4)); y = p.pos.y + 1.2 + 1.02 * Math.sin(a);   // al alcance del brazo estirado
+      // gancho: el balón describe un arco amplio alrededor del hombro, con el brazo casi estirado:
+      // desde la cadera del lado alejado, hacia fuera y hasta encima de la cabeza
+      const th = lerp(-0.85, 1.65, k), rr = 0.55;
+      fw = 0.08; lat = p.hand * (0.235 + rr * Math.cos(th)); y = p.pos.y + 1.47 + rr * Math.sin(th);
     } else if (p.shotKind === 'fade') {
       // fadeaway: punto de tiro alto y algo por detrás de la cabeza
       fw = lerp(0.3, 0.06, k); lat = lerp(0.05, -0.02, k); y = p.pos.y + lerp(1.25, 2.28, k);
@@ -1804,7 +1805,8 @@ function updatePlayer(p, inp, dt) {
   let maxSp = (p.sprinting ? C.sprint * (0.85 + 0.15 * p.stamina) : C.speed) * p.speedMul;
   if (p.exhausted) maxSp *= CFG.energy.exhaustedSpeed;
   if (p.stance) maxSp *= holdingB ? C.stanceOff : C.stanceDef;
-  if ((p.charging && !p.move && p.shotKind === 'jump') || (p.shotT > 0 && p.shotKind === 'jump')) { maxSp = 0; p.vel.x = 0; p.vel.z = 0; }   // tirando: fijo en su sitio
+  if ((p.charging && !p.move) || (p.shotT > 0 && p.shotKind === 'jump')) { maxSp = 0; p.vel.x = 0; p.vel.z = 0; }   // tirando (también gancho y fadeaway): fijo en su sitio
+  if (p.fadeTurn) p.fadeTurn.t += dt;
   // poste: postura con balón, de espaldas a un defensor pegado y cerca del aro
   p.post = false;
   if (p.stance && holdingB && !p.move) {
@@ -1915,6 +1917,13 @@ function updatePlayer(p, inp, dt) {
   else if (p.move && (p.move.type === 'cross' || p.move.type === 'between')) ty = p.move.yaw0 - p.move.side * 0.35 * smooth(Math.min(1, p.move.t / p.move.dur));
   else if (p.move && p.move.type === 'step') { const c = hoops[p.attackSide].rimC; ty = Math.atan2(c.x - p.pos.x, c.z - p.pos.z); }
   else if (p.post && !p.charging && p.shotT <= 0) { const c = hoops[p.attackSide].rimC; ty = Math.atan2(p.pos.x - c.x, p.pos.z - c.z); }   // de espaldas al aro
+  else if ((p.charging || p.shotT > 0) && p.shotKind === 'fade' && p.fadeTurn) {
+    const c = hoops[p.attackSide].rimC, ft = p.fadeTurn;
+    let delta = wrapA(Math.atan2(c.x - p.pos.x, c.z - p.pos.z) - ft.y0);
+    if (ft.dir > 0 && delta < -0.2) delta += Math.PI * 2;
+    if (ft.dir < 0 && delta > 0.2) delta -= Math.PI * 2;
+    p.yaw = ft.y0 + delta * smooth(Math.min(1, ft.t / 0.32)); ty = null;
+  }
   else if ((p.charging || p.shotT > 0) && p.shotKind === 'hook') {
     // gancho: de lado, con el hombro contrario apuntando al aro y el balón por el lado alejado
     const c = hoops[p.attackSide].rimC, dx = c.x - p.pos.x, dz = c.z - p.pos.z;
@@ -2487,7 +2496,7 @@ function beginShot(p) {
   p.charging = false; p.shotReleased = p.charge;
   if (!p.onGround) { shoot(p); return; }
   const c = hoops[p.attackSide].rimC, dx = c.x - p.pos.x, dz = c.z - p.pos.z, l = Math.hypot(dx, dz) || 1;
-  if (p.shotKind === 'fade') { p.shotT = 0.2; p.vel.set(-dx / l * 3.2, 4.0, -dz / l * 3.2); }          // salta hacia atrás
+  if (p.shotKind === 'fade') { p.shotT = 0.2; p.vel.set(-dx / l * 1.7, 3.9, -dz / l * 1.7); }   // salta y cae hacia atrás (≈0,7 m)          // salta hacia atrás
   else if (p.shotKind === 'hook') { p.shotT = 0.18; p.vel.set(dx / l * 1.0, 3.8, dz / l * 1.0); }        // gancho: impulso hacia el aro con una pierna
   else { p.shotT = 0.16; p.vel.y = 3.4; p.vel.x = 0; p.vel.z = 0; }   // salto vertical: no se desplaza
   p.onGround = false;
@@ -2939,7 +2948,14 @@ function handleActions(p, inp, dt) {
   if (!p.charging && inp.shootHold && (inp.shootPress || !p.isHuman || inp.postShot)) {
     if (inLayupRange(p) && p.onGround && !inp.postShot) { layup(p); return; }
     p.charging = true; p.charge = 0; p.shotKind = inp.postShot || 'jump';   // gancho / fadeaway desde el poste
-    if (p.shotKind === 'jump') { p.vel.x = 0; p.vel.z = 0; }
+    p.vel.x = 0; p.vel.z = 0; p.fadeTurn = null;
+    if (p.shotKind === 'fade') {
+      // fadeaway: gira hacia el aro por el hombro que marque el stick izquierdo (derecha o izquierda); sin stick, por el lado de la mano
+      const F = carrierFrame(p), mm = Math.hypot(inp.move.x, inp.move.z);
+      const lat = mm > 0.3 ? (inp.move.x * F.rx + inp.move.z * F.rz) / mm : 0;
+      const right = Math.abs(lat) > 0.25 ? lat > 0 : p.hand > 0;
+      p.fadeTurn = { y0: p.yaw, dir: right ? -1 : 1, t: 0 };   // girar a la derecha = el ángulo baja
+    }
   }
   if (inp.fake && !p.charging && p.onGround) { pumpFake(p); return; }
   if (p.charging) {
@@ -4211,6 +4227,7 @@ function animatePlayer(p, dt, T) {
   // ---- fadeaway: se echa hacia atrás al cargar; en el aire una pierna adelantada y el cuerpo cayendo hacia atrás ----
   if (p.charging && p.shotKind === 'fade') {
     const k = smooth(Math.min(1, p.charge / CFG.shot.sweet));
+    if (p.fadeTurn && p.fadeTurn.t < 0.32) { const tk = Math.sin(Math.PI * p.fadeTurn.t / 0.32); tp.lL.z = 0.25 * tk; tp.lR.z = -0.25 * tk; tp.bodyZ = -p.fadeTurn.dir * 0.08 * tk; }   // pivote del giro
     tp.bodyX = -0.18 * k; tp.torsoX = -0.12 * k; tp.headX += 0.1 * k;
     tp.lL.x = -0.35 * k; tp.lL.k = 0.4; tp.lR.x = 0.15; tp.lR.k = 0.5;
   }
@@ -4349,7 +4366,16 @@ function animatePlayer(p, dt, T) {
       const elIK = solveArm(arm, r.torso, _ikT, _pole, _qIK);
       _qFK.slerp(_qIK, clamp(ikw, 0, 1)); el = lerp(el, elIK, clamp(ikw, 0, 1));
     } else if (ikw > 0.01 && holding) {
-      if ((p.charging || p.shotT > 0) && p.shotKind !== 'hook') {
+      if ((p.charging || p.shotT > 0) && p.shotKind === 'hook') {
+        const sg = p.hand > 0 ? 1 : -1, shooting = (arm.side < 0) === (sg > 0);
+        if (shooting) {   // palma bajo el balón por el lado exterior; codo abierto hacia fuera y atrás
+          _ikT.set(ball.pos.x + F.rx * sg * R * 0.45, ball.pos.y - R * 0.8, ball.pos.z + F.rz * sg * R * 0.45);
+          _pole.set(arm.side * 1.0, -0.25, -0.9);
+        } else {          // la otra mano acompaña el balón al principio por su lado interior
+          _ikT.set(ball.pos.x - F.rx * sg * (R + 0.02), ball.pos.y, ball.pos.z - F.rz * sg * (R + 0.02));
+          _pole.set(arm.side * 1.2, -0.6, 0.2);
+        }
+      } else if ((p.charging || p.shotT > 0) && p.shotKind !== 'hook') {
         if (arm.side < 0) {   // mano de tiro (derecha): bajo el balón y algo por detrás, con el codo debajo
           _ikT.set(ball.pos.x - F.fx * R * 0.3 + F.rx * 0.02, ball.pos.y - R * 0.9, ball.pos.z - F.fz * R * 0.3 + F.rz * 0.02);
           _pole.set(arm.side * 0.2, -1, 0.55);
