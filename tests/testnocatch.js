@@ -1,5 +1,5 @@
 // un defensor saltando delante del tirador y otro bajo el aro: ¿pueden coger el tiro en vuelo?
-let src=require('fs').readFileSync('testblock.js','utf8').split('// 1) tiro del rival')[0].replace("'/mnt/user-data/outputs/hoopblast.html'","'/home/claude/reorg_out.html'").replace(/process\.env\.HOOPBLAST\|\|[^)]*\)/,"'/home/claude/reorg_out.html'");
+let src=require('fs').readFileSync(require('path').join(__dirname,'testblock.js'),'utf8').split('// 1) tiro del rival')[0].replace("require('path').join(__dirname,'..','index.html')","require('path').join(__dirname,'..','index.html')").replace(/process\.env\.HOOPBLAST\|\|[^)]*\)/,"require('path').join(__dirname,'..','index.html')");
 eval(src + `
 const V=h.pos.constructor; const rim=d.hoops[1].rimC;
 let caughtInFlight=0, rebounds=0, N=10;

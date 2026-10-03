@@ -1,4 +1,4 @@
-const base=require('fs').readFileSync('testanim.js','utf8').split("console.log('modo'")[0];
+const base=require('fs').readFileSync(require('path').join(__dirname,'testanim.js'),'utf8').split("console.log('modo'")[0];
 eval(base + `
 const pick=(name)=>[...w.document.querySelectorAll('#animList button')].find(b=>b.textContent===name);
 // determinismo: avanzar a un fotograma, ir atrás y adelante, y comparar la pose y el balón

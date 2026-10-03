@@ -1,4 +1,4 @@
-const src=require('fs').readFileSync('testpad.js','utf8').split("// navegación de menú")[0].replace("'/mnt/user-data/outputs/hoopblast.html'","'/home/claude/reorg_out.html'").replace("window.__dbg=()=>({","window.__dbg=()=>({get human(){return human}, get live(){return live}, set live(v){live=v},");
+const src=require('fs').readFileSync(require('path').join(__dirname,'testpad.js'),'utf8').split("// navegación de menú")[0].replace("require('path').join(__dirname,'..','index.html')","require('path').join(__dirname,'..','index.html')").replace("window.__dbg=()=>({","window.__dbg=()=>({get human(){return human}, get live(){return live}, set live(v){live=v},");
 eval(src + `
 btn(0,true); run(0.05); btn(0,false); run(4);
 const P=d.players; const h=d.human; w.__noai=true;

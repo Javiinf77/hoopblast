@@ -1,4 +1,4 @@
-let src=require('fs').readFileSync('testblock.js','utf8').split('// 1) tiro del rival')[0].replace(/process\.env\.HOOPBLAST\|\|[^)]*\)/,"'/home/claude/reorg_out.html'").replace("'/mnt/user-data/outputs/hoopblast.html'","'/home/claude/reorg_out.html'");
+let src=require('fs').readFileSync(require('path').join(__dirname,'testblock.js'),'utf8').split('// 1) tiro del rival')[0].replace(/process\.env\.HOOPBLAST\|\|[^)]*\)/,"require('path').join(__dirname,'..','index.html')").replace("require('path').join(__dirname,'..','index.html')","require('path').join(__dirname,'..','index.html')");
 eval(src + `
 const V=h.pos.constructor;
 // defensa: el rival bota hacia ti; tú en postura (clic derecho) o sin ella

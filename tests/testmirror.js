@@ -1,4 +1,4 @@
-const base=require('fs').readFileSync('testanim.js','utf8').split("console.log('modo'")[0];
+const base=require('fs').readFileSync(require('path').join(__dirname,'testanim.js'),'utf8').split("console.log('modo'")[0];
 eval(base + `
 const pick=(name)=>[...w.document.querySelectorAll('#animList button')].find(b=>b.textContent===name);
 const deg=(x,z)=>(Math.atan2(z,x)*180/Math.PI).toFixed(0);

@@ -1,4 +1,4 @@
-const base=require('fs').readFileSync('testanim.js','utf8').split("console.log('modo'")[0];
+const base=require('fs').readFileSync(require('path').join(__dirname,'testanim.js'),'utf8').split("console.log('modo'")[0];
 eval(base + `
 const pick=(name)=>[...w.document.querySelectorAll('#animList button')].find(b=>b.textContent===name);
 pick('Paso atrás + tiro').click(); $('animPause').click(); const hh=d.human; let x0=null, xEnd=null, shotF=-1, kind='', maxY=0, made=false;
