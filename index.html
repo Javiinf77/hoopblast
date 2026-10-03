@@ -312,7 +312,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
 <section id="menu" class="overlay">
   <div class="col">
     <h1 class="title">HOOPBLAST<small>3v3</small></h1>
-    <span class="version">v0.3 alpha · 3 oct 2026 · 18:26</span>
+    <span class="version">v0.3 alpha · 3 oct 2026 · 18:30</span>
     <div class="split"></div>
     <p class="lead">Baloncesto tres contra tres en una jaula. Protege el balón con el cuerpo, rompe tobillos con tus regates y roba con un manotazo en el momento justo.</p>
     <div class="row">
@@ -1887,6 +1887,10 @@ function updatePlayer(p, inp, dt) {
   p.vel.y += CFG.gravity * dt * (p.vel.y < 0 ? 1.2 : 1);
   p.pos.addScaledVector(p.vel, dt);
   if (p.pos.y <= 0) {
+    if (!p.onGround && p.throwT > 0 && (p.throwKind === 'shot' || p.throwKind === 'hook' || p.throwKind === 'fade')) {
+      // al caer de un tiro, gancho o fadeaway: se acaba el gesto del remate y vuelve a la pose de juego (breve apoyo sin moverse)
+      p.throwT = Math.min(p.throwT, 0.08); p.ctrlT = Math.max(p.ctrlT, 0.12); p.vel.x *= 0.3; p.vel.z *= 0.3;
+    }
     if (!p.onGround && p.vel.y < -2) {
       p.land = Math.min(1, -p.vel.y / 8);
       // cada aterrizaje es un poco distinto: flexión, inclinación, pierna adelantada y brazos
@@ -2520,7 +2524,7 @@ function shoot(p) {
   }
   release(p, shotVelocity(ball.pos, target, kind === 'hook' ? 1.7 + dist * 0.1 : kind === 'fade' ? 1.45 + dist * 0.09 : 1.25 + dist * 0.09));
   ball.shot = { team: p.team, shooter: p, from3: dist > CFG.shot.three, dunk: false };
-  p.throwT = kind === 'jump' ? 0.75 : 0.6; p.throwKind = kind === 'jump' ? 'shot' : kind; p.shotKind = 'jump';
+  p.throwT = kind === 'jump' ? 0.75 : 0.6; p.throwKind = kind === 'jump' ? 'shot' : kind; p.shotKind = 'jump'; p.fadeTurn = null;
   stats[p.team].att++; trainAttempt(p, dist > CFG.shot.three, perfect);
   sfx('shoot');
   if (p === human) {
