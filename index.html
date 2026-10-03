@@ -312,7 +312,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
 <section id="menu" class="overlay">
   <div class="col">
     <h1 class="title">HOOPBLAST<small>3v3</small></h1>
-    <span class="version">v0.3 alpha · 3 oct 2026 · 18:30</span>
+    <span class="version">v0.3 alpha · 3 oct 2026 · 18:40</span>
     <div class="split"></div>
     <p class="lead">Baloncesto tres contra tres en una jaula. Protege el balón con el cuerpo, rompe tobillos con tus regates y roba con un manotazo en el momento justo.</p>
     <div class="row">
@@ -567,7 +567,7 @@ const CFG = {
     postspin:{ dur: 0.7,  prot: 0.4,  cd: 1.2, cost: 0.1 },    // giro de poste: media vuelta sobre el pie de apoyo hacia el aro
     euro:    { dur: 0.72, prot: 0.5,  cd: 1.5, cost: 0.06 },   // eurostep: dos pasos en zigzag y bandeja
     retreat: { dur: 0.62, prot: 0.25, cd: 0.9, cost: 0.05 },   // retroceso con bote: gana espacio hacia atrás sin dejar de botar
-    spinlay: { dur: 0.6,  prot: 0.5,  cd: 1.5, cost: 0.08 },   // bandeja con giro
+    spinlay: { dur: 0.7,  prot: 0.5,  cd: 1.5, cost: 0.08 },   // bandeja con giro
     step:    { dur: 0.62, prot: 0.18, cd: 1.3, cost: 0.08 },   // paso atrás en dos apoyos (tiro más fácil justo después)
     heatDecay: 0.8, heatPenalty: 0.4,
     // la clave del regate: un movimiento provoca la reacción del defensor y después EXPLOTAS con stick izquierdo + sprint
@@ -1541,6 +1541,10 @@ function holdTarget(p, dt) {
       fw = lerp(0.34, 0.36, k) + up * 0.08; lat = lerp(0.06, 0.15, k); y = p.pos.y + lerp(1.3, 2.1, k) + up * 0.24;
     }
   }
+  else if (p.layupSeq) {
+    const k = smooth(Math.min(1, p.layupSeq.t / p.layupSeq.dur));
+    fw = lerp(0.3, 0.42, k); lat = lerp(0.06, 0.2, k) * p.hand; y = p.pos.y + lerp(1.2, 2.5, k);
+  }
   else if (p.rebT > 0) {
     // rebote: el balón llega a las manos arriba y baja hasta el pecho, con los codos abiertos
     const k = smooth(clamp((0.75 - p.rebT) / 0.6, 0, 1));
@@ -1586,10 +1590,10 @@ function holdTarget(p, dt) {
       lat = 0.38 * h0; fw = 0.32; y = R + (0.75 - R) * Math.abs(Math.cos(Math.PI * 2 * k));
     } else if (t === 'euro') {    // eurostep: balón al pecho, se lleva al lado contrario al de cada paso (protegido)
       // balón bajo, a la altura de la cadera, pasando al lado protegido; sube al final para la bandeja
-      lat = lerp(-s * 0.3, s * 0.3, smooth(clamp((k - 0.3) / 0.4, 0, 1))); fw = 0.3;
+      lat = lerp(-s * 0.3, s * 0.3, smooth(clamp((k - 0.3) / 0.4, 0, 1))); fw = 0.44;   // separado del cuerpo: los brazos no lo atraviesan
       y = p.pos.y + (k < 0.72 ? 0.82 : lerp(0.82, 1.75, smooth((k - 0.72) / 0.28)));
     } else if (t === 'spinlay') { // bandeja con giro: balón pegado al pecho mientras gira
-      lat = 0.05 * h0; fw = 0.26; y = p.pos.y + 1.15;
+      lat = 0.05 * h0; fw = 0.48; y = p.pos.y + 1.2;
     } else {                      // paso atrás: bote corto y recoge bajo, en posición de tiro
       if (k < 0.22) { lat = 0.3 * h0; fw = 0.36; y = R + (0.85 - R) * Math.abs(Math.cos(Math.PI * k / 0.22)); }
       else { const e = smooth(clamp((k - 0.22) / 0.25, 0, 1)); lat = lerp(0.3 * h0, 0.1, e); fw = lerp(0.36, 0.44, e); y = p.pos.y + lerp(0.85, 1.12, e); }
@@ -1644,11 +1648,15 @@ function stepBall(dt) {
   }
   const h = ball.holder;
   if (h) {
-    const t = holdTarget(h, dt), k = h.dunkSeq ? 1500 : h.move ? 900 : h.rebT > 0.55 ? 260 : 520, c = h.dunkSeq ? 78 : h.move ? 60 : h.rebT > 0.55 ? 32 : 46;
+    const t = holdTarget(h, dt), k = h.dunkSeq || (h.move && (h.move.type === 'spinlay' || h.move.type === 'spin')) ? 1500 : h.move ? 900 : h.rebT > 0.55 ? 260 : 520, c = h.dunkSeq || (h.move && (h.move.type === 'spinlay' || h.move.type === 'spin')) ? 78 : h.move ? 60 : h.rebT > 0.55 ? 32 : 46;
     ball.vel.x += (k * (t.x - ball.pos.x) - c * (ball.vel.x - h.vel.x)) * dt;
     ball.vel.y += (k * (t.y - ball.pos.y) - c * (ball.vel.y - h.vel.y)) * dt;
     ball.vel.z += (k * (t.z - ball.pos.z) - c * (ball.vel.z - h.vel.z)) * dt;
     if (ball.pos.distanceTo(t) > 3) { ball.pos.copy(t); ball.vel.copy(h.vel); }
+    if (h.move && (h.move.type === 'spin' || h.move.type === 'spinlay' || h.move.type === 'postspin') && h.move.t / h.move.dur > 0.2 && h.move.type !== 'postspin') {
+      // en los giros el balón va pegado a las manos (el muelle no alcanza la velocidad de rotación y se metería en el cuerpo)
+      ball.vel.subVectors(t, ball.pos).multiplyScalar(1 / dt); ball.pos.copy(t);
+    }
     _tmp.crossVectors(UP, ball.vel).multiplyScalar(1 / CFG.ball.r);
     ball.w.lerp(_tmp, 0.1);
   } else {
@@ -1779,6 +1787,7 @@ function updatePlayer(p, inp, dt) {
   p.cutT = Math.max(0, (p.cutT || 0) - dt);
   p.fakeCd = Math.max(0, p.fakeCd - dt);
   p.rebT = Math.max(0, p.rebT - dt);
+  if (p.layupSeq) { p.layupSeq.t += dt; if (p.layupSeq.t >= p.layupSeq.dur || p.vel.y < -0.5) releaseLayup(p); }
   if (p.fakeT > 0) { p.fakeT -= dt; if (p.fakeT <= 0) p.explodeWin = CFG.moves.explodeWin; }   // tras el amago, ventana para explotar
   p.blockCd = Math.max(0, p.blockCd - dt); p.swatT = Math.max(0, p.swatT - dt);
   if (p.dunkSeq) { stepDunk(p, dt); return; }
@@ -1858,7 +1867,8 @@ function updatePlayer(p, inp, dt) {
   if (p.move) {
     p.move.t += dt;
     if (p.move.type === 'spin' || p.move.type === 'postspin') pivotSpin(p, dt);
-    if (p.move.type === 'euro' || p.move.type === 'spinlay') driveSteer(p, dt);
+    if (p.move.type === 'euro') driveSteer(p, dt);
+    if (p.move.type === 'spinlay') pivotSpin(p, dt);
     if (p.move.type === 'retreat') {   // pasitos rápidos hacia atrás: ~1,8 m en 0,6 s
       const m = p.move, k = Math.min(1, m.t / m.dur), sp = 4.8 * Math.sin(Math.PI * k), a = 1 - Math.exp(-14 * dt);
       p.vel.x += (m.back.x * sp - p.vel.x) * a; p.vel.z += (m.back.z * sp - p.vel.z) * a;
@@ -2069,9 +2079,21 @@ function startMove(p, type, side, momentum) {
     const c = hoops[p.attackSide].rimC, ax = c.x - p.pos.x, az = c.z - p.pos.z, al = Math.hypot(ax, az) || 1;
     p.move.back = { x: -ax / al, z: -az / al }; p.ctrlT = M.dur; dx = p.vel.x; dz = p.vel.z; spd = hs;
   }
-  else if (type === 'euro' || type === 'spinlay') {
+  else if (type === 'euro') {
     const c = hoops[p.attackSide].rimC, ax = c.x - p.pos.x, az = c.z - p.pos.z, al = Math.hypot(ax, az) || 1;
     p.move.rim = { x: ax / al, z: az / al }; p.move.sp0 = Math.max(hs, 4.5); p.ctrlT = M.dur; dx = p.vel.x; dz = p.vel.z; spd = hs;
+  }
+  else if (type === 'spinlay') {
+    // giro de 360° sobre el pie de apoyo, con el eje avanzando hacia el aro (hacia el lado elegido)
+    const c = hoops[p.attackSide].rimC, ax = c.x - p.pos.x, az = c.z - p.pos.z, al = Math.hypot(ax, az) || 1;
+    const m = p.move, turn = -s, fx = ax / al, fz = az / al, rx = -fz, rz = fx;
+    m.turn = turn; m.yaw0 = p.yaw; m.angle = Math.PI * 2; m.xl = turn * 0.14; m.zl = -0.05;
+    const L = { x: -F.rx, z: -F.rz };
+    m.pivot = { x: p.pos.x + L.x * m.xl + F.fx * 0.4, z: p.pos.z + L.z * m.xl + F.fz * 0.4 };
+    m.start = { x: p.pos.x, z: p.pos.z };
+    const tdx = fx * 0.9 + rx * s * 0.35, tdz = fz * 0.9 + rz * s * 0.35, tl = Math.hypot(tdx, tdz);
+    m.spinDir = { x: tdx / tl, z: tdz / tl }; m.travel = clamp(Math.min(hs * M.dur * 0.8, al - 1.3), 0.8, 3);
+    p.ctrlT = M.dur; dx = F.fx; dz = F.fz; spd = 0;
   }
   else if (type === 'behind' || type === 'behindAir') { mirrorDir(p, s); dx = p.move.newDir.x; dz = p.move.newDir.z; spd = p.move.static ? 0.7 : Math.max(hs * 0.85, 3.2); p.ctrlT = 0.2; }
   if (momentum && (type === 'behind' || type === 'behindAir')) { spd *= 1.2; spend(p, M.cost * 0.5); }
@@ -2163,7 +2185,7 @@ function moveSteer(p, dt) {
 function driveSteer(p, dt) {
   const m = p.move, k = Math.min(1, m.t / m.dur), s = m.side, f = m.rim, rx = -f.z, rz = f.x;
   let ang;
-  if (m.type === 'euro') ang = k < 0.42 ? s * 1.0 : -s * 0.9;   // zancadas muy abiertas a cada lado
+  if (m.type === 'euro') ang = k < 0.45 ? s * 1.15 : -s * 1.05;   // zancadas muy abiertas a cada lado
   else { ang = s * 0.35; p.spinAngle = -s * Math.PI * 2 * smooth(k); }
   const dx = f.x * Math.cos(ang) + rx * Math.sin(ang), dz = f.z * Math.cos(ang) + rz * Math.sin(ang);
   const sp = m.type === 'euro' ? m.sp0 * 0.85 : m.sp0 * 0.75, a = 1 - Math.exp(-12 * dt);
@@ -2464,15 +2486,31 @@ const inLayupRange = p => hdist(p.pos, hoops[p.attackSide].rimC) < CFG.shot.layu
 
 // Bandeja: arco guiado hasta encima del aro (puede fallar si te defienden o estás cansado).
 function layup(p) {
+  // la bandeja ya no es un arco teledirigido: el jugador salta hacia el aro con el balón en la mano,
+  // lo sube con el brazo estirado y lo suelta arriba (cerca del aro) con un toque suave; la física decide si entra
   const rim = hoops[p.attackSide].rimC;
   const dx = rim.x - p.pos.x, dz = rim.z - p.pos.z, dist = Math.max(0.1, Math.hypot(dx, dz)), fx = dx / dist, fz = dz / dist;
-  const chance = 0.9 - (contested(p) ? 0.28 : 0) - (1 - shotSkill(p)) * 0.8;
-  const lat = Math.random() < chance ? 0 : Math.sign(Math.random() - 0.5) * rand(0.2, 0.34);
-  release(p, ZERO);
-  guideTo(new V3(rim.x - fz * lat - fx * 0.03, rim.y + 0.3, rim.z + fx * lat - fz * 0.03), 0.42, 0.5, new V3(fx * 0.25, -2, fz * 0.25));
-  p.throwT = 0.55; p.throwKind = 'layup';
-  if (p.onGround) { p.vel.y = 4.8; p.vel.x += fx * 1.2; p.vel.z += fz * 1.2; p.onGround = false; }
+  if (p.onGround) {
+    const fwd = clamp((dist - 0.7) / 0.45, 1.3, 4);                        // avanza lo justo para acabar cerca del aro
+    const keep = 0.35;                                                     // conserva algo de la carrera
+    p.vel.x = p.vel.x * keep + fx * fwd; p.vel.z = p.vel.z * keep + fz * fwd; p.vel.y = 4.9; p.onGround = false;
+  }
+  p.layupSeq = { t: 0, dur: 0.34, fx, fz };
+  p.throwKind = 'layupUp'; p.throwT = 0.34;
+}
+// Suelta la bandeja: desde la mano, con un arco corto hacia el aro (con algo de error según defensa y cansancio)
+function releaseLayup(p) {
+  p.layupSeq = null;
+  if (ball.holder !== p) return;
+  const rim = hoops[p.attackSide].rimC, c = new V3(rim.x, rim.y, rim.z);
+  const dx = c.x - ball.pos.x, dz = c.z - ball.pos.z, dist = Math.hypot(dx, dz) || 1;
+  const err = 0.035 + (contested(p) ? 0.13 : 0) + (1 - shotSkill(p)) * 0.22 + Math.max(0, dist - 1.2) * 0.04;
+  const rx = -dz / dist, rz = dx / dist, a = gauss() * err, l = gauss() * err;
+  const target = new V3(c.x + rx * a + dx / dist * (0.04 + l), c.y + 0.02, c.z + rz * a + dz / dist * (0.04 + l));
+  release(p, shotVelocity(ball.pos, target, 0.3 + dist * 0.12));
+  ball.w.set(0, 0, 0);
   ball.shot = { team: p.team, shooter: p, from3: false, dunk: false };
+  p.throwT = 0.5; p.throwKind = 'layup';
   stats[p.team].att++; sfx('shoot'); trainAttempt(p, false, false);
 }
 
@@ -4039,7 +4077,7 @@ function animatePlayer(p, dt, T) {
   if (p.post) crouchD = 0.26;
   if (p.move) {
     const mt = p.move.type, mk = p.move.t / p.move.dur;
-    crouchD = mt === 'euro' ? 0.28 : mt === 'retreat' ? 0.22 : mt === 'postspin' || mt === 'spin' ? 0.24 : mt === 'step' ? 0.2 : mt === 'hesi' ? (p.move.t < 0.2 || !p.move.burst ? 0.0 : 0.3) : mt === 'step' ? 0.14 : mt === 'between' ? 0.3 : mt === 'cross' ? 0.3 : 0.28;
+    crouchD = mt === 'euro' ? 0.3 : mt === 'retreat' ? 0.22 : mt === 'postspin' || mt === 'spin' || mt === 'spinlay' ? 0.24 : mt === 'step' ? 0.2 : mt === 'hesi' ? (p.move.t < 0.2 || !p.move.burst ? 0.0 : 0.3) : mt === 'step' ? 0.14 : mt === 'between' ? 0.3 : mt === 'cross' ? 0.3 : 0.28;
     crouchD *= 0.6 + 0.4 * Math.sin(Math.PI * Math.min(1, mk * 1.3));   // baja de golpe y sube al salir
   }
   if (p.fakeT > 0) crouchD = 0.04;
@@ -4087,7 +4125,7 @@ function animatePlayer(p, dt, T) {
   // ---- con balón ----
   const F = carrierFrame(p);
   if (holding) {
-    if (p.charging || p.shotT > 0 || air || p.inbounding || p.fakeT > 0 || p.rebT > 0 || p.deadDribble || (p.move && ((p.move.type === 'step' && p.move.t / p.move.dur > 0.22) || p.move.type === 'euro' || p.move.type === 'spinlay'))) {
+    if (p.charging || p.shotT > 0 || air || p.inbounding || p.fakeT > 0 || p.rebT > 0 || p.deadDribble || p.layupSeq || (p.move && ((p.move.type === 'step' && p.move.t / p.move.dur > 0.22) || p.move.type === 'euro' || p.move.type === 'spinlay'))) {
       tp.ikL = tp.ikR = 1;
       tp.torsoX = air ? 0 : 0.05 + crouchD * 0.6;
       if (p.move && p.move.type === 'step') {
@@ -4149,24 +4187,20 @@ function animatePlayer(p, dt, T) {
         const l1 = s > 0 ? tp.lR : tp.lL, l2 = s > 0 ? tp.lL : tp.lR;
         l1.x = -1.2 * ph(0, 0.45) + 0.4 * ph(0.4, 0.85) + cr.x; l1.k = 0.5 + 0.8 * ph(0, 0.45); l1.z = -s * 0.6 * ph(0, 0.45);
         l2.x = 0.45 * ph(0, 0.45) - 1.25 * ph(0.38, 0.85) + cr.x; l2.k = 0.5 + 0.85 * ph(0.38, 0.85); l2.z = s * 0.6 * ph(0.38, 0.85);
-        const lean = s * 0.36 * ph(0, 0.45) - s * 0.4 * ph(0.38, 0.85);   // el peso del cuerpo cae sobre la pierna de cada zancada
+        const lean = s * 0.42 * ph(0, 0.45) - s * 0.46 * ph(0.38, 0.85);   // el peso del cuerpo cae sobre la pierna de cada zancada
         tp.bodyZ = lean; tp.torsoZ = -lean * 0.35; tp.torsoX += 0.3; tp.hipsY -= 0.08 * (ph(0, 0.45) + ph(0.38, 0.85));
         tp.headY = -lean * 0.5;
+        if (k > 0.62) { if (s > 0) tp.ikL = 0; else tp.ikR = 0; const gd = s > 0 ? tp.aL : tp.aR; gd.x = -1.0; gd.z = (s > 0 ? 1 : -1) * 0.8; gd.el = -0.7; }
       }
-      else if (mv.type === 'spinlay') {
-        // bandeja con giro: brazos recogidos con el balón, piernas cruzando al girar
-        const sweep = Math.sin(Math.PI * k);
-        tp.lL.x = -0.6 * sweep + cr.x; tp.lR.x = 0.3 * sweep + cr.x; tp.lL.k = tp.lR.k = 0.7; tp.torsoX += 0.3; tp.squash = 0.04 * sweep;
-      }
-      else if (mv.type === 'spin' || mv.type === 'postspin') {
+      else if (mv.type === 'spin' || mv.type === 'postspin' || mv.type === 'spinlay') {
         // giro sobre el pie de apoyo: pierna de eje plantada y flexionada; la otra barre alrededor
         const turn = mv.turn, piv = turn > 0 ? tp.lL : tp.lR, free = turn > 0 ? tp.lR : tp.lL;
         const plantK = 0.2, rk = clamp((k - plantK) / 0.7, 0, 1), sweep = Math.sin(Math.PI * rk);
         if (k < plantK) { const e = Math.sin(Math.PI * k / plantK * 0.5); piv.x = lerp(cr.x, cr.x * 0.45, e) - 0.25 * Math.sin(Math.PI * k / plantK); piv.k = lerp(cr.k, cr.k * 0.55, e); }
         else { piv.x = cr.x * 0.45; piv.k = cr.k * 0.55; piv.a = -0.1; }   // pie de eje casi bajo la cadera
         free.x = -0.5 * sweep + 0.15 + cr.x; free.k = 0.5 + 0.7 * sweep; free.z = -turn * 0.35 * sweep;
-        tp.torsoX += 0.25; tp.bodyZ = turn * 0.08 * sweep;
-        const off = mv.from > 0 ? tp.aL : tp.aR; off.x = -0.9; off.z = mv.from * 0.7; off.el = -1.1;   // brazo libre doblado protegiendo
+        tp.torsoX += mv.type === 'spinlay' ? 0.08 : 0.25; tp.bodyZ = turn * 0.08 * sweep;
+        if (mv.type !== 'spinlay') { const off = mv.from > 0 ? tp.aL : tp.aR; off.x = -0.9; off.z = mv.from * 0.7; off.el = -1.1; }   // brazo libre doblado protegiendo
       }
       else if (mv.type === 'inout') {
         // amago de cruce: el cuerpo entero finge irse al otro lado y vuelve
@@ -4201,7 +4235,13 @@ function animatePlayer(p, dt, T) {
       tp.aL.x = -2.25; tp.aL.el = -0.35; tp.aL.z = 0.8; tp.aL.wr = -0.25;
       tp.squash = -0.06; tp.torsoX = -0.06; tp.headX -= 0.25;
     }
-    else if (k === 'layup') { tp.aR.x = -3.0; tp.aR.el = -0.05; tp.aR.wr = -0.8; tp.lL.x = -1.25; tp.lL.k = 1.5; tp.lR.x = 0.1; tp.lR.k = 0.2; }
+    else if (k === 'layup' || k === 'layupUp') {
+      const sg = p.hand > 0 ? 1 : -1, sh = sg > 0 ? tp.aR : tp.aL, gd = sg > 0 ? tp.aL : tp.aR, knee = sg > 0 ? tp.lR : tp.lL, push = sg > 0 ? tp.lL : tp.lR;
+      if (k === 'layup') { sh.x = -2.85; sh.el = -0.05; sh.wr = -0.9; sh.z = -sg * 0.1; }   // tras soltar: brazo estirado hacia el aro, muñeca caída
+      gd.x = -1.2; gd.z = sg * 0.9; gd.el = -0.6;                                          // el otro brazo protege
+      if (p.layupSeq && (p.layupSeq.t / p.layupSeq.dur > 0.3 || Math.abs((ball.pos.x - p.pos.x) * carrierFrame(p).rx + (ball.pos.z - p.pos.z) * carrierFrame(p).rz) > 0.15)) { if (sg > 0) tp.ikL = 0; else tp.ikR = 0; }   // la mano libre suelta el balón pronto (no cruza el cuerpo)
+      knee.x = -1.35; knee.k = 1.6; push.x = 0.25; push.k = 0.15; tp.bodyX = 0.08; tp.headX -= 0.25;
+    }
     else if (k === 'dunk') { tp.aR.x = tp.aL.x = -2.7; tp.aR.el = tp.aL.el = -0.35; tp.lL.k = tp.lR.k = 1.2; tp.lL.x = tp.lR.x = -0.3; }
     else if (k === 'pass') { tp.aR.x = tp.aL.x = -1.55; tp.aR.el = tp.aL.el = 0; tp.aL.z = 0.05; tp.aR.z = -0.05; tp.torsoX += 0.3; tp.bodyX = 0.12; }
     else if (k === 'bounce') { tp.aR.x = tp.aL.x = -0.95; tp.aR.el = tp.aL.el = 0; tp.aL.z = 0.15; tp.aR.z = -0.15; tp.torsoX += 0.55; tp.hipsY -= 0.14; tp.bodyX = 0.1; }
@@ -4370,7 +4410,11 @@ function animatePlayer(p, dt, T) {
       const elIK = solveArm(arm, r.torso, _ikT, _pole, _qIK);
       _qFK.slerp(_qIK, clamp(ikw, 0, 1)); el = lerp(el, elIK, clamp(ikw, 0, 1));
     } else if (ikw > 0.01 && holding) {
-      if ((p.charging || p.shotT > 0) && p.shotKind === 'hook') {
+      if (p.layupSeq) {
+        const sg = p.hand > 0 ? 1 : -1, shooting = (arm.side < 0) === (sg > 0), k = p.layupSeq.t / p.layupSeq.dur;
+        if (shooting) { _ikT.set(ball.pos.x - F.fx * R * 0.2, ball.pos.y - R * 0.85, ball.pos.z - F.fz * R * 0.2); _pole.set(arm.side * 0.7, -1, -0.2); }
+        else { _ikT.set(ball.pos.x - F.rx * sg * (R + 0.02), ball.pos.y, ball.pos.z - F.rz * sg * (R + 0.02)); _pole.set(arm.side * 1.1, -0.8, -0.1); }
+      } else if ((p.charging || p.shotT > 0) && p.shotKind === 'hook') {
         const sg = p.hand > 0 ? 1 : -1, shooting = (arm.side < 0) === (sg > 0);
         if (shooting) {   // palma bajo el balón por el lado exterior; codo abierto hacia fuera y atrás
           _ikT.set(ball.pos.x + F.rx * sg * R * 0.45, ball.pos.y - R * 0.8, ball.pos.z + F.rz * sg * R * 0.45);
@@ -4389,8 +4433,9 @@ function animatePlayer(p, dt, T) {
         }
       } else if (p.charging || p.shotT > 0 || air || p.inbounding || p.rebT > 0 || p.deadDribble || (p.move && ((p.move.type === 'step' && p.move.t / p.move.dur > 0.22) || p.move.type === 'euro' || p.move.type === 'spinlay'))) {
         if (p.rebT > 0) _pole.set(arm.side * 1.2, -0.6, -0.1);   // codos abiertos al proteger el rebote
+        else if (p.move && (p.move.type === 'euro' || p.move.type === 'spinlay')) _pole.set(arm.side * 0.9, -1, -0.35);   // balón protegido: codos abajo y fuera
         _ikT.set(ball.pos.x + F.rx * -arm.side * (R + 0.02) - F.fx * 0.05, ball.pos.y - 0.02, ball.pos.z + F.rz * -arm.side * (R + 0.02) - F.fz * 0.05);
-        if (p.rebT <= 0) _pole.set(arm.side * 0.5, -0.9, 0.35);
+        if (p.rebT <= 0 && !(p.move && (p.move.type === 'euro' || p.move.type === 'spinlay'))) _pole.set(arm.side * 0.5, -0.9, 0.35);
       } else {
         // la mano que no tiene el balón en su lado no lo persigue a través del cuerpo: su objetivo se queda en su propio lado
         const hs = -arm.side, bl = (ball.pos.x - p.pos.x) * F.rx + (ball.pos.z - p.pos.z) * F.rz;
@@ -4716,7 +4761,7 @@ function animPlace(p, x, z, yaw) {
   p.throwT = 0; p.stamina = 1; p.exhausted = false; p.reactT = 0; p.pickupCd = 0; p.land = 0; p.hand = 1;
   p.heat = 0; p.chain = []; p.chainT = 9; p.cutT = 0; p.swatT = 0; p.fakeCd = 0; p.stepT = 0; p.callT = 0; p.protectT = 0;
   p.speedMul = 1; p.guarded = false; p.stance = false; p.post = false; p.blockDone = false; p.blockMissLand = false; p.beat = null;
-  p.anim = 0; p.rebT = 0; p.dirOverride = null; p.autoShot = false; p.drive = null; p.deadDribble = false; p.dash = CFG.dash.max;   // fase de la zancada y rebote
+  p.anim = 0; p.rebT = 0; p.dirOverride = null; p.autoShot = false; p.drive = null; p.deadDribble = false; p.dash = CFG.dash.max; p.layupSeq = null;   // fase de la zancada y rebote
   for (const k in p.moveCd) p.moveCd[k] = 0;
   for (const k in p.pend) p.pend[k] = k === 'move' ? null : false;
 }
