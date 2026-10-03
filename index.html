@@ -57,13 +57,27 @@ html,body{ height:100%; margin:0; overflow:hidden; background:var(--ink); color:
 .combos span.done{ color:var(--chalk); } .combos span.done i{ background:#4fe08a; border-color:#4fe08a; }
 /* en el entrenamiento los paneles van a la derecha para no tapar la canasta con la cámara de retransmisión */
 #combos{ position:fixed; right:calc(env(safe-area-inset-right,0px) + 16px); top:calc(env(safe-area-inset-top,0px) + 16px); width:330px; flex-direction:column; align-items:flex-start; }
-#traintip{ position:fixed; right:calc(env(safe-area-inset-right,0px) + 16px); top:calc(env(safe-area-inset-top,0px) + 178px); width:330px; box-sizing:border-box; }
+#traintip{ position:fixed; right:calc(env(safe-area-inset-right,0px) + 16px); top:calc(env(safe-area-inset-top,0px) + 16px); width:330px; box-sizing:border-box; }
 .traintip{ font-weight:600; font-size:15px; color:var(--muted); background:var(--panel); padding:4px 12px; border-radius:4px; }
 .shotclock{ font-weight:700; font-size:16px; color:var(--muted); background:var(--panel); padding:3px 12px; border-radius:4px; border-top:3px solid var(--c,transparent); }
 .shotclock b{ font-family:Anton,Impact,sans-serif; font-weight:400; font-size:20px; color:var(--chalk); margin-left:6px; }
 .shotclock.warn b{ color:var(--rival); }
-.gauges{ position:absolute; left:calc(env(safe-area-inset-left,0px) + 20px); bottom:calc(env(safe-area-inset-bottom,0px) + 20px);
-  display:grid; gap:9px; background:var(--panel); padding:12px 16px; border-radius:6px; }
+.gauges{ position:absolute; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 18px);
+  display:grid; gap:6px; width:min(320px, 70vw); background:var(--panel); padding:10px 14px; border-radius:8px; }
+/* en el centro solo queda la energía con las 3 cargas; robo, tapón y postura van ocultos */
+.gauges .gauge, .gauges .stancelbl{ display:none; }
+.gauges .ebar{ width:100%; }
+.dashes{ justify-content:center; }
+/* panel lateral de controles, compacto */
+.ctrls{ position:absolute; right:calc(env(safe-area-inset-right,0px) + 14px); bottom:calc(env(safe-area-inset-bottom,0px) + 18px);
+  display:grid; gap:6px; background:var(--panel); padding:8px 10px; border-radius:8px; font-size:12px; max-width:250px; }
+.ctrls .hint{ position:static; display:grid; grid-template-columns:1fr; gap:3px; background:none; padding:0; font-size:12px; }
+.ctrls .hint > span{ display:flex; align-items:center; gap:2px; }
+.ctrls kbd{ font-size:11px; padding:0 5px; min-width:0; }
+.ctrls .moves{ grid-template-columns:repeat(2, auto); gap:3px; margin-top:2px; border-top:1px solid var(--line); padding-top:6px; }
+.ctrls .chip{ font-size:11px; padding:2px 6px 3px; }
+/* los combos básicos ya no se muestran */
+#combos{ display:none !important; }
 .gauge{ display:grid; grid-template-columns:62px 150px; align-items:center; gap:10px; font-weight:600; font-size:15px; color:var(--muted); }
 .bar{ height:8px; background:rgba(243,245,255,.12); border-radius:4px; overflow:hidden; }
 .bar i{ display:block; height:100%; width:100%; background:var(--chalk); border-radius:4px; }
@@ -119,8 +133,7 @@ html,body{ height:100%; margin:0; overflow:hidden; background:var(--ink); color:
 .mlabel{ display:block; margin-top:6px; font-weight:600; font-size:15px; color:var(--muted); }
 .pin{ position:absolute; width:26px; height:26px; margin:-13px 0 0 -13px; border-radius:50%;
   background:#e2652b; border:3px solid var(--chalk); box-shadow:0 0 14px rgba(226,101,43,.8); display:none; }
-.hint{ position:absolute; right:calc(env(safe-area-inset-right,0px) + 20px); bottom:calc(env(safe-area-inset-bottom,0px) + 20px);
-  display:flex; gap:16px; font-weight:600; font-size:15px; color:var(--muted); background:var(--panel); padding:8px 12px; border-radius:6px; }
+.hint{ display:flex; gap:16px; font-weight:600; font-size:15px; color:var(--muted); }
 kbd{ font-family:inherit; font-weight:700; font-size:14px; color:var(--chalk); padding:1px 7px; margin-right:4px;
   border:1px solid rgba(243,245,255,.35); border-bottom-width:3px; border-radius:4px; background:rgba(243,245,255,.06); }
 
@@ -285,14 +298,6 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
     <div class="gauge"><span>Robo</span><div class="bar"><i id="stealbar"></i></div></div>
     <div class="gauge"><span>Tapón</span><div class="bar"><i id="blockbar"></i></div></div>
     <div id="stanceLbl" class="stancelbl"><kbd data-kb="Clic der." data-pad="L2">Clic der.</kbd><span>Mantén para postura</span></div>
-    <div id="moves" class="moves">
-      <span class="chip"><kbd data-kb="F" data-pad="RS ↖">F</kbd>Cruce<i id="cd-cross"></i></span>
-      <span class="chip"><kbd data-kb="G" data-pad="RS ←">G</kbd>Piernas<i id="cd-between"></i></span>
-      <span class="chip"><kbd data-kb="R" data-pad="RS ↙">R</kbd>Espalda<i id="cd-behind"></i></span>
-      <span class="chip"><kbd data-kb="X" data-pad="R3">X</kbd>Giro<i id="cd-spin"></i></span>
-      <span class="chip"><kbd data-kb="S + clic" data-pad="LS ↓ + □">S + clic</kbd>Paso atrás<i id="cd-step"></i></span>
-      <span class="chip"><kbd data-kb="C" data-pad="RS ↓">C</kbd>Retroceso<i id="cd-retreat"></i></span>
-    </div>
   </div>
   <div id="smeter" class="smeter"><div class="strack"><i id="swin"></i><i id="sfill"></i></div><span id="slabel" class="slabel"></span></div>
   <div id="ctxhint" class="ctxhint"></div>
@@ -302,7 +307,18 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
   </div>
   <div id="pin" class="pin"></div>
   <div id="headbar" class="headbar"><i id="headfill"></i></div>
-  <div class="hint"><span><kbd data-kb="E" data-pad="○">E</kbd>Robar</span><span><kbd data-kb="Q" data-pad="△">Q</kbd><span data-kbl="Pase o pedir" data-padl="Rebote / tapón">Pase o pedir</span></span><span><kbd data-kb="Clic der." data-pad="L1">Clic der.</kbd><span data-kbl="Postura" data-padl="Cambiar jugador">Postura</span></span><span><kbd data-kb="B" data-pad="↑">B</kbd><span id="camlbl">Cámara al balón</span></span><span><kbd data-kb="Esc" data-pad="Options">Esc</kbd>Pausa</span></div>
+  <!-- controles compactos en el lateral derecho -->
+  <aside id="ctrls" class="ctrls">
+    <div class="hint"><span><kbd data-kb="E" data-pad="○">E</kbd>Robar</span><span><kbd data-kb="Q" data-pad="△">Q</kbd><span data-kbl="Pase o pedir" data-padl="Rebote / tapón">Pase o pedir</span></span><span><kbd data-kb="Clic der." data-pad="L1">Clic der.</kbd><span data-kbl="Postura" data-padl="Cambiar jugador">Postura</span></span><span><kbd data-kb="B" data-pad="↑">B</kbd><span id="camlbl">Cámara al balón</span></span><span><kbd data-kb="Esc" data-pad="Options">Esc</kbd>Pausa</span></div>
+    <div id="moves" class="moves">
+      <span class="chip"><kbd data-kb="F" data-pad="RS ↖">F</kbd>Cruce<i id="cd-cross"></i></span>
+      <span class="chip"><kbd data-kb="G" data-pad="RS ←">G</kbd>Piernas<i id="cd-between"></i></span>
+      <span class="chip"><kbd data-kb="R" data-pad="RS ↙">R</kbd>Espalda<i id="cd-behind"></i></span>
+      <span class="chip"><kbd data-kb="X" data-pad="R3">X</kbd>Giro<i id="cd-spin"></i></span>
+      <span class="chip"><kbd data-kb="S + clic" data-pad="LS ↓ + □">S + clic</kbd>Paso atrás<i id="cd-step"></i></span>
+      <span class="chip"><kbd data-kb="C" data-pad="RS ↓">C</kbd>Retroceso<i id="cd-retreat"></i></span>
+    </div>
+  </aside>
 </div>
 <!-- ── Rótulos grandes y pequeños ── -->
 <div id="banner" class="banner"></div>
@@ -312,7 +328,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
 <section id="menu" class="overlay">
   <div class="col">
     <h1 class="title">HOOPBLAST<small>3v3</small></h1>
-    <span class="version">v0.3 alpha · 3 oct 2026 · 18:40</span>
+    <span class="version">v0.3 alpha · 3 oct 2026 · 18:44</span>
     <div class="split"></div>
     <p class="lead">Baloncesto tres contra tres en una jaula. Protege el balón con el cuerpo, rompe tobillos con tus regates y roba con un manotazo en el momento justo.</p>
     <div class="row">
