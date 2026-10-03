@@ -1,5 +1,5 @@
 // comprueba que ni el balón ni los antebrazos atraviesan el tronco, y que el pie de eje del giro no se mueve
-const base=require('fs').readFileSync('testanim.js','utf8').split("console.log('modo'")[0];
+const base=require('fs').readFileSync(require('path').join(__dirname,'testanim.js'),'utf8').split("console.log('modo'")[0];
 eval(base + `
 const V=d.human.pos.constructor;
 const wp=(o,x,y,z)=>{ const v=new V(x||0,y||0,z||0); o.localToWorld(v); return v; };

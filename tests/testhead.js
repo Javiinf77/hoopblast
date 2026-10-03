@@ -1,5 +1,5 @@
 // mide la distancia mínima del brazo izquierdo (codo→mano) al centro de la cabeza durante el tiro
-const base=require('fs').readFileSync('testpost.js','utf8').split("console.log('Ventana")[0];
+const base=require('fs').readFileSync(require('path').join(__dirname,'testpost.js'),'utf8').split("console.log('Ventana")[0];
 eval(base + `
 const THREE_=require('three'); const V=h.pos.constructor;
 const wp=(o,x,y,z)=>{ const v=new V(x||0,y||0,z||0); o.localToWorld(v); return v; };
