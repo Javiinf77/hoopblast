@@ -335,7 +335,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
 <section id="menu" class="overlay">
   <div class="col">
     <h1 class="title">HOOPBLAST<small>3v3</small></h1>
-    <span class="version">v0.3 alpha · 4 oct 2026 · 21:22</span>
+    <span class="version">v0.3 alpha · 4 oct 2026 · 21:26</span>
     <div class="split"></div>
     <p class="lead">Baloncesto tres contra tres en una jaula. Protege el balón con el cuerpo, rompe tobillos con tus regates y roba con un manotazo en el momento justo.</p>
     <div class="row">
@@ -373,6 +373,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
       <dt><kbd>X</kbd> / paso atrás</dt><dd>Giro. <kbd>C</kbd>: retroceso con bote (ganas espacio sin dejar de botar). Paso atrás: S (hacia atrás, lejos del aro) + mantener clic; el tiro se va levantando mientras retrocedes y sale al soltar el clic. Paso lateral: esprintando (Mayús) hacia un lado + mantener clic (en diagonal hacia ese lado)</dd>
       <dt>Poste</dt><dd>Con balón, mantén clic derecho cerca del aro (a menos de 6 m, o de 7 m si tienes un defensor pegado): te pones de espaldas y, si hay defensor, le empujas hacia atrás. Mantén <kbd>G</kbd> para gancho o <kbd>C</kbd> para fadeaway y suelta para tirar; <kbd>F</kbd> giro de poste</dd>
       <dt>Entrenamiento</dt><dd><kbd>P</kbd> (Share con mando) cambia el rival: sin rival → te defiende → ataca él y defiendes tú (cuenta paradas, robos, tapones y canastas en contra)</dd>
+      <dt>Puntear</dt><dd>En postura defensiva y sin balón, apunta con el stick derecho (o las flechas con clic derecho mantenido): tu mano va hacia ese lado. Cuanto más centrada sobre el tirador, más estrecha su franja verde (hasta un 60 %)</dd>
       <dt>Reglas 3x3</dt><dd>Media pista. Tras cada canasta saca el otro equipo desde fuera del triple. Tras un rebote defensivo o un robo, hay que sacar el balón fuera del triple antes de poder anotar</dd>
       <dt>Eurostep / bandeja con giro</dt><dd>Corriendo hacia la canasta (de 3,6 a 6,8 m): clic + clic con una pequeña pausa = eurostep; clic + clic casi seguidos = bandeja con giro. El lado lo marca A/D (o tu mano de bote)</dd>
       <dt>Explosión</dt><dd>Gasta una de las 3 cargas azules de sobresfuerzo (se recargan despacio, más rápido con la energía alta). Justo después de un regate, dirección + <kbd>Mayús</kbd>: sales disparado. Un regate sirve para provocar al defensor; la explosión es lo que lo supera</dd>
@@ -1347,7 +1348,8 @@ function makePlayer(team, idx) {
     pos: new V3(), vel: new V3(), home: new V3(), yaw: 0, onGround: true, stamina: 1, sprinting: false, exhausted: false, energyRate: 0, sweatT: 0, breathT: 0,
     stunT: 0, ctrlT: 0, charge: 0, charging: false, callT: 0, assistT: 0, assistFrom: null, throwT: 0, throwKind: '',
     swipeT: 0, swipeCd: 0, swipeChecked: false, lungeT: 0,
-    move: null, moveCd: { cross: 0, between: 0, behind: 0, behindAir: 0, spin: 0, hesi: 0, step: 0, inout: 0, postspin: 0, euro: 0, spinlay: 0, retreat: 0 }, drive: null, dunkSeq: null, shotT: 0, stepT: 0, prevYaw: 0, plantT: 0, stance: false, post: false, shotKind: 'jump', rebT: 0, fakeT: 0, fakeCd: 0,
+    move: null, moveCd: { cross: 0, between: 0, behind: 0, behindAir: 0, spin: 0, hesi: 0, step: 0, inout: 0, postspin: 0, euro: 0, spinlay: 0, retreat: 0 }, drive: null, dunkSeq: null, shotT: 0, stepT: 0, prevYaw: 0, plantT: 0, stance: false, post: false, shotKind: 'jump', rebT: 0,
+    handAim: new V3(), handAimAmt: 0, contestK: 0, fakeT: 0, fakeCd: 0,
     explodeWin: 0, burstT: 0, nextMove: null, chain: [], chainT: 9, chainHand: 1, reactT: 0, reactMode: '', reactDir: new V3(), beat: null, blockT: 0, blockCd: 0, blockDone: false, blockMissLand: false, swatT: 0, protectT: 0, heat: 0, hand: 1, spinAngle: 0, guarded: false,
     pickupCd: 0, anim: 0, land: 0, landVar: { dip: 1, tilt: 0, leg: 1, arms: 0.5, twist: 0 }, dunk: null, aimErr: 0, speedMul: 1, inbounding: false, missT: 0,
     pend: { jump: false, shoot: false, pass: false, steal: false, move: null, block: false },
@@ -2493,6 +2495,27 @@ function release(p, vel) {
 }
 
 // ¿Hay un rival a menos de 2 m del tirador?
+// Punto de la mano de punteo de un defensor (en el mundo): hacia donde apunta el stick, alta y algo adelantada
+function contestHand(o, out) {
+  const l = Math.hypot(o.handAim.x, o.handAim.z) || 1, a = o.handAimAmt;
+  return out.set(o.pos.x + o.handAim.x / l * 0.75 * a, o.pos.y + 2.05 + 0.3 * a, o.pos.z + o.handAim.z / l * 0.75 * a);
+}
+// Punteo sobre el tirador p (0..1): cuanto más centrada está la mano del defensor sobre él, más puntea.
+// Tú lo haces con el stick derecho en postura; la IA puntea sola si está cerca (algo menos precisa).
+const _ch = new V3(), _cs = new V3();
+function contestAmount(p) {
+  let best = 0;
+  _cs.set(p.pos.x, p.pos.y + 2.0, p.pos.z);                         // zona del balón y la cabeza del tirador
+  for (const o of live) {
+    if (o.team === p.team || o.stunT > 0) continue;
+    const dd = hdist(o.pos, p.pos); if (dd > 2.4) continue;
+    let k;
+    if (o.isHuman) { if (!o.stance || o.handAimAmt < 0.2) continue; k = clamp(1 - contestHand(o, _ch).distanceTo(_cs) / 1.1, 0, 1); }
+    else k = o.onGround || o.blockT > 0 ? clamp((1.7 - dd) / 1.1, 0, 0.75) : 0;
+    best = Math.max(best, k);
+  }
+  return best;
+}
 function contested(p) { for (const o of live) if (o.team !== p.team && hdist(o.pos, p.pos) < 2) return true; return false; }
 
 // ventana verde del medidor: más estrecha lejos, defendido o cansado; más ancha tras un paso atrás
@@ -2502,7 +2525,8 @@ function shotWindow(p, dist, kind) {
   let base = clamp(0.118 - dist * 0.0108, 0.012, 0.1), cont = contested(p) ? 0.65 : 1;
   if (kind === 'hook') { base = clamp(0.11 - Math.max(0, dist - 2) * 0.03, 0.012, 0.1); cont = contested(p) ? 0.92 : 1; }   // gancho: bueno cerca, difícil de tapar
   else if (kind === 'fade') { base *= 0.85; cont = contested(p) ? 0.88 : 1; }                                                // fadeaway: crea espacio
-  return base * shotSkill(p) * cont * (p.stepT > 0 ? 1.35 : 1);
+  p.contestK = contestAmount(p);
+  return base * shotSkill(p) * cont * (1 - 0.6 * p.contestK) * (p.stepT > 0 ? 1.35 : 1);   // punteo: hasta un 60 % menos de franja verde
 }
 // Dificultad del tiro como texto (para el medidor)
 const shotDifficulty = dist => dist < 3.5 ? 'fácil' : dist < 5.5 ? 'media' : dist < 7.5 ? 'difícil' : 'muy difícil';
@@ -2528,7 +2552,7 @@ function releaseLayup(p) {
   if (ball.holder !== p) return;
   const rim = hoops[p.attackSide].rimC, c = new V3(rim.x, rim.y, rim.z);
   const dx = c.x - ball.pos.x, dz = c.z - ball.pos.z, dist = Math.hypot(dx, dz) || 1;
-  const err = 0.035 + (contested(p) ? 0.13 : 0) + (1 - shotSkill(p)) * 0.22 + Math.max(0, dist - 1.2) * 0.04;
+  const err = 0.035 + (contested(p) ? 0.13 : 0) + contestAmount(p) * 0.12 + (1 - shotSkill(p)) * 0.22 + Math.max(0, dist - 1.2) * 0.04;
   const rx = -dz / dist, rz = dx / dist, a = gauss() * err, l = gauss() * err;
   const target = new V3(c.x + rx * a + dx / dist * (0.04 + l), c.y + 0.02, c.z + rz * a + dz / dist * (0.04 + l));
   release(p, shotVelocity(ball.pos, target, 0.3 + dist * 0.12));
@@ -2586,6 +2610,7 @@ function shoot(p) {
   }
   release(p, shotVelocity(ball.pos, target, kind === 'hook' ? 1.7 + dist * 0.1 : kind === 'fade' ? 1.45 + dist * 0.09 : 1.25 + dist * 0.09));
   ball.shot = { team: p.team, shooter: p, from3: dist > CFG.shot.three, dunk: false };
+  if (p.team !== human.team && p.contestK > 0.45 && human.stance) banner2(p.contestK > 0.75 ? '¡Gran punteo!' : 'Punteo', 'var(--blue)', 0.7);
   p.throwT = kind === 'jump' ? 0.75 : 0.6; p.throwKind = kind === 'jump' ? 'shot' : kind; p.shotKind = 'jump'; p.fadeTurn = null;
   stats[p.team].att++; trainAttempt(p, dist > CFG.shot.three, perfect);
   sfx('shoot');
@@ -3317,6 +3342,13 @@ function humanFrameInput() {
   out.sprint = !!(keys.ShiftLeft || keys.ShiftRight) || PAD.r2;
   out.shootHold = mouseHeld || !!keys.KeyJ || PAD.square;
   out.stance = rmbHeld || PAD.l2;
+  // mano de punteo (relativa a la pantalla): mando = stick derecho; teclado = flechas mientras mantienes la postura
+  let cx = PAD.cx, cy = PAD.cy;
+  if (!cx && !cy && rmbHeld) { cx = (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0); cy = (keys.ArrowUp ? 1 : 0) - (keys.ArrowDown ? 1 : 0); }
+  if (!(human.stance || out.stance) || ball.holder === human) { cx = 0; cy = 0; }
+  const cfx = -Math.sin(camYaw), cfz = -Math.cos(camYaw), rgx = Math.cos(camYaw), rgz = -Math.sin(camYaw);
+  human.handAim.set(cfx * cy + rgx * cx, 0, cfz * cy + rgz * cx); human.handAimAmt = Math.min(1, Math.hypot(cx, cy));
+  PAD.cx = 0; PAD.cy = 0;
   // tiros de poste (mantener y soltar como el tiro): mando L2 + stick derecho ↑/↓; teclado clic der. + G / C
   const inPost = human.post || (human.charging && human.shotKind !== 'jump');   // sigue valiendo mientras cargas el tiro de poste
   out.postShot = inPost ? (PAD.postShot || (rmbHeld && keys.KeyG ? 'hook' : rmbHeld && keys.KeyC ? 'fade' : null)) : null;
@@ -3391,7 +3423,7 @@ document.addEventListener('pointerlockchange', () => {
    Funciones: setInputMode, getPad, rumble, menuNav, padFrame
    ============================================================================== */
 // Botones con el mapeo estándar: 0 ✕, 1 ○, 2 □, 3 △, 4 L1, 5 R1, 6 L2, 7 R2, 9 Options, 10 L3, 11 R3, 12-15 cruceta
-const PAD = { sx: 0, sy: 0, n: 0, postShot: null, idx: null, prev: [], lx: 0, ly: 0, lm: 0, rx: 0, ry: 0, r2: false, l2: false, square: false, side: 0, navT: 0, rot: 0, rotT: 0, peak: 0, flickO: 0, lastAng: null };
+const PAD = { cx: 0, cy: 0, sx: 0, sy: 0, n: 0, postShot: null, idx: null, prev: [], lx: 0, ly: 0, lm: 0, rx: 0, ry: 0, r2: false, l2: false, square: false, side: 0, navT: 0, rot: 0, rotT: 0, peak: 0, flickO: 0, lastAng: null };
 let inputMode = 'kb';
 
 // Cambia los iconos de controles entre teclado y mando.
@@ -3482,6 +3514,9 @@ function padFrame(dt) {
       else if (o !== null && Math.abs(o) >= 3) PAD.postShot = 'fade';
       else if (o !== null && Math.abs(o) === 2 && PAD.lastAng === null) { pendH.move = 'postspin'; PAD.side = o > 0 ? 1 : -1; PAD.lastAng = 0; }
       if (m < 0.3) PAD.lastAng = null;
+    } else if (!proStick && human.stance && ball.holder !== human) {
+      PAD.cx = Math.abs(rx) > 0.25 ? rx : 0; PAD.cy = Math.abs(ry) > 0.25 ? -ry : 0;   // punteo: la mano va hacia donde apuntas
+      PAD.rot = 0; PAD.rotT = 0; PAD.peak = 0; PAD.lastAng = null;
     } else if (!proStick) {
       camYaw -= rx * 2.8 * dt; camPitch = clamp(camPitch + ry * 1.4 * dt, -0.15, 0.6);
       PAD.rot = 0; PAD.rotT = 0; PAD.peak = 0; PAD.lastAng = null;
@@ -4325,6 +4360,9 @@ function animatePlayer(p, dt, T) {
     const up = p.shotT > 0 ? 1 - p.shotT / 0.16 : 0, k2 = p.shotT > 0 ? 1 : smooth(Math.min(1, p.charge / CFG.shot.sweet));
     tp.aR.wr = lerp(1.05, 0.2, up); tp.aL.wr = 0.15; tp.headX -= 0.2; tp.torsoZ = 0.2 * k2;
   }
+  // ---- punteo: el brazo del lado al que apuntas sube hacia ese punto (IK) ----
+  if (p.isHuman && p.stance && !holding && p.handAimAmt > 0.2) { const F = carrierFrame(p); const side = (p.handAim.x * F.rx + p.handAim.z * F.rz) >= 0 ? 1 : -1; if (side > 0) tp.ikR = 1; else tp.ikL = 1; p.contestSide = side; }
+  else p.contestSide = 0;
   // ---- poste: de espaldas, bajo, culo atrás y brazo libre haciendo de barrera ----
   if (p.post && !p.charging && p.shotT <= 0) {
     tp.bodyX = -0.1; tp.torsoX += 0.15; tp.lL.z = 0.25; tp.lR.z = -0.25;
@@ -4483,7 +4521,9 @@ function animatePlayer(p, dt, T) {
       const elIK = solveArm(arm, r.torso, _ikT, _pole, _qIK);
       _qFK.slerp(_qIK, clamp(ikw, 0, 1)); el = lerp(el, elIK, clamp(ikw, 0, 1));
     } else if (ikw > 0.01 && holding) {
-      if (p.layupSeq) {
+      if (p.contestSide && !holding && ((arm.side < 0) === (p.contestSide > 0))) {
+        contestHand(p, _ikT); _pole.set(arm.side * 1, -0.4, -0.3);    // mano de punteo
+      } else if (p.layupSeq) {
         const sg = p.hand > 0 ? 1 : -1, shooting = (arm.side < 0) === (sg > 0), k = p.layupSeq.t / p.layupSeq.dur;
         if (shooting) { _ikT.set(ball.pos.x - F.fx * R * 0.2, ball.pos.y - R * 0.85, ball.pos.z - F.fz * R * 0.2); _pole.set(arm.side * 0.7, -1, -0.2); }
         else { _ikT.set(ball.pos.x - F.rx * sg * (R + 0.02), ball.pos.y, ball.pos.z - F.rz * sg * (R + 0.02)); _pole.set(arm.side * 1.1, -0.8, -0.1); }
