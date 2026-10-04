@@ -339,6 +339,29 @@ kbd{ font-family:var(--font); background:#f1f5fb; color:var(--chalk); border:1px
 .alist h4{ color:var(--gold); } .aname{ color:var(--chalk); } .atime{ color:#1f8ff0; } .ahint{ color:#4a5d78; text-shadow:none; }
 /* tabla de estadísticas y pantallas de pausa/final */
 table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
+
+/* ── Pantalla de título y menú con barra superior ── */
+.titlescreen{ position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:6vh 4vw 4vh; z-index:30; cursor:pointer;
+  background:radial-gradient(ellipse at 50% 30%, rgba(255,255,255,.0) 40%, rgba(214,238,255,.55) 100%); }
+.tcard{ text-align:center; }
+.tlogo{ margin:0; font-family:var(--font); font-weight:900; font-size:clamp(64px,11vw,150px); line-height:.9; color:#1f9bff; letter-spacing:-.01em;
+  text-shadow:0 5px 0 #fff, 0 10px 0 rgba(21,114,198,.25), 0 20px 40px rgba(31,155,255,.35); }
+.tlogo small{ font-size:.42em; color:var(--gold); margin-left:.15em; text-shadow:0 4px 0 #fff, 0 8px 18px rgba(255,170,31,.4); }
+.tsub{ margin:14px 0 0; font-weight:800; font-size:clamp(16px,1.8vw,22px); color:#24324a; background:rgba(255,255,255,.85); display:inline-block; padding:6px 18px; border-radius:999px; box-shadow:var(--shadow); }
+.tpress{ margin:0; font-weight:900; font-size:clamp(20px,2.4vw,30px); color:#fff; background:linear-gradient(180deg,#38b0ff,#1f8ff0); padding:12px 34px; border-radius:999px;
+  box-shadow:0 5px 0 #1572c6, 0 14px 30px rgba(31,155,255,.4); animation:tpulse 1.6s ease-in-out infinite; }
+@keyframes tpulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.06); } }
+.tversion{ position:absolute; right:calc(env(safe-area-inset-right,0px) + 18px); bottom:calc(env(safe-area-inset-bottom,0px) + 14px); font-weight:800; font-size:14px; color:#24324a;
+  background:rgba(255,255,255,.85); padding:5px 12px; border-radius:999px; box-shadow:var(--shadow); }
+.menu2{ flex-direction:column; align-items:stretch; justify-content:flex-start !important; padding-top:calc(env(safe-area-inset-top,0px) + 14px) !important; }
+.topnav{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:10px 14px; margin:0 auto 26px; background:rgba(255,255,255,.92); border-radius:999px; box-shadow:var(--shadow); max-width:min(1180px, 96vw); }
+.topnav .btn{ font-size:15px !important; padding:8px 16px !important; }
+.topnav{ flex-wrap:nowrap; overflow-x:auto; }
+.tn-logo{ font-weight:900; font-size:21px; white-space:nowrap; color:#1f9bff; margin:0 10px 0 6px; } .tn-logo small{ color:var(--gold); font-size:.6em; margin-left:3px; }
+.menucard{ background:rgba(255,255,255,.88); border-radius:24px; padding:22px 26px; box-shadow:var(--shadow); max-width:620px; margin:0 auto 0 4vw !important; }
+.menucard .lead{ margin-bottom:18px; }
+.ctlpanel{ width:min(760px, 96vw) !important; } .ctlpanel .cbody{ max-height:calc(100vh - 190px); }
+.ctlpanel .controls{ margin-top:6px; max-width:none; font-size:15px; }
 </style>
 </head>
 <body>
@@ -413,11 +436,27 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
 <div id="banner2" class="banner small"></div>
 
 <!-- ── Menú principal y controles ── -->
-<section id="menu" class="overlay">
-  <div class="col">
-    <h1 class="title">HOOPBLAST<small>3v3</small></h1>
-    <span class="version">v0.3 alpha · 4 oct 2026 · 22:18</span>
-    <div class="split"></div>
+<!-- ── Pantalla de título: logo, «pulsa cualquier botón», versión y una jugada en bucle de fondo ── -->
+<section id="titlescreen" class="titlescreen">
+  <div class="tcard">
+    <h1 class="tlogo">HOOPBLAST<small>3v3</small></h1>
+    <p class="tsub">Baloncesto callejero en la playa, la jungla y el pabellón</p>
+  </div>
+  <p class="tpress">Pulsa cualquier botón</p>
+  <span id="tversion" class="tversion"></span>
+</section>
+
+<section id="menu" class="overlay menu2">
+  <nav class="topnav" aria-label="Menú principal">
+    <span class="tn-logo">HOOPBLAST<small>3v3</small></span>
+    <button id="play" class="btn"><span>Jugar partido</span></button>
+    <button id="train" class="btn ghost"><span>Entrenamiento</span></button>
+    <button id="onlineBtn" class="btn ghost"><span>Online 2 contra 2</span></button>
+    <button id="customize" class="btn ghost"><span>Personalizar</span></button>
+    <button id="controlsBtn" class="btn ghost"><span>Controles</span></button>
+    <button id="animMode" class="btn ghost"><span>Animaciones</span></button>
+  </nav>
+  <div class="col menucard">
     <p class="lead">Baloncesto tres contra tres en una jaula. Protege el balón con el cuerpo, rompe tobillos con tus regates y roba con un manotazo en el momento justo.</p>
     <div class="row">
       <span class="lbl">Rivales</span>
@@ -442,13 +481,16 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
         <button data-arena="jungle" aria-pressed="false">Jungla</button>
       </div>
     </div>
-    <div class="row" style="margin-bottom:0">
-      <button id="play" class="btn"><span>Jugar partido</span></button>
-      <button id="train" class="btn ghost"><span>Entrenamiento</span></button>
-      <button id="customize" class="btn ghost"><span>Personalizar</span></button>
-      <button id="onlineBtn" class="btn ghost"><span>Online 2 contra 2</span></button>
-      <button id="animMode" class="btn ghost"><span>Animaciones</span></button>
-    </div>
+    <p id="touchnote" class="note" hidden>Necesitas teclado y ratón para jugar.</p>
+  </div>
+  <span class="version">v0.3 alpha «Resort» · 4 oct 2026 · 22:29</span>
+</section>
+
+<!-- ── Controles (pestaña aparte) ── -->
+<section id="controls" class="overlay" hidden>
+  <div class="cpanel ctlpanel">
+    <header class="chead"><h2>Controles</h2><span>Teclado y ratón, y mando de PS4</span></header>
+    <div class="cbody">
     <dl class="controls">
       <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>Moverte</dd>
       <dt>Ratón o <kbd>←</kbd><kbd>→</kbd></dt><dd>Girar la cámara</dd>
@@ -489,7 +531,8 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
     </dl>
     <p class="note" style="color:var(--muted)">Los regates te protegen un instante: si te intentan robar justo entonces, el defensor se queda clavado.</p>
     <p class="note" style="color:var(--muted)">Moverte con normalidad no gasta energía: solo el sprint. En cuanto lo sueltas se recupera rápido, y más deprisa cuanta más te queda. Si llega a cero quedas agotado: lento, sin sprint ni giro y con peor tiro hasta que recuperes un 30 %.</p>
-    <p id="touchnote" class="note" hidden>Necesitas teclado y ratón para jugar.</p>
+    </div>
+    <footer class="cfoot"><button id="controlsBack" class="cbtn primary">Volver</button></footer>
   </div>
 </section>
 
@@ -3718,6 +3761,7 @@ let shiftLast = 0;
 addEventListener('keydown', e => {
   setInputMode('kb');
   if ((e.code === 'ShiftLeft' || e.code === 'ShiftRight') && !e.repeat && inMatch()) { const now = performance.now(); if (now - shiftLast < 300) { pendH.dash = true; shiftLast = 0; } else shiftLast = now; }   // doble Mayús: sobresfuerzo
+  if (TITLE.on) { exitTitle(); e.preventDefault(); return; }
   if (mode === 'anim' && state === 'play') {
     if (e.code === 'Escape') exitAnimMode();
     else if (e.code === 'Space') { ANIM.paused = !ANIM.paused; animUI(); }
@@ -3748,6 +3792,7 @@ addEventListener('blur', () => { for (const k in keys) keys[k] = false; mouseHel
 renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
 renderer.domElement.addEventListener('mousedown', e => {
   setInputMode('kb');
+  if (TITLE.on) { exitTitle(); return; }
   if (mode === 'anim') { ANIM.drag = [e.clientX, e.clientY]; return; }
   if (!inMatch()) return;
   if (!locked) lock();
@@ -3823,6 +3868,7 @@ function padFrame(dt) {
   if (any || lm > 0 || Math.hypot(rx, ry) > 0) setInputMode('pad');
   PAD.lx = lx; PAD.ly = ly; PAD.lm = lm; PAD.rx = rx; PAD.ry = ry;
   PAD.r2 = b(5) || b(7);                                             // R1 (o R2): correr
+  if (TITLE.on && gp.buttons.some((x, i) => x.pressed && !PAD.prev[i])) { exitTitle(); PAD.prev = gp.buttons.map(x => x.pressed); return; }
   if (down(5) && inMatch()) { const now = performance.now(); if (now - (PAD.r1Last || 0) < 300) { pendH.dash = true; PAD.r1Last = 0; } else PAD.r1Last = now; }   // doble R1: sobresfuerzo
   // L2: postura. Algunos mandos dejan el gatillo con un valor residual al soltarlo: se toma su reposo como referencia
   const l2v = gp.buttons[6] ? gp.buttons[6].value : 0;
@@ -5041,6 +5087,7 @@ function updateCamera(dt, T) {
   }
   if (state === 'paused') return;
   if (mode === 'anim') {
+    if (TITLE.on) { ANIM.az += dt * 0.12; ANIM.dist = 9.5; ANIM.el = 0.2; }
     // cámara orbital alrededor del jugador
     const c = human.pos;
     _cl.set(c.x, c.y + 1.15, c.z);
@@ -5211,11 +5258,15 @@ document.body.append($('combos'), $('traintip'));   // paneles del entrenamiento
 document.querySelectorAll('.seg button[data-cam]').forEach(b => b.addEventListener('click', () => setCamMode(b.dataset.cam)));
 document.querySelectorAll('.seg button[data-arena]').forEach(b => b.addEventListener('click', () => setArena(b.dataset.arena)));
 setArena(arenaKey);
+setTimeout(enterTitle, 0);   // el juego arranca en la pantalla de título
 setCamMode(camMode);
 $('play').addEventListener('click', startMatch);
 $('train').addEventListener('click', startTraining);
 $('customize').addEventListener('click', openCustomizer);
 $('animMode').addEventListener('click', enterAnimMode);
+$('titlescreen').addEventListener('click', exitTitle);
+$('controlsBtn').addEventListener('click', () => { $('menu').hidden = true; $('controls').hidden = false; $('controlsBack').focus(); });
+$('controlsBack').addEventListener('click', () => { $('controls').hidden = true; $('menu').hidden = false; $('controlsBtn').focus(); });
 $('onlineBtn').addEventListener('click', openOnline);
 $('custDone').addEventListener('click', closeCustomizer);
 $('custReset').addEventListener('click', () => { myLook = Object.assign({}, DEFAULT_LOOK); applyLook(); buildCustomForm(); });
@@ -5278,7 +5329,22 @@ const regate = (type, side) => (type === 'cross' || type === 'between') ? ({ cat
 const mate = (type, name) => ({ cat: 'Mates', name, dur: 3.2,
   setup() { animPlace(H(), RIM1().x - 5.5, 0.3); giveBall(H()); },
   tick(t) { fwd(t < 0.55 ? 1 : 0); ANIM.inp.sprint = true; once(t, 0.5, () => startDunk(H(), type, false)); } });
+// Jugada de la pantalla de título: tu jugador bota, cruza, arranca y machaca ante un defensor (no sale en la lista)
+const TITLE = { on: false };
 const ANIMS = [
+  { cat: 'Título', name: 'Intro', hidden: true, dur: 5.6,
+    setup() { animPlace(H(), RIM1().x - 9.5, -2.2); giveBall(H()); H().hand = 1; animPlace(R0(), RIM1().x - 6.4, -0.8, -Math.PI / 2); },
+    tick(t) {
+      const h = H(), rim = RIM1(), dx = rim.x - h.pos.x, dz = rim.z - h.pos.z, l = Math.hypot(dx, dz) || 1;
+      if (t < 0.9) ANIM.inp.move.set(0.55, 0, 0.25);
+      else if (t < 1.25) ANIM.inp.move.set(0.4, 0, -0.35);
+      else if (!h.dunkSeq && ball.holder === h) { ANIM.inp.move.set(dx / l, 0, dz / l); ANIM.inp.sprint = true; }
+      once(t, 0.95, () => startMove(h, 'cross', -1));
+      if (t > 1.4 && l < 3.3 && ball.holder === h && !h.dunkSeq && !ANIM.fired.has('dunk')) { ANIM.fired.add('dunk'); startDunk(h, 'windmill', false); }
+      const r = R0(), hx = h.pos.x - r.pos.x, hz = h.pos.z - r.pos.z, hl = Math.hypot(hx, hz) || 1;
+      ANIM.npc.set(r, { move: new V3(hx / hl * (hl > 1.4 ? 0.8 : 0), 0, hz / hl * (hl > 1.4 ? 0.8 : 0)), sprint: false, shootHold: false, stance: true });
+      if (h.dunkSeq && !ANIM.fired.has('blk')) { ANIM.fired.add('blk'); r.pend.block = true; }
+    } },
   { cat: 'Movimiento', name: 'Reposo', dur: 3, setup() { animPlace(H(), 0, 0); }, tick() {} },
   { cat: 'Movimiento', name: 'Andar', dur: 3, setup() { animPlace(H(), -4, 0); }, tick(t) { fwd(0.4); } },
   { cat: 'Movimiento', name: 'Correr', dur: 2.5, setup() { animPlace(H(), -6, 0); }, tick(t) { fwd(1); } },
@@ -5348,6 +5414,7 @@ function animUI() {
 function buildAnimUI() {
   const list = $('animList'); list.innerHTML = ''; let cat = '';
   ANIMS.forEach((a, i) => {
+    if (a.hidden) return;
     if (a.cat !== cat) { cat = a.cat; const h = document.createElement('h4'); h.textContent = cat; list.appendChild(h); }
     const b = document.createElement('button'); b.textContent = a.name; b.dataset.i = i; b.onclick = () => playAnim(i); list.appendChild(b);
   });
@@ -5416,6 +5483,21 @@ function enterAnimMode() {
   for (const id of ['menu', 'over', 'pause', 'hud']) $(id).hidden = true;
   $('animdbg').hidden = false; possTeam = -1; state = 'play';
   buildAnimUI(); playAnim(ANIM.cur === null ? 0 : ANIM.cur);
+}
+// Pantalla de título: la jugada de intro en bucle con la cámara girando despacio
+function enterTitle() {
+  TITLE.on = true;
+  mode = 'anim'; ANIM.paused = false; ANIM.speed = 1; Math.random = seededRandom;
+  resetEntities(); stats = newStats();
+  for (const id of ['menu', 'over', 'pause', 'hud', 'animdbg']) $(id).hidden = true;
+  $('titlescreen').hidden = false; $('tversion').textContent = (document.querySelector('.version') || {}).textContent || '';
+  possTeam = -1; state = 'play'; ANIM.az = 2.2; ANIM.el = 0.22; ANIM.dist = 10;
+  playAnim(ANIMS.findIndex(a => a.name === 'Intro'));
+}
+function exitTitle() {
+  if (!TITLE.on) return;
+  TITLE.on = false; $('titlescreen').hidden = true; SFX.init();
+  exitAnimMode();
 }
 function exitAnimMode() {
   $('animdbg').hidden = true;
