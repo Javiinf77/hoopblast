@@ -240,6 +240,15 @@ button:focus-visible{ outline:3px solid var(--gold); outline-offset:3px; }
 .dashes i{ position:relative; flex:0 0 34px; height:8px; border-radius:4px; background:rgba(127,215,255,.18); overflow:hidden; }
 .dashes b{ position:absolute; left:0; top:0; bottom:0; width:0; background:#4fb8ff; border-radius:4px; }
 .dashes b.full{ background:#7fd7ff; box-shadow:0 0 8px #4fb8ff; }
+/* ── Online ── */
+.netin{ font:inherit; font-weight:700; font-size:15px; color:var(--chalk); background:rgba(243,245,255,.06); border:1px solid var(--line); border-radius:8px; height:36px; padding:0 10px; width:100%; box-sizing:border-box; text-transform:none; }
+#netCode{ text-transform:uppercase; letter-spacing:.2em; }
+.netrow{ display:flex; gap:8px; } .netrow .cbtn{ flex:0 0 auto; padding:0 14px; height:36px; }
+.crow .cbtn{ height:36px; }
+.netstatus{ margin:12px 0 6px; font-weight:700; font-size:15px; color:var(--gold); min-height:20px; }
+.netstatus b{ font-size:22px; letter-spacing:.18em; color:var(--chalk); }
+.netplayers{ margin:0; padding-left:22px; font-weight:700; font-size:15px; color:var(--chalk); display:grid; gap:4px; }
+.netplayers .t0{ color:#7fb0ff; } .netplayers .t1{ color:#ff7f9e; } .netplayers small{ color:var(--muted); font-weight:600; margin-left:6px; }
 /* ── Indicador de postura (L2) ── */
 .stancelbl{ display:flex; align-items:center; gap:6px; font-weight:700; font-size:14px; color:var(--muted); }
 .stancelbl.on{ color:var(--gold); }
@@ -269,7 +278,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
   <div class="top">
     <div class="board" aria-live="polite">
       <div class="side blue"><span class="who">Tu equipo</span><span id="s0" class="pts">0</span></div>
-      <div id="clock" class="clock">4:00</div>
+      <div id="clock" class="clock">5:00</div>
       <div class="side rival"><span id="s1" class="pts">0</span><span class="who">Rival</span></div>
     </div>
     <div id="shotclock" class="shotclock">Posesión<b id="sc">14</b></div>
@@ -335,7 +344,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
 <section id="menu" class="overlay">
   <div class="col">
     <h1 class="title">HOOPBLAST<small>3v3</small></h1>
-    <span class="version">v0.3 alpha · 4 oct 2026 · 21:32</span>
+    <span class="version">v0.3 alpha · 4 oct 2026 · 21:43</span>
     <div class="split"></div>
     <p class="lead">Baloncesto tres contra tres en una jaula. Protege el balón con el cuerpo, rompe tobillos con tus regates y roba con un manotazo en el momento justo.</p>
     <div class="row">
@@ -357,6 +366,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
       <button id="play" class="btn"><span>Jugar partido</span></button>
       <button id="train" class="btn ghost"><span>Entrenamiento</span></button>
       <button id="customize" class="btn ghost"><span>Personalizar</span></button>
+      <button id="onlineBtn" class="btn ghost"><span>Online 2 contra 2</span></button>
       <button id="animMode" class="btn ghost"><span>Animaciones</span></button>
     </div>
     <dl class="controls">
@@ -435,6 +445,21 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
     <div class="actl" id="animSpeeds"></div>
   </div>
   <p class="ahint">Arrastra para girar la cámara · rueda para acercar · ← → fotograma a fotograma · espacio pausa · Esc salir</p>
+</section>
+
+<!-- ── Online: sala para jugar 2 contra 2 con amigos ── -->
+<section id="online" class="overlay" hidden>
+  <div class="cpanel">
+    <header class="chead"><h2>Online 2 contra 2</h2><span>Uno crea la sala; los demás se unen con el código</span></header>
+    <div class="cbody">
+      <div class="crow"><label>Tu nombre</label><input id="netName" class="netin" maxlength="12" placeholder="Jugador"></div>
+      <div class="crow"><label>Nueva sala</label><button id="netCreate" class="cbtn">Crear sala</button></div>
+      <div class="crow"><label>Unirse</label><div class="netrow"><input id="netCode" class="netin" maxlength="5" placeholder="CÓDIGO"><button id="netJoin" class="cbtn">Unirse</button></div></div>
+      <p id="netStatus" class="netstatus">Elige: crear una sala o unirte con un código.</p>
+      <ol id="netPlayers" class="netplayers"></ol>
+    </div>
+    <footer class="cfoot"><button id="netBack" class="cbtn">Salir</button><button id="netStart" class="cbtn primary" hidden>Empezar partido</button></footer>
+  </div>
 </section>
 
 <!-- ── Pausa ── -->
@@ -516,6 +541,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
    §31  MENÚS Y ARRANQUE                 Botones de los menús y puesta en marcha del bucle.
    §32  DATOS DE MODELOS               Mallas compactas de cabezas/pelo/nariz/barba (miiRawData). No hace falta leerlo.
    §33  MODO ANIMACIONES (debug)       Reproducir cada animación por separado: lista, pausa, fotograma a fotograma, velocidad.
+   §34  ONLINE 2 CONTRA 2              Salas con código (PeerJS): el anfitrión simula, los invitados envían mando y reciben el estado.
    ==============================================================================
    CÓMO FUNCIONA (resumen para orientarse rápido)
    · Un fotograma: frame() §30 → padFrame() §23 → entrada humana (humanFrameInput §22) o IA (aiThink §21)
@@ -563,7 +589,7 @@ const ZERO = new V3();
    TODOS los números ajustables del juego (física, energía, robo, tapón, regates, tiro, pase) y dificultad de la IA.
    ============================================================================== */
 const CFG = {
-  gravity: -20, step: 1 / 120, matchTime: 240, shotClock: 14,
+  gravity: -20, step: 1 / 120, matchTime: 300, shotClock: 14, scorePause: 3,   // partidos de 5 minutos; pausa tras cada canasta
   arena: { hx: 20, hz: 12, ceil: 14 },
   ball: { r: 0.14, eFloor: 0.76, eWall: 0.72, eRim: 0.5, eBoard: 0.6, mu: 0.35, rollDrag: 0.45, magnus: 0.004, drag: 0.05 },
   hoop: { x: 17.2, y: 3.05, r: 0.28, tube: 0.022 },
@@ -606,7 +632,8 @@ const CFG = {
   // Sobresfuerzo (como en Rematch): 3 cargas azules; la explosión tras un regate gasta una.
   // Se recargan de una en una: 9 s con la energía llena, hasta ~26 s si vas casi vacío.
   dash: { max: 3, recharge: 9, lowMul: 0.35 },
-  pass: { magnet: 5.5, chestSpeed: 15.5, bounceSpeed: 12.5, lobTime: 0.45, lobSpeed: 13, chestG: 0.22, bounceG: 0.55, lockTime: 4 },
+  // Pases teledirigidos: el directo vuela recto y sigue a las manos del receptor; el picado bota y sube a sus manos.
+  pass: { magnet: 5.5, chestSpeed: 21, bounceSpeed: 17, bounceUp: 14, lobTime: 0.32, lobSpeed: 16, chestG: 0, bounceG: 1, lockTime: 4 },
   // Tapón (clic sin balón): salto con ventana activa, igual que el robo tiene su momento justo
   block: { dur: 0.6, winStart: 0.1, winEnd: 0.36, sweetStart: 0.18, sweetEnd: 0.3, reach: 0.45, reachSweet: 0.7,
            jump: 6.8, lunge: 1.2, cost: 0.06, cdMiss: 1.4, cdHit: 0.8, missStun: 0.25, posterStun: 0.5 },
@@ -1641,7 +1668,14 @@ function holdTarget(p, dt) {
 function passMagnet(dt) {
   const ps = ball.pass, to = ps.to;
   if (!to || to.team !== ps.team) return;
-  if (ps.type === 'bounce' && !ps.bounced) { if (ball.pos.y < CFG.ball.r + 0.06 && ball.vel.y > 0) ps.bounced = true; }
+  if (ps.type === 'bounce' && !ps.bounced) { if (ball.pos.y < CFG.ball.r + 0.06 && ball.vel.y > 0) { ps.bounced = true; ps.home = true; ps.g = 0; ps.speed = CFG.pass.bounceUp; } }
+  if (ps.home) {
+    // teledirigido: siempre hacia las manos del receptor, a velocidad constante (lo corta quien se cruce en medio)
+    const hx = to.pos.x - ball.pos.x, hy = to.pos.y + (to.onGround ? 1.25 : 1.6) - ball.pos.y, hz = to.pos.z - ball.pos.z, hl = Math.hypot(hx, hy, hz) || 1;
+    const sp = ps.speed || CFG.pass.chestSpeed, a = 1 - Math.exp(-14 * dt);
+    ball.vel.x += (hx / hl * sp - ball.vel.x) * a; ball.vel.y += (hy / hl * sp - ball.vel.y) * a; ball.vel.z += (hz / hl * sp - ball.vel.z) * a;
+    return;
+  }
   const hy = to.pos.y + (to.onGround ? 1.2 : 1.6), g = -CFG.gravity * (ps.g || 1), vy = ball.vel.y, dy = ball.pos.y - hy;
   const disc = vy * vy + 2 * g * dy;
   const tr = (ps.type !== 'bounce' || ps.bounced) && disc > 0 ? (vy + Math.sqrt(disc)) / g : 0;
@@ -1688,7 +1722,7 @@ function stepBall(dt) {
     _tmp.crossVectors(UP, ball.vel).multiplyScalar(1 / CFG.ball.r);
     ball.w.lerp(_tmp, 0.1);
   } else {
-    ball.vel.y += CFG.gravity * dt * (ball.pass && ball.pass.g ? ball.pass.g : 1);   // los pases tensos caen menos
+    ball.vel.y += CFG.gravity * dt * (ball.pass && ball.pass.g !== undefined ? ball.pass.g : 1);   // los pases tensos caen menos
     if (!ball.shot && !ball.pass) {
       _tmp.crossVectors(ball.w, ball.vel).multiplyScalar(CFG.ball.magnus * dt);
       ball.vel.add(_tmp);
@@ -2480,7 +2514,7 @@ function onScore(hi) {
     if (sh.shooter && sh.shooter.assistT > 0 && sh.shooter.assistFrom) stats[team].assists++;
   }
   score[team] += pts; updateScore();
-  lastScoreHoop = hi; scoredTeam = team; state = 'scored'; stateT = 1.9;
+  lastScoreHoop = hi; scoredTeam = team; state = 'scored'; stateT = CFG.scorePause;
   slowT = Math.max(slowT, 0.7); shake = Math.max(shake, 0.5);
   hp.jiggle = 1; hp.waveT = 1; teamLights[hi].intensity = 4;
   burst(hp.rimC, team === 0 ? CFG.colors.blue : CFG.colors.rival, 200, 10);
@@ -2767,34 +2801,30 @@ function pass(p, to, alley, type) {
   if (p.inbounding) { p.inbounding = false; alley = false; }
   type = type || 'chest';
   const PC = CFG.pass, R = CFG.ball.r, d = hdist(p.pos, to.pos);
-  // tiempo de vuelo según el tipo: se usa también para adelantar al receptor
-  const T = type === 'lob' ? PC.lobTime + d / PC.lobSpeed : type === 'bounce' ? d / PC.bounceSpeed + 0.1 : d / PC.chestSpeed + 0.08;
-  const tx = clamp(to.pos.x + to.vel.x * T, -19, 19), tz = clamp(to.pos.z + to.vel.z * T, -11, 11);
-  let vel, target, gs = 1;
-  // velocidad para llegar a "tg" en "t" segundos con la gravedad escalada por "g"
-  const aimAt = (tg, t, g) => { const gy = CFG.gravity * g; return new V3((tg.x - ball.pos.x) / t, (tg.y - ball.pos.y) / t - 0.5 * gy * t - gy * CFG.step / 2, (tg.z - ball.pos.z) / t); };
+  // se apunta directamente al compañero (a sus manos), no a una posición adelantada: si se mueve, el balón le sigue
+  const hands = new V3(to.pos.x, to.onGround ? 1.25 : to.pos.y + 1.6, to.pos.z);
+  let vel, target = hands, gs = 1;
   if (alley && !to.isHuman) {
     const c = hoops[to.attackSide].rimC, s = Math.sign(c.x);
     target = new V3(c.x - s * 0.8, CFG.hoop.y + 0.3, clamp(to.pos.z, -0.6, 0.6));
     vel = shotVelocity(ball.pos, target, 0.9); type = 'lob';
   } else if (type === 'bounce') {
-    // picado: bota a 2/3 del camino y sube a las manos del compañero
-    target = new V3(tx, 0.9, tz); gs = PC.bounceG;
-    const bp = new V3(lerp(ball.pos.x, tx, 0.62), R, lerp(ball.pos.z, tz, 0.62));
-    vel = aimAt(bp, T * 0.62, gs);
+    // picado: directo al suelo a ~60 % del camino; tras el bote sube teledirigido a las manos
+    const bp = new V3(lerp(ball.pos.x, to.pos.x, 0.6), R, lerp(ball.pos.z, to.pos.z, 0.6));
+    vel = bp.clone().sub(ball.pos).normalize().multiplyScalar(PC.bounceSpeed);
   } else if (type === 'lob') {
-    target = new V3(tx, to.onGround ? 1.9 : to.pos.y + 1.8, tz);
-    vel = aimAt(target, T, 1);
+    const T = PC.lobTime + d / PC.lobSpeed, gy = CFG.gravity;
+    target = new V3(to.pos.x + to.vel.x * T * 0.6, to.onGround ? 1.9 : to.pos.y + 1.8, to.pos.z + to.vel.z * T * 0.6);
+    vel = new V3((target.x - ball.pos.x) / T, (target.y - ball.pos.y) / T - 0.5 * gy * T, (target.z - ball.pos.z) / T);
   } else {
-    target = new V3(tx, clamp(to.onGround ? 1.25 : to.pos.y + 1.6 + to.vel.y * T * 0.5, 1, 6), tz); gs = PC.chestG;
-    vel = aimAt(target, T, gs);
+    gs = 0;                                                              // directo: tenso, sin caída
+    vel = hands.clone().sub(ball.pos).normalize().multiplyScalar(PC.chestSpeed);
   }
   release(p, vel);
   passLock = null;
-  if (type === 'bounce') ball.w.crossVectors(UP, ball.vel).multiplyScalar(1 / R);   // efecto de rodadura: no pierde velocidad al botar
-  else ball.w.multiplyScalar(0.3);
-  ball.pass = { team: p.team, from: p, to, alley: !!alley, target, t: 3.5, type, g: gs };
-  p.throwT = 0.35; p.throwKind = type === 'lob' ? 'lob' : type === 'bounce' ? 'bounce' : 'pass';
+  ball.w.multiplyScalar(0.2);
+  ball.pass = { team: p.team, from: p, to, alley: !!alley, target, t: 3, type, g: type === 'chest' ? 0 : 1, home: type === 'chest' };
+  p.throwT = 0.3; p.throwKind = type === 'lob' ? 'lob' : type === 'bounce' ? 'bounce' : 'pass';
   to.pickupCd = 0;
   sfx('pass');
 }
@@ -2813,9 +2843,11 @@ function cyclePassTarget(p) {
   sfx('grab');
 }
 function bestPassTarget(p, aim) {
-  if (passLock && passLock.to !== p && passLock.to.team === p.team && live.includes(passLock.to)) return passLock.to;   // elegido con L1
-  // dirección de pase: el stick izquierdo si lo inclinas; si no, hacia donde mira la cámara
-  let ax = -Math.sin(camYaw), az = -Math.cos(camYaw);
+  if (p === human && passLock && passLock.to !== p && passLock.to.team === p.team && live.includes(passLock.to)) return passLock.to;   // elegido con L1
+  if (p.netLock && p.netLock.team === p.team && p.netLock !== p && live.includes(p.netLock)) return p.netLock;                  // (online) elegido con L1 por un amigo
+  // dirección de pase: el stick izquierdo si lo inclinas; si no, hacia donde mira la cámara (la de cada jugador en online)
+  const cy = p.netCtl ? p.netCam : camYaw;
+  let ax = -Math.sin(cy), az = -Math.cos(cy);
   if (aim && Math.hypot(aim.x, aim.z) > 0.3) { const l = Math.hypot(aim.x, aim.z); ax = aim.x / l; az = aim.z / l; }
   let best = null, bs = -1e9;
   for (const m of live) {
@@ -2828,7 +2860,7 @@ function bestPassTarget(p, aim) {
 }
 // Cambia el jugador controlado (3v3): el anterior pasa a la IA
 function setControlled(p) {
-  if (!p || p === human || mode !== 'match') return;
+  if (!p || p === human || mode !== 'match' || NET.inGame) return;   // online: cada uno controla siempre a su jugador
   const old = human;
   old.isHuman = false; old.charging = false; old.charge = 0; old.stance = false;
   for (const k in old.pend) old.pend[k] = k === 'move' ? null : false;
@@ -3662,6 +3694,7 @@ function setupCheck(team) {
   const at = (dist, ang) => new V3(c.x - sx * Math.cos(ang) * dist, 0, Math.sin(ang) * dist);
   const offSpots = [at(8.2, 0), at(7.4, 0.95), at(7.4, -0.95)], defSpots = [at(6.4, 0), at(5.6, 0.85), at(5.6, -0.85)];
   for (const p of players) {
+    if (!live.includes(p)) { p.pos.set(0, -50, 0); p.vel.set(0, 0, 0); continue; }   // (online 2 contra 2: los que no juegan, fuera)
     p.charging = false; p.charge = 0; p.move = null; p.nextMove = null; p.spinAngle = 0; p.inbounding = false; p.dunkSeq = null; p.shotT = 0; p.stunT = 0; p.swipeT = 0; p.blockT = 0; p.deadDribble = false;
     const sp = (p.team === team ? offSpots : defSpots)[p.idx];
     p.pos.copy(sp); p.home.copy(p.team === team ? sp : defSpots[p.idx]); p.vel.set(0, 0, 0); p.onGround = true;
@@ -3730,7 +3763,7 @@ function endGame() {
 }
 
 // Pausa el partido.
-function pause() { if (!inMatch()) return; prevState = state; state = 'paused'; mouseHeld = false; $('pause').hidden = false; $('resume').focus(); }
+function pause() { if (!inMatch()) return; if (NET.role === 'client') { if (confirm('¿Salir de la sala?')) netLeave(); return; } prevState = state; state = 'paused'; mouseHeld = false; $('pause').hidden = false; $('resume').focus(); }
 
 // Reanuda el partido.
 function resume() { $('pause').hidden = true; state = prevState; lock(); }
@@ -4831,6 +4864,8 @@ function frame(now) {
   const rdt = Math.min(0.05, (now - last) / 1000); last = now; T += rdt;
   padFrame(rdt);
   if (mode === 'anim' && state === 'play') { animFrame(rdt); return; }
+  if (NET.role === 'client' && NET.inGame) { netClientFrame(rdt); return; }
+  if (NET.role === 'host' && NET.inGame) netHostTick(rdt);
   shake = Math.max(0, shake - rdt * 2.2);
   if (hitstop > 0) { hitstop -= rdt; updateCamera(rdt, T); renderer.render(scene, camera); return; }
   if (slowT > 0) slowT -= rdt;
@@ -4840,7 +4875,7 @@ function frame(now) {
   if (state === 'play' || state === 'scored') {
     if (mode === 'match') updateTeamPlans(gdt);
     const hf = mode === 'anim' ? ANIM.inp : humanFrameInput();
-    const frames = live.map(p => p === human ? hf : mode === 'anim' ? (ANIM.npc.get(p) || ANIM.idle) : aiThink(p, gdt));
+    const frames = live.map(p => p === human ? hf : mode === 'anim' ? (ANIM.npc.get(p) || ANIM.idle) : p.netCtl ? p.netIn : aiThink(p, gdt));
     acc += gdt; let n = 0;
     while (acc >= CFG.step && n < 12) { step(CFG.step, frames); acc -= CFG.step; n++; if (state !== 'play' && state !== 'scored') break; }
     if (state === 'scored') { stateT -= rdt; if (stateT <= 0) afterScore(); }
@@ -4892,6 +4927,7 @@ $('play').addEventListener('click', startMatch);
 $('train').addEventListener('click', startTraining);
 $('customize').addEventListener('click', openCustomizer);
 $('animMode').addEventListener('click', enterAnimMode);
+$('onlineBtn').addEventListener('click', openOnline);
 $('custDone').addEventListener('click', closeCustomizer);
 $('custReset').addEventListener('click', () => { myLook = Object.assign({}, DEFAULT_LOOK); applyLook(); buildCustomForm(); });
 $('custRand').addEventListener('click', () => {
@@ -4903,10 +4939,10 @@ $('custRand').addEventListener('click', () => {
   applyLook(); buildCustomForm();
 });
 $('resetTrain').addEventListener('click', () => { resetTrainStats(); resume(); });
-$('again').addEventListener('click', startMatch);
-$('tomenu').addEventListener('click', toMenu);
+$('again').addEventListener('click', () => { if (NET.role === 'host') netStart(); else if (NET.role === 'client') netLeave(); else startMatch(); });   // online: el anfitrión repite la sala
+$('tomenu').addEventListener('click', () => { if (NET.role) netLeave(); else toMenu(); });
 $('resume').addEventListener('click', resume);
-$('quit').addEventListener('click', toMenu);
+$('quit').addEventListener('click', () => { if (NET.role) netLeave(); else toMenu(); });
 if (window.matchMedia('(pointer: coarse)').matches) $('touchnote').hidden = false;resetEntities();
 ball.pos.set(0, 6, 0);
 $('play').focus();
@@ -5106,6 +5142,201 @@ $('animRestart').addEventListener('click', () => { if (ANIM.cur !== null) playAn
 addEventListener('mousemove', e => { if (mode !== 'anim' || !ANIM.drag) return; ANIM.az -= (e.clientX - ANIM.drag[0]) * 0.008; ANIM.el = clamp(ANIM.el + (e.clientY - ANIM.drag[1]) * 0.006, -0.1, 1.3); ANIM.drag = [e.clientX, e.clientY]; });
 addEventListener('mouseup', () => { ANIM.drag = null; });
 renderer.domElement.addEventListener('wheel', e => { if (mode !== 'anim') return; ANIM.dist = clamp(ANIM.dist * (e.deltaY > 0 ? 1.1 : 0.9), 2, 14); e.preventDefault(); }, { passive: false });
+
+/* ==============================================================================
+   §34 ONLINE 2 CONTRA 2 (PeerJS / WebRTC)
+   El anfitrión ejecuta el partido; los invitados envían su mando y reciben el estado ~30 veces por segundo.
+   Huecos: 0 = anfitrión (equipo azul), 1 = equipo rojo, 2 = azul, 3 = rojo. Los huecos vacíos los juega la IA.
+   Funciones: openOnline, netCreate, netJoin, netLeave, netStart, netHostTick, netClientFrame
+   ============================================================================== */
+const NET = { role: null, inGame: false, peer: null, conns: [], code: '', slots: [], mySlot: 0, sendT: 0, last: null, names: [] };
+const NET_SLOT = i => players.find(p => p.team === (i % 2) && p.idx === (i >> 1));   // hueco → jugador
+const NET_PREFIX = 'hoopblast-v1-';
+function netLoadPeer() {
+  if (window.Peer) return Promise.resolve();
+  const urls = ['https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js', 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js'];
+  return urls.reduce((pr, u) => pr.catch(() => new Promise((ok, ko) => { const s = document.createElement('script'); s.src = u; s.onload = ok; s.onerror = ko; document.head.appendChild(s); })), Promise.reject());
+}
+const netStatus = html => { $('netStatus').innerHTML = html; };
+function netLobby() {
+  const ol = $('netPlayers'); ol.innerHTML = '';
+  for (let i = 0; i < 4; i++) {
+    const li = document.createElement('li'), n = NET.names[i];
+    li.className = 't' + (i % 2); li.innerHTML = (n || '— IA —') + '<small>' + (i % 2 ? 'Rojo' : 'Azul') + (i === NET.mySlot && n ? ' · tú' : '') + '</small>';
+    ol.appendChild(li);
+  }
+  $('netStart').hidden = NET.role !== 'host';
+}
+function openOnline() {
+  $('menu').hidden = true; $('online').hidden = false;
+  try { $('netName').value = localStorage.getItem('hoopblast.name') || ''; } catch (e) { /* sin almacenamiento */ }
+  netLobby(); $('netCreate').focus();
+}
+const netName = () => { const n = ($('netName').value || 'Jugador').trim().slice(0, 12) || 'Jugador'; try { localStorage.setItem('hoopblast.name', n); } catch (e) { /* nada */ } return n; };
+// ---- anfitrión ----
+function netCreate() {
+  netStatus('Preparando la sala…');
+  netLoadPeer().then(() => {
+    const code = Array.from({ length: 5 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
+    const peer = new Peer(NET_PREFIX + code);
+    NET.peer = peer; NET.role = 'host'; NET.code = code; NET.mySlot = 0; NET.names = [netName(), null, null, null]; NET.conns = [null, null, null, null];
+    peer.on('open', () => { netStatus('Sala creada. Código: <b>' + code + '</b> — pásaselo a tus amigos'); netLobby(); });
+    peer.on('connection', conn => netHostAccept(conn));
+    peer.on('error', e => netStatus('Error de conexión: ' + (e.type || e)));
+  }).catch(() => netStatus('No se pudo cargar el módulo online (¿sin internet o en la vista previa de Claude? Prueba desde la web de GitHub).'));
+}
+function netHostAccept(conn) {
+  conn.on('data', m => netHostData(conn, m));
+  conn.on('close', () => netDrop(conn));
+}
+function netHostData(conn, m) {
+  if (m.t === 'hello') {
+    const slot = [1, 2, 3].find(i => !NET.conns[i]);
+    if (slot === undefined || NET.inGame) { conn.send({ t: 'full' }); return; }
+    NET.conns[slot] = conn; NET.names[slot] = String(m.name || 'Amigo').slice(0, 12); conn.slot = slot;
+    netBroadcast({ t: 'lobby', names: NET.names }); conn.send({ t: 'welcome', slot, names: NET.names, code: NET.code }); netLobby();
+  } else if (m.t === 'in' && NET.inGame) {
+    const p = NET_SLOT(conn.slot); if (!p) return;
+    const I = p.netIn || (p.netIn = { move: new V3(), sprint: false, stance: false, shootHold: false, postShot: null });
+    I.move.set(m.mx, 0, m.mz); I.sprint = !!m.sp; I.stance = !!m.st; I.shootHold = !!m.sh; I.postShot = m.ps || null;
+    p.handAim.set(m.hx || 0, 0, m.hz || 0); p.handAimAmt = m.ha || 0; p.netCam = m.cam || 0;
+    p.netLock = m.lock >= 0 ? players[m.lock] : null;
+    const e = m.e || {};
+    for (const k of ['jump', 'shoot', 'pass', 'steal', 'block', 'dash']) if (e[k]) p.pend[k] = e[k];
+    if (e.move) { p.pend.move = e.move; I.moveSide = e.side || 0; }
+  }
+}
+function netDrop(conn) {
+  const slot = NET.conns.indexOf(conn); if (slot < 0) return;
+  NET.conns[slot] = null; NET.names[slot] = null;
+  const p = NET_SLOT(slot); if (p && NET.inGame) { p.netCtl = false; p.isHuman = false; banner2('Un jugador se ha ido: le sustituye la IA', 'var(--muted)', 1.4); }
+  netBroadcast({ t: 'lobby', names: NET.names }); netLobby();
+}
+const netBroadcast = m => { for (const c of NET.conns) if (c && c.open) try { c.send(m); } catch (e) { /* conexión caída */ } };
+function netStart() {
+  if (NET.role !== 'host') return;
+  NET.inGame = true;
+  const four = [0, 1, 2, 3].map(NET_SLOT);
+  for (let i = 0; i < 6; i++) { const p = players[i]; p.netCtl = false; }
+  four.forEach((p, i) => { if (i > 0 && NET.conns[i]) { p.netCtl = true; p.isHuman = true; p.netIn = { move: new V3(), sprint: false, stance: false, shootHold: false, postShot: null }; } });
+  $('online').hidden = true;
+  startMatch();
+  live = four; for (const p of players) if (!live.includes(p)) { p.rig.root.visible = p.rig.ring.visible = false; p.pos.set(0, -50, 0); } else p.rig.root.visible = p.rig.ring.visible = true;
+  setupCheck(0);
+  netBroadcast({ t: 'start', names: NET.names });
+}
+// estado de un jugador para los invitados (solo lo que hace falta para dibujarlo y animarlo)
+const NET_KEYS = ['yaw', 'spinAngle', 'hand', 'onGround', 'stance', 'post', 'boxout', 'charging', 'charge', 'shotKind', 'shotT', 'throwT', 'throwKind', 'stunT', 'swipeT', 'blockT', 'fakeT', 'rebT',
+  'deadDribble', 'stamina', 'exhausted', 'sprinting', 'burstT', 'land', 'plantT', 'dash', 'handAimAmt', 'contestSide', 'guarded', 'missT', 'protectT', 'anim', 'explodeWin', 'inbounding'];
+const r3 = v => Math.round(v * 1000) / 1000;
+function netPack(p) {
+  const o = { i: players.indexOf(p), p: [r3(p.pos.x), r3(p.pos.y), r3(p.pos.z)], v: [r3(p.vel.x), r3(p.vel.y), r3(p.vel.z)], ha: [r3(p.handAim.x), r3(p.handAim.z)] };
+  for (const k of NET_KEYS) { const v = p[k]; o[k] = typeof v === 'number' ? r3(v) : v; }
+  const flat = x => { if (!x) return null; const c = {}; for (const k in x) { const v = x[k]; if (typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean') c[k] = v; } return c; };
+  o.move = flat(p.move); o.dunkSeq = flat(p.dunkSeq); o.layupSeq = flat(p.layupSeq); o.landVar = flat(p.landVar);
+  return o;
+}
+function netHostTick(rdt) {
+  NET.sendT += rdt; if (NET.sendT < 1 / 30) return; NET.sendT = 0;
+  netBroadcast({ t: 'snap', st: state, stT: r3(stateT || 0), clock: r3(clock), sc: r3(shotClock), score, poss: possTeam, need: needClear, ot: overtime,
+    b: { p: [r3(ball.pos.x), r3(ball.pos.y), r3(ball.pos.z)], v: [r3(ball.vel.x), r3(ball.vel.y), r3(ball.vel.z)], h: ball.holder ? players.indexOf(ball.holder) : -1, s: !!ball.shot },
+    pl: live.map(netPack), stats: state === 'over' ? stats : null });
+}
+// ---- invitado ----
+function netJoin() {
+  const code = ($('netCode').value || '').trim().toUpperCase();
+  if (code.length < 5) { netStatus('Escribe el código de 5 letras.'); return; }
+  netStatus('Conectando…');
+  netLoadPeer().then(() => {
+    const peer = new Peer(); NET.peer = peer; NET.role = 'client';
+    peer.on('open', () => {
+      const conn = peer.connect(NET_PREFIX + code, { serialization: 'json', reliable: true });
+      NET.conns = [conn];
+      conn.on('open', () => conn.send({ t: 'hello', name: netName() }));
+      conn.on('data', m => netClientData(m));
+      conn.on('close', () => { if (NET.role === 'client') { netStatus('Se ha cerrado la sala.'); netLeave(true); } });
+    });
+    peer.on('error', e => netStatus(e.type === 'peer-unavailable' ? 'No existe ninguna sala con ese código.' : 'Error de conexión: ' + (e.type || e)));
+  }).catch(() => netStatus('No se pudo cargar el módulo online (¿sin internet o en la vista previa de Claude? Prueba desde la web de GitHub).'));
+}
+function netClientData(m) {
+  if (m.t === 'welcome') { NET.mySlot = m.slot; NET.names = m.names; netStatus('Dentro de la sala <b>' + m.code + '</b>. Esperando a que el anfitrión empiece…'); netLobby(); }
+  else if (m.t === 'lobby') { NET.names = m.names; netLobby(); }
+  else if (m.t === 'full') netStatus('La sala está llena o el partido ya ha empezado.');
+  else if (m.t === 'start') netClientStart();
+  else if (m.t === 'snap') NET.last = m;
+  else if (m.t === 'fx') { if (m.f === 'sfx') sfx(...m.a); else if (m.f === 'ban') showBanner($(m.a[0]), m.a[1], m.a[2], m.a[3]); }
+}
+function netClientStart() {
+  SFX.init(); NET.inGame = true; mode = 'match';
+  human.isHuman = false; human = NET_SLOT(NET.mySlot); human.isHuman = true; pendH = human.pend;
+  live = [0, 1, 2, 3].map(NET_SLOT);
+  for (const p of players) { const on = live.includes(p); p.rig.root.visible = p.rig.ring.visible = on; if (!on) p.pos.set(0, -50, 0); p.rig.ring.material.color.setHex(p === human ? CFG.colors.gold : p.team === 0 ? CFG.colors.blue : CFG.colors.rival); }
+  setTrainingVisible(false);
+  score = [0, 0]; stats = newStats(); clock = CFG.matchTime; updateScore(); state = 'countdown';
+  $('online').hidden = true; $('menu').hidden = true; $('over').hidden = true; $('hud').hidden = false; lock();
+}
+// aplica la última instantánea del anfitrión
+function netApply(m) {
+  const prevState = state;
+  state = m.st; stateT = m.stT; clock = m.clock; shotClock = m.sc; possTeam = m.poss; overtime = m.ot;
+  needClear[0] = m.need[0]; needClear[1] = m.need[1];
+  if (score[0] !== m.score[0] || score[1] !== m.score[1]) { score = m.score; updateScore(); }
+  for (const o of m.pl) {
+    const p = players[o.i];
+    p.pos.set(o.p[0], o.p[1], o.p[2]); p.vel.set(o.v[0], o.v[1], o.v[2]);
+    if (p !== human) p.handAim.set(o.ha[0], 0, o.ha[1]);
+    for (const k of NET_KEYS) p[k] = o[k];
+    p.move = o.move; p.dunkSeq = o.dunkSeq; p.layupSeq = o.layupSeq; if (o.landVar) p.landVar = o.landVar;
+  }
+  ball.holder = m.b.h >= 0 ? players[m.b.h] : null;
+  ball.pos.set(m.b.p[0], m.b.p[1], m.b.p[2]); ball.vel.set(m.b.v[0], m.b.v[1], m.b.v[2]);
+  ball.shot = m.b.s ? (ball.shot || {}) : null;
+  if (m.st === 'over' && prevState !== 'over' && m.stats) {
+    stats = m.stats; const my = human.team, win = score[my] > score[1 - my];
+    endGame(); $('result').textContent = win ? 'Victoria' : 'Derrota';
+    $('resultline').textContent = (win ? 'Ganasteis ' : 'Perdisteis ') + score[my] + ' a ' + score[1 - my] + '.';
+  }
+}
+function netClientFrame(rdt) {
+  padFrame(rdt);
+  if (NET.last) { netApply(NET.last); NET.last = null; }
+  else for (const p of live) if (!p.onGround || Math.hypot(p.vel.x, p.vel.z) > 0.05) p.pos.addScaledVector(p.vel, rdt);   // entre instantáneas, sigue la inercia
+  // mando → anfitrión (30 veces por segundo; las pulsaciones se acumulan hasta enviarlas)
+  NET.sendT += rdt;
+  if (NET.sendT >= 1 / 30 && NET.conns[0] && NET.conns[0].open) {
+    NET.sendT = 0;
+    const f = humanFrameInput(), e = {}, pd = human.pend;
+    for (const k of ['jump', 'shoot', 'pass', 'steal', 'block', 'dash']) if (pd[k]) { e[k] = pd[k]; pd[k] = false; }
+    if (pd.move) { e.move = pd.move; e.side = PAD.side || sideFromInput(human, f.move) || 0; pd.move = null; }
+    try { NET.conns[0].send({ t: 'in', mx: r3(f.move.x), mz: r3(f.move.z), sp: f.sprint, st: f.stance, sh: f.shootHold, ps: f.postShot, hx: r3(human.handAim.x), hz: r3(human.handAim.z), ha: r3(human.handAimAmt), cam: r3(camYaw), lock: passLock ? players.indexOf(passLock.to) : -1, e }); } catch (err) { /* reintenta en el siguiente envío */ }
+  }
+  for (const p of live) animatePlayer(p, rdt, T);
+  T += rdt;
+  updateBallVisual(rdt); updateParticles(rdt); updateHoopFx(rdt, T); updateCrowd(rdt, T); updateTrail(rdt);
+  updateCamera(rdt, T); updateHUD();
+  renderer.render(scene, camera);
+}
+function netLeave(silent) {
+  try { for (const c of NET.conns) if (c) c.close(); if (NET.peer) NET.peer.destroy(); } catch (e) { /* nada */ }
+  const wasIn = NET.inGame;
+  NET.role = null; NET.inGame = false; NET.conns = []; NET.peer = null; NET.last = null; NET.names = [];
+  for (const p of players) { p.netCtl = false; p.isHuman = false; p.netIn = null; p.rig.root.visible = p.rig.ring.visible = true; }
+  human = players[0]; human.isHuman = true; pendH = human.pend;
+  live = players;
+  $('online').hidden = true;
+  if (wasIn || !silent) toMenu(); else { $('menu').hidden = false; }
+}
+// el anfitrión reenvía rótulos y sonidos a los invitados
+{
+  const sb = showBanner, sf = sfx;
+  showBanner = (el, text, color, dur) => { sb(el, text, color, dur); if (NET.role === 'host' && NET.inGame && el) netBroadcast({ t: 'fx', f: 'ban', a: [el.id, text, color, dur] }); };
+  sfx = (name, ...a) => { sf(name, ...a); if (NET.role === 'host' && NET.inGame && name !== 'bounce') netBroadcast({ t: 'fx', f: 'sfx', a: [name, ...a] }); };
+}
+$('netCreate').addEventListener('click', netCreate);
+$('netJoin').addEventListener('click', netJoin);
+$('netStart').addEventListener('click', netStart);
+$('netBack').addEventListener('click', () => { netLeave(true); $('menu').hidden = false; });
 
 /* ==============================================================================
    §32 DATOS DE MODELOS (cabezas, pelo, nariz, barba estilo Mii) — datos compactos, no editar
