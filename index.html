@@ -12,7 +12,7 @@
 <title>Hoopblast 3v3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&display=swap" rel="stylesheet">
 <style>
 /* ── Variables de color y base ── */
 :root{
@@ -267,6 +267,78 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
   .banner.show{ animation-name:fade; }
   @keyframes fade{ 0%{opacity:0} 15%{opacity:1} 80%{opacity:1} 100%{opacity:0} }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   TEMA CLARO (inspiración deportes de consola): blanco, azul cielo, formas redondeadas
+   Se aplica encima de los estilos anteriores; cambiando estas variables cambia todo el juego.
+   ══════════════════════════════════════════════════════════════════════════ */
+:root{
+  --ink:#ffffff; --panel:rgba(255,255,255,.92); --chalk:#24324a; --muted:#7486a0;
+  --blue:#1f9bff; --rival:#ff5272; --gold:#ffaa1f; --line:rgba(36,50,74,.12);
+  --sky1:#e9f6ff; --sky2:#bfe3ff; --font:'M PLUS Rounded 1c', 'Nunito', 'Segoe UI', Arial, sans-serif;
+  --shadow:0 6px 18px rgba(31,90,160,.16), 0 1px 0 rgba(255,255,255,.9) inset;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --ink:#ffffff; --chalk:#24324a; } }
+:root[data-theme="dark"]{ --ink:#ffffff; --chalk:#24324a; }
+html,body{ background:var(--sky1); color:var(--chalk); font-family:var(--font); }
+.title, .clock, .chead h2, .apanel h2, h1, h2{ font-family:var(--font) !important; }
+kbd{ font-family:var(--font); background:#f1f5fb; color:var(--chalk); border:1px solid #d5deea; box-shadow:0 2px 0 #d5deea; border-radius:6px; }
+/* pantallas (menú, pausa, final): fondo de cielo claro con franjas suaves */
+.overlay{ background:
+  repeating-linear-gradient(135deg, rgba(255,255,255,.0) 0 26px, rgba(255,255,255,.22) 26px 52px),
+  linear-gradient(180deg, rgba(233,246,255,.94) 0%, rgba(206,234,255,.9) 55%, rgba(255,255,255,.55) 100%) !important; color:var(--chalk); }
+.title{ font-weight:900 !important; font-style:normal !important; letter-spacing:-.01em; color:#1f9bff;
+  text-shadow:0 4px 0 #ffffff, 0 8px 22px rgba(31,155,255,.35); }
+.title small{ color:var(--gold) !important; font-weight:800; }
+.lede, .lede *{ color:#4a5d78 !important; font-weight:600; }
+.row .lbl{ color:var(--muted); font-weight:800; }
+/* botones: píldoras blancas que se vuelven azules */
+.btn{ font-family:var(--font); font-weight:800 !important; border-radius:999px !important; padding:12px 30px !important;
+  background:linear-gradient(180deg,#38b0ff,#1f8ff0) !important; color:#fff !important; border:0 !important;
+  box-shadow:0 4px 0 #1572c6, 0 10px 22px rgba(31,155,255,.35) !important; transition:transform .12s, box-shadow .12s, background .12s; }
+.btn:hover, .btn:focus-visible{ transform:translateY(-2px) scale(1.03); }
+.btn:active{ transform:translateY(2px); box-shadow:0 2px 0 #1572c6 !important; }
+.btn.ghost{ background:#ffffff !important; color:#1f8ff0 !important; box-shadow:0 4px 0 #cfe2f5, 0 8px 18px rgba(31,90,160,.12) !important; }
+.btn.ghost:hover, .btn.ghost:focus-visible{ background:#eaf6ff !important; }
+.btn span{ color:inherit !important; }
+.seg{ background:#ffffff; border-radius:999px; padding:4px; box-shadow:var(--shadow); gap:2px; }
+.seg button{ font-family:var(--font); font-weight:800; border-radius:999px; color:var(--muted); background:transparent; border:0; }
+.seg button[aria-pressed="true"]{ background:#1f9bff !important; color:#fff !important; box-shadow:0 3px 0 #1572c6; }
+/* HUD: tarjetas blancas redondeadas */
+.board{ background:#ffffff !important; border-radius:999px !important; box-shadow:var(--shadow); }
+.side .who{ color:var(--muted); font-weight:800; } .pts{ color:var(--chalk); font-weight:900; font-family:var(--font); }
+.side{ border-bottom-width:0 !important; } .side.blue .pts{ color:#1f9bff; } .side.rival .pts{ color:#ff5272; }
+.clock{ color:var(--chalk); font-weight:900; background:#f1f6fc; }
+.shotclock{ background:#ffffff; color:var(--muted); border-radius:999px; box-shadow:var(--shadow); font-weight:800; } .shotclock b{ color:var(--chalk); }
+.gauges, .ctrls, .trainpanel, .traintip, #defpanel{ background:var(--panel) !important; border-radius:18px !important; box-shadow:var(--shadow); color:var(--chalk); }
+.gauges .elabel span, .ctrls, .traintip{ color:var(--muted); font-weight:700; } .gauges .elabel b{ color:var(--chalk); }
+.ebar{ background:#e3ebf5 !important; border-radius:999px; overflow:hidden; }
+.dashes span{ color:#1f8ff0 !important; } .dashes i{ background:#dcebfa !important; }
+.chip{ background:#f1f5fb !important; color:var(--chalk) !important; border-radius:8px !important; }
+.trainpanel b{ color:var(--chalk); } .trainpanel span{ color:var(--muted); }
+.minimap{ background:rgba(255,255,255,.85) !important; border-radius:18px !important; box-shadow:var(--shadow); }
+.ctxhint{ background:#ffffff !important; color:var(--chalk) !important; border-radius:999px !important; box-shadow:var(--shadow); font-weight:700; }
+.ctxhint b{ color:#1f8ff0 !important; }
+/* rótulos grandes: letras blancas con borde azul */
+.banner{ font-family:var(--font) !important; font-weight:900 !important; color:#ffffff;
+  text-shadow:0 0 0 #fff, 3px 3px 0 #1f8ff0, -3px 3px 0 #1f8ff0, 3px -3px 0 #1f8ff0, -3px -3px 0 #1f8ff0, 0 10px 24px rgba(0,60,140,.35) !important; }
+/* vestuario, sala online y modo animaciones: tarjetas blancas */
+.cpanel, .apanel, .abar{ background:rgba(255,255,255,.96) !important; border:0 !important; border-radius:22px !important; box-shadow:0 18px 50px rgba(31,90,160,.22) !important; color:var(--chalk); }
+.chead h2, .apanel h2{ color:#1f9bff; font-weight:900; } .chead span{ color:var(--muted); }
+.ctabs{ border-bottom:2px solid #e8eef6; } .ctab{ font-family:var(--font); color:var(--muted); } .ctab[aria-selected="true"]{ color:#1f8ff0; border-bottom-color:#1f9bff; }
+.crow{ border-bottom-color:#eef2f8 !important; } .crow > label{ color:var(--muted); }
+.cstep{ background:#f3f7fc !important; border-color:#dde6f1 !important; border-radius:999px !important; } .cstep span, .cstep button{ color:var(--chalk) !important; } .cstep small{ color:var(--muted); }
+.cstep button:hover{ background:#e2efff !important; }
+.cbtn{ font-family:var(--font); background:#ffffff !important; color:#1f8ff0 !important; border:2px solid #d6e8fb !important; border-radius:999px !important; }
+.cbtn:hover{ background:#eaf6ff !important; }
+.cbtn.primary{ background:linear-gradient(180deg,#38b0ff,#1f8ff0) !important; color:#fff !important; border:0 !important; box-shadow:0 3px 0 #1572c6; }
+.sw{ border-color:#ffffff !important; box-shadow:0 1px 4px rgba(0,0,0,.18); } .sw[aria-pressed="true"]{ box-shadow:0 0 0 3px #1f9bff !important; }
+.netin{ background:#f3f7fc !important; color:var(--chalk) !important; border-color:#dde6f1 !important; border-radius:999px !important; }
+.netstatus{ color:#1f8ff0 !important; } .netstatus b{ color:var(--chalk) !important; }
+.alist button{ color:var(--muted); font-family:var(--font); } .alist button:hover{ background:#eef6ff; color:var(--chalk); } .alist button[aria-pressed="true"]{ background:#1f9bff; color:#fff; }
+.alist h4{ color:var(--gold); } .aname{ color:var(--chalk); } .atime{ color:#1f8ff0; } .ahint{ color:#4a5d78; text-shadow:none; }
+/* tabla de estadísticas y pantallas de pausa/final */
+table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
 </style>
 </head>
 <body>
@@ -344,7 +416,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
 <section id="menu" class="overlay">
   <div class="col">
     <h1 class="title">HOOPBLAST<small>3v3</small></h1>
-    <span class="version">v0.3 alpha · 4 oct 2026 · 21:43</span>
+    <span class="version">v0.3 alpha · 4 oct 2026 · 22:18</span>
     <div class="split"></div>
     <p class="lead">Baloncesto tres contra tres en una jaula. Protege el balón con el cuerpo, rompe tobillos con tus regates y roba con un manotazo en el momento justo.</p>
     <div class="row">
@@ -360,6 +432,14 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
       <div class="seg camseg" role="group" aria-label="Cámara">
         <button data-cam="broad" aria-pressed="true">Retransmisión</button>
         <button data-cam="third" aria-pressed="false">Tercera persona</button>
+      </div>
+    </div>
+    <div class="row">
+      <span class="lbl">Pista</span>
+      <div class="seg" role="group" aria-label="Pista">
+        <button data-arena="pav" aria-pressed="true">Pabellón</button>
+        <button data-arena="beach" aria-pressed="false">Playa</button>
+        <button data-arena="jungle" aria-pressed="false">Jungla</button>
       </div>
     </div>
     <div class="row" style="margin-bottom:0">
@@ -512,6 +592,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
    §03  RENDER, MATERIALES Y LUCES       Renderer WebGL, escena, cámara, materiales cel-shading (toon) con contorno, cielo y luces.
    §04  AUDIO                            Sonidos sintetizados con Web Audio (sin archivos). sfx(nombre) es la puerta de entrada.
    §05  ESCENARIO                        Parqué pintado por código, vallas publicitarias, cristal, torres de luz, gradas y público.
+   §05b PISTAS EXTERIORES               Playa y jungla, cielo y luz de cada pista, cambio de pista (setArena).
    §06  CANASTAS                         Aro (3,05 m), tablero, soporte, red y pivote para que el aro se doble al colgarse.
    §07  BALÓN                            Malla y estado del balón (posición, velocidad, efecto, poseedor, tiro/pase en curso).
    §08  MODELO DE JUGADOR Y VESTUARIO    Construcción del muñeco articulado (1,95 m), estampados, peinados, accesorios y aspecto guardado.
@@ -675,7 +756,8 @@ const toonGrad = (() => {
   const t = new THREE.DataTexture(d, 3, 1, THREE.RGBAFormat);
   t.minFilter = t.magFilter = THREE.NearestFilter; t.generateMipmaps = false; t.needsUpdate = true; return t;
 })();
-const toon = (color, extra) => new THREE.MeshToonMaterial(Object.assign({ color, gradientMap: toonGrad }, extra || {}));
+// Estética de plástico suave y brillante (estilo deportes de consola): sombreado liso con un brillo leve
+const toon = (color, extra) => new THREE.MeshPhongMaterial(Object.assign({ color, shininess: 24, specular: 0x141414 }, extra || {}));
 const INK = 0x10132b;
 
 // Material de contorno negro (casco invertido) con grosor th.
@@ -688,11 +770,12 @@ function outlineMat(th) {
 const OL = { thin: outlineMat(0.008), mid: outlineMat(0.014), thick: outlineMat(0.03) };
 
 // Añade el contorno cel-shading a una malla.
-function outlined(mesh, ol) { mesh.add(new THREE.Mesh(mesh.geometry, ol || OL.mid)); return mesh; }
+function outlined(mesh, ol) { return mesh; }   // sin contorno negro: estética limpia (el contorno cel-shading queda desactivado)
 
 // cielo degradado
+let skyMesh = null;   // cielo degradado (sus colores cambian con la pista)
 {
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 16), new THREE.ShaderMaterial({
+  const sky = skyMesh = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 16), new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false,
     uniforms: { top: { value: new THREE.Color(0x3f8fff) }, mid: { value: new THREE.Color(0x9fd0ff) }, bot: { value: new THREE.Color(0xffe2c4) } },
     vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
@@ -700,7 +783,7 @@ function outlined(mesh, ol) { mesh.add(new THREE.Mesh(mesh.geometry, ol || OL.mi
   }));
   scene.add(sky);
 }
-scene.add(new THREE.HemisphereLight(0xe4f0ff, 0x8a7a66, 0.72));
+const hemi = new THREE.HemisphereLight(0xffffff, 0xd8c7a8, 0.95); scene.add(hemi);
 const key = new THREE.DirectionalLight(0xfff1dc, 0.85);
 key.position.set(-14, 30, 12);
 key.castShadow = true;
@@ -788,22 +871,39 @@ function sfx(name, ...args) { if (!SFX.ctx) return; try { SFX[name](...args); } 
    Funciones: makeCourtCanvas, adTexture, updateCrowd
    ============================================================================== */
 // Pinta la pista (parqué, zonas, líneas) en un canvas para usarlo como textura.
-function makeCourtCanvas() {
+// Cada pista es un grupo; lo que se construye en esta sección pertenece al pabellón
+const ENV = { pav: new THREE.Group(), beach: new THREE.Group(), jungle: new THREE.Group() };
+scene.add(ENV.pav, ENV.beach, ENV.jungle);
+const _sceneAdd = scene.add.bind(scene);
+scene.add = (...o) => ENV.pav.add(...o);
+function makeCourtCanvas(style) {
+  style = style || 'wood';
   const S = 48, W = 40 * S, H = 24 * S;
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const g = cv.getContext('2d');
   const X = x => (x + 20) * S, Y = z => (z + 12) * S;
-  g.fillStyle = '#22306e'; g.fillRect(0, 0, W, H);
-  // parqué
-  const ph = S * 0.18;
-  for (let y = Y(-11); y < Y(11); y += ph) {
-    let x = X(-19) - Math.random() * S * 3;
-    while (x < X(19)) {
-      const len = S * rand(2, 4.5), l = 62 + Math.random() * 7;
-      g.fillStyle = 'hsl(30 62% ' + l.toFixed(1) + '%)';
-      g.fillRect(Math.max(x, X(-19)), y, Math.min(len, X(19) - Math.max(x, X(-19))) - 1, ph - 1);
-      x += len;
+  const PAL = { wood: { out: '#3d8ce0' }, beach: { out: '#e9d7a7' }, clay: { out: '#6f9a4a' } }[style] || { out: '#3d8ce0' };
+  g.fillStyle = PAL.out; g.fillRect(0, 0, W, H);
+  if (style === 'wood') {
+    // parqué claro
+    const ph = S * 0.18;
+    for (let y = Y(-11); y < Y(11); y += ph) {
+      let x = X(-19) - Math.random() * S * 3;
+      while (x < X(19)) {
+        const len = S * rand(2, 4.5), l = 72 + Math.random() * 7;
+        g.fillStyle = 'hsl(34 66% ' + l.toFixed(1) + '%)';
+        g.fillRect(Math.max(x, X(-19)), y, Math.min(len, X(19) - Math.max(x, X(-19))) - 1, ph - 1);
+        x += len;
+      }
     }
+  } else if (style === 'beach') {
+    // hormigón pintado de turquesa con motas
+    g.fillStyle = '#4bb3c8'; g.fillRect(X(-19), Y(-11), 38 * S, 22 * S);
+    for (let k = 0; k < 9000; k++) { g.fillStyle = Math.random() < 0.5 ? 'rgba(255,255,255,.05)' : 'rgba(0,60,80,.05)'; g.fillRect(X(-19) + Math.random() * 38 * S, Y(-11) + Math.random() * 22 * S, 3, 3); }
+  } else {
+    // tierra batida rojiza con vetas
+    g.fillStyle = '#c47a52'; g.fillRect(X(-19), Y(-11), 38 * S, 22 * S);
+    for (let k = 0; k < 7000; k++) { g.fillStyle = Math.random() < 0.5 ? 'rgba(255,220,180,.06)' : 'rgba(90,30,10,.06)'; g.fillRect(X(-19) + Math.random() * 38 * S, Y(-11) + Math.random() * 22 * S, 2 + Math.random() * 6, 2); }
   }
   g.lineWidth = 0.07 * S; g.strokeStyle = '#ffffff';
   const th = Math.asin(6.6 / 6.75), off = Math.sqrt(6.75 * 6.75 - 6.6 * 6.6);
@@ -828,18 +928,18 @@ function makeCourtCanvas() {
   g.beginPath(); g.moveTo(X(0), Y(-11)); g.lineTo(X(0), Y(11)); g.stroke();
   g.beginPath(); g.arc(X(0), Y(0), 1.8 * S, 0, Math.PI * 2); g.stroke();
   g.strokeRect(X(-19), Y(-11), 38 * S, 22 * S);
-  g.save(); g.fillStyle = 'rgba(255,255,255,.9)'; g.font = 'italic 40px Impact, "Arial Narrow", sans-serif'; g.textAlign = 'center';
+  g.save(); g.fillStyle = 'rgba(255,255,255,.9)'; g.font = '800 40px "M PLUS Rounded 1c", Arial, sans-serif'; g.textAlign = 'center';
   for (const z of [-11.55, 11.8]) for (const x of [-10, 10]) g.fillText('HOOPBLAST 3V3', X(x), Y(z));
   g.restore();
   return cv;
 }
-const courtTex = new THREE.CanvasTexture(makeCourtCanvas());
+const courtTex = new THREE.CanvasTexture(makeCourtCanvas('wood'));
 courtTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 24), toon(0xd6c2a8, { map: courtTex }));
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 24), toon(0xf2f2f2, { map: courtTex, shininess: 50, specular: 0x2a2a2a }));
 floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
 scene.add(floor);
-const apron = new THREE.Mesh(new THREE.PlaneGeometry(160, 130), toon(0x5a6a8e));
+const apron = new THREE.Mesh(new THREE.PlaneGeometry(160, 130), toon(0xdfeaf6));
 apron.rotation.x = -Math.PI / 2;
 apron.position.y = -0.02;
 apron.receiveShadow = true;
@@ -938,6 +1038,193 @@ function updateCrowd(dt, T) {
     crowdDummy.position.y = y + 0.37; crowdDummy.updateMatrix(); crowdHead.setMatrixAt(i, crowdDummy.matrix);
   }
   crowdBody.instanceMatrix.needsUpdate = true; crowdHead.instanceMatrix.needsUpdate = true;
+}
+
+scene.add = _sceneAdd;   // a partir de aquí, todo vuelve a la escena (canastas, balón, jugadores…)
+
+/* ==============================================================================
+   §05b PISTAS EXTERIORES: PLAYA Y JUNGLA (y cambio de pista)
+   Cada pista es un grupo (ENV.pav / ENV.beach / ENV.jungle) con su suelo, decorado, cielo y luz.
+   La física no cambia: las paredes invisibles de la jaula siguen ahí (en exteriores las marcan vallas bajas).
+   Funciones: noiseTex, stripeTex, makePalm, makeTree, makeCloud, buildBeach, buildJungle, setArena, updateArena
+   ============================================================================== */
+// textura de ruido suave para arena, hierba, piedra…
+function noiseTex(base, spots, n, size) {
+  const c = document.createElement('canvas'); c.width = c.height = size || 256; const g = c.getContext('2d');
+  g.fillStyle = base; g.fillRect(0, 0, c.width, c.height);
+  for (let k = 0; k < (n || 1400); k++) { g.fillStyle = spots[k % spots.length]; const r = 1 + Math.random() * 3; g.beginPath(); g.arc(Math.random() * c.width, Math.random() * c.height, r, 0, 7); g.fill(); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+}
+// textura de rayas (sombrillas, agua, olas)
+function stripeTex(cols, n, vertical) {
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), w = 128 / n;
+  for (let k = 0; k < n; k++) { g.fillStyle = cols[k % cols.length]; if (vertical) g.fillRect(k * w, 0, w + 1, 128); else g.fillRect(0, k * w, 128, w + 1); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+}
+const M_ = {};   // materiales compartidos de los decorados
+const mat = (k, f) => M_[k] || (M_[k] = f());
+// palmera: tronco curvo por segmentos, hojas alargadas que cuelgan y cocos
+function makePalm(h, lean, rot) {
+  const g = new THREE.Group(), trunkM = mat('trunk', () => toon(0xb98a55)), leafM = mat('leaf', () => toon(0x3fbf4f, { side: THREE.DoubleSide })), cocoM = mat('coco', () => toon(0x6b4423));
+  const seg = 7; let x = 0, y = 0;
+  for (let k = 0; k < seg; k++) {
+    const t = k / seg, r = 0.32 - 0.13 * t, dx = lean * (Math.pow((k + 1) / seg, 2) - Math.pow(t, 2)) * h;
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.92, r, h / seg + 0.05, 9), trunkM);
+    m.position.set(x + dx / 2, y + h / seg / 2, 0); m.rotation.z = -Math.atan2(dx, h / seg); m.castShadow = true; g.add(m);
+    x += dx; y += h / seg;
+  }
+  const leafG = mat('leafG', () => { const s = new THREE.SphereGeometry(1, 10, 6); s.scale(0.42, 0.06, 2.3); s.translate(0, 0, 2.1); return s; });
+  for (let k = 0; k < 8; k++) {
+    const l = new THREE.Mesh(leafG, leafM); l.position.set(x, y, 0); l.rotation.order = 'YXZ'; l.rotation.y = k / 8 * Math.PI * 2 + rand(-0.2, 0.2); l.rotation.x = rand(0.35, 0.7); l.castShadow = true; g.add(l);
+  }
+  for (let k = 0; k < 3; k++) { const c = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), cocoM); c.position.set(x + Math.cos(k * 2.1) * 0.25, y - 0.25, Math.sin(k * 2.1) * 0.25); g.add(c); }
+  g.rotation.y = rot || 0; return g;
+}
+// árbol de jungla: tronco alto y copa de varias bolas
+function makeTree(h, r) {
+  const g = new THREE.Group(), trunkM = mat('jtrunk', () => toon(0x7a5235)), leafM = [mat('jl1', () => toon(0x2f8f3a)), mat('jl2', () => toon(0x3fae46)), mat('jl3', () => toon(0x27773a))];
+  const t = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.16, r * 0.24, h, 8), trunkM); t.position.y = h / 2; t.castShadow = true; g.add(t);
+  for (let k = 0; k < 6; k++) {
+    const b = new THREE.Mesh(mat('ball', () => new THREE.SphereGeometry(1, 12, 9)), leafM[k % 3]);
+    const a = k / 6 * Math.PI * 2, rr = k === 0 ? 0 : r * 0.55;
+    b.position.set(Math.cos(a) * rr, h + (k === 0 ? r * 0.35 : rand(-0.2, 0.3) * r), Math.sin(a) * rr); b.scale.setScalar(r * (k === 0 ? 0.85 : rand(0.55, 0.7))); b.castShadow = true; g.add(b);
+  }
+  return g;
+}
+// nube esponjosa
+function makeCloud(s) {
+  const g = new THREE.Group(), m = mat('cloud', () => new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0xdfe9f5, fog: false }));
+  for (let k = 0; k < 6; k++) { const b = new THREE.Mesh(mat('ball', () => new THREE.SphereGeometry(1, 12, 9)), m); b.position.set((k - 2.5) * 1.6 * s, rand(-0.3, 0.6) * s, rand(-0.8, 0.8) * s); b.scale.setScalar(s * rand(1.2, 2)); g.add(b); }
+  return g;
+}
+// valla baja alrededor de la pista (marca los límites de la jaula invisible)
+function lowFence(group, postM, railM, h) {
+  const post = mat('postG', () => new THREE.CylinderGeometry(0.09, 0.11, 1, 8));
+  const add = (x1, z1, x2, z2) => {
+    const L = Math.hypot(x2 - x1, z2 - z1), n = Math.ceil(L / 3);
+    for (let k = 0; k <= n; k++) { const p = new THREE.Mesh(post, postM); p.scale.y = h; p.position.set(lerp(x1, x2, k / n), h / 2, lerp(z1, z2, k / n)); p.castShadow = true; group.add(p); }
+    const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, L, 6), railM); rail.position.set((x1 + x2) / 2, h * 0.85, (z1 + z2) / 2); rail.rotation.z = Math.PI / 2; rail.rotation.y = -Math.atan2(z2 - z1, x2 - x1); group.add(rail);
+  };
+  const ax = CFG.arena.hx, az = CFG.arena.hz;
+  add(-ax, -az, ax, -az); add(-ax, az, ax, az); add(-ax, -az, -ax, az); add(ax, -az, ax, az);
+}
+// ---------------- PLAYA ----------------
+const ARENA_ANIM = { ocean: null, falls: null, t: 0 };
+function buildBeach() {
+  const G = ENV.beach;
+  // arena (isla) y mar alrededor
+  const sandT = noiseTex('#f3dfa6', ['#e9cf8e', '#fff0c8', '#dcc184'], 2200); sandT.repeat.set(30, 30);
+  const sand = new THREE.Mesh(new THREE.CircleGeometry(95, 48), toon(0xffffff, { map: sandT, shininess: 6 })); sand.rotation.x = -Math.PI / 2; sand.position.y = -0.02; sand.receiveShadow = true; G.add(sand);
+  const seaT = stripeTex(['#2bb5e8', '#38c2f0', '#2bb5e8', '#5fd2f5'], 8); seaT.repeat.set(40, 40);
+  const sea = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), new THREE.MeshPhongMaterial({ color: 0xffffff, map: seaT, shininess: 90, specular: 0x88ccee })); sea.rotation.x = -Math.PI / 2; sea.position.y = -0.35; G.add(sea);
+  ARENA_ANIM.ocean = seaT;
+  const shore = new THREE.Mesh(new THREE.RingGeometry(94, 101, 64), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55 })); shore.rotation.x = -Math.PI / 2; shore.position.y = -0.2; G.add(shore);
+  // tarima de madera y pista de hormigón turquesa
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(44, 0.3, 28), toon(0xd9a06a)); deck.position.y = -0.16; deck.receiveShadow = true; G.add(deck);
+  const ct = new THREE.CanvasTexture(makeCourtCanvas('beach')); ct.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  const court = new THREE.Mesh(new THREE.PlaneGeometry(40, 24), toon(0xffffff, { map: ct, shininess: 40 })); court.rotation.x = -Math.PI / 2; court.position.y = 0.002; court.receiveShadow = true; G.add(court);
+  lowFence(G, mat('wpost', () => toon(0xa86b3c)), mat('rope', () => toon(0xf3e6c4)), 1.1);
+  // palmeras alrededor
+  const spots = [[-26, -18], [-30, 4], [-24, 20], [26, -19], [31, -2], [25, 19], [-8, -22], [10, -23], [-12, 23], [12, 22], [-40, -30], [42, 28], [-46, 16], [44, -24], [0, 32], [-18, -34], [20, 35]];
+  spots.forEach(([x, z], k) => { const p = makePalm(rand(7, 11), rand(0.12, 0.3), rand(0, 6.3)); p.position.set(x, 0, z); G.add(p); });
+  // sombrillas, hamacas y tablas de surf
+  const umbT = [stripeTex(['#ff5470', '#ffffff'], 8, true), stripeTex(['#1fa2ff', '#ffffff'], 8, true), stripeTex(['#ffb020', '#ffffff'], 8, true)];
+  [[-28, -10], [29, 10], [-27, 13], [27, -12], [-6, 27], [8, -28]].forEach(([x, z], k) => {
+    const u = new THREE.Group(), pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.6, 6), toon(0xffffff)); pole.position.y = 1.3; u.add(pole);
+    const top = new THREE.Mesh(new THREE.ConeGeometry(1.9, 0.75, 16, 1, true), toon(0xffffff, { map: umbT[k % 3], side: THREE.DoubleSide })); top.position.y = 2.65; top.castShadow = true; u.add(top);
+    const chair = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.12, 1.9), toon([0xff5470, 0x1fa2ff, 0xffb020][k % 3])); chair.position.set(1.2, 0.35, 0.3); chair.rotation.x = -0.25; u.add(chair);
+    u.position.set(x, 0, z); G.add(u);
+  });
+  [[-23, -23, 0xff7a3d], [-21.8, -23.2, 0x2fb7c9], [23, 23, 0xffd23f]].forEach(([x, z, c]) => { const b = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), toon(c)); b.scale.set(0.32, 1.25, 0.08); b.position.set(x, 1.15, z); b.rotation.z = 0.12; b.castShadow = true; G.add(b); });
+  // islas lejanas con su playa y nubes
+  for (const [x, z, s] of [[170, -120, 30], [-190, 80, 40], [60, 210, 26], [-120, -200, 34], [230, 60, 22]]) {
+    const il = new THREE.Group();
+    const beachRing = new THREE.Mesh(new THREE.CylinderGeometry(s * 1.15, s * 1.25, 1, 24), toon(0xf3dfa6)); il.add(beachRing);
+    const hill = new THREE.Mesh(new THREE.SphereGeometry(s, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), toon(0x4fbf55)); hill.scale.y = 0.7; il.add(hill);
+    il.position.set(x, -0.6, z); G.add(il);
+  }
+  for (let k = 0; k < 12; k++) { const c = makeCloud(rand(2.5, 4.5)); const a = k / 12 * Math.PI * 2 + rand(-0.2, 0.2); c.position.set(Math.cos(a) * rand(140, 220), rand(35, 70), Math.sin(a) * rand(140, 220)); c.lookAt(0, c.position.y, 0); G.add(c); }
+}
+// ---------------- JUNGLA ----------------
+function buildJungle() {
+  const G = ENV.jungle;
+  const grassT = noiseTex('#4fa83f', ['#3f9235', '#62bb4a', '#468f37', '#7cc95a'], 2600); grassT.repeat.set(40, 40);
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(160, 48), toon(0xffffff, { map: grassT, shininess: 4 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.02; ground.receiveShadow = true; G.add(ground);
+  // pista de tierra batida sobre losas de piedra
+  const stoneM = mat('stone', () => toon(0xa9b3a0, { map: noiseTex('#a9b3a0', ['#97a28f', '#bcc6b2', '#8a947f'], 1600) }));
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(43, 0.3, 27), stoneM); slab.position.y = -0.16; slab.receiveShadow = true; G.add(slab);
+  const ct = new THREE.CanvasTexture(makeCourtCanvas('clay')); ct.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  const court = new THREE.Mesh(new THREE.PlaneGeometry(40, 24), toon(0xffffff, { map: ct, shininess: 10 })); court.rotation.x = -Math.PI / 2; court.position.y = 0.002; court.receiveShadow = true; G.add(court);
+  lowFence(G, mat('bamboo', () => toon(0xc9b45a)), mat('vineR', () => toon(0x5a8f2f)), 1.2);
+  // columnas de piedra en las esquinas con plantas
+  for (const [x, z] of [[-21.5, -13.5], [21.5, -13.5], [-21.5, 13.5], [21.5, 13.5]]) {
+    const col = new THREE.Group();
+    for (let k = 0; k < 4; k++) { const b = new THREE.Mesh(new THREE.BoxGeometry(1.6 - k * 0.12, 1.1, 1.6 - k * 0.12), stoneM); b.position.y = 0.55 + k * 1.1; b.rotation.y = rand(-0.08, 0.08); b.castShadow = true; col.add(b); }
+    const bush = new THREE.Mesh(mat('ball', () => new THREE.SphereGeometry(1, 12, 9)), mat('jl2', () => toon(0x3fae46))); bush.position.y = 4.8; bush.scale.set(1.1, 0.7, 1.1); col.add(bush);
+    col.position.set(x, 0, z); G.add(col);
+  }
+  // pirámide escalonada al fondo
+  const pyr = new THREE.Group();
+  for (let k = 0; k < 7; k++) { const s = 34 - k * 4.4; const b = new THREE.Mesh(new THREE.BoxGeometry(s, 3.2, s), stoneM); b.position.y = 1.6 + k * 3.2; b.receiveShadow = b.castShadow = true; pyr.add(b); }
+  const temple = new THREE.Mesh(new THREE.BoxGeometry(5, 4, 5), mat('stone2', () => toon(0x8f9a86))); temple.position.y = 7 * 3.2 + 2; pyr.add(temple);
+  const stairs = new THREE.Mesh(new THREE.BoxGeometry(5, 23, 4), mat('stone2', () => toon(0x8f9a86))); stairs.position.set(0, 11, 16); stairs.rotation.x = 0.62; pyr.add(stairs);
+  pyr.position.set(0, -0.5, -72); G.add(pyr);
+  // cascada con estanque a un lado
+  const cliff = new THREE.Group(), rockM = mat('rock', () => toon(0x7d8a78));
+  for (let k = 0; k < 9; k++) { const r = new THREE.Mesh(new THREE.BoxGeometry(rand(10, 18), rand(10, 26), rand(8, 14)), rockM); r.position.set(rand(-14, 14), rand(4, 12), rand(-4, 4)); r.rotation.y = rand(-0.4, 0.4); cliff.add(r); }
+  const fallT = stripeTex(['#bfefff', '#ffffff', '#9fe3ff', '#ffffff'], 8); fallT.repeat.set(2, 3);
+  const falls = new THREE.Mesh(new THREE.PlaneGeometry(7, 26), new THREE.MeshBasicMaterial({ map: fallT, transparent: true, opacity: 0.92 })); falls.position.set(0, 13, 7.2); cliff.add(falls);
+  const pond = new THREE.Mesh(new THREE.CircleGeometry(11, 32), new THREE.MeshPhongMaterial({ color: 0x3fc3e8, shininess: 90 })); pond.rotation.x = -Math.PI / 2; pond.position.set(0, 0.05, 14); cliff.add(pond);
+  cliff.position.set(62, 0, -20); cliff.rotation.y = -Math.PI / 2.4; G.add(cliff);
+  ARENA_ANIM.falls = fallT;
+  // árboles, palmeras, helechos y arbustos alrededor
+  for (let k = 0; k < 46; k++) {
+    const a = k / 46 * Math.PI * 2 + rand(-0.06, 0.06), r = rand(32, 75), x = Math.cos(a) * r * 1.25, z = Math.sin(a) * r;
+    if (Math.abs(z + 72) < 22 && Math.abs(x) < 26) continue;   // deja ver la pirámide
+    const t = Math.random() < 0.7 ? makeTree(rand(9, 17), rand(3.5, 6.5)) : makePalm(rand(8, 13), rand(0.1, 0.25), rand(0, 6.3));
+    t.position.set(x, 0, z); G.add(t);
+  }
+  const fernM = mat('fern', () => toon(0x58c048, { side: THREE.DoubleSide })), fernG = mat('fernG', () => { const s = new THREE.SphereGeometry(1, 8, 5); s.scale(0.3, 0.05, 1.4); s.translate(0, 0, 1.2); return s; });
+  for (let k = 0; k < 60; k++) {
+    const a = rand(0, Math.PI * 2), r = rand(24, 40), f = new THREE.Group();
+    for (let j = 0; j < 7; j++) { const l = new THREE.Mesh(fernG, fernM); l.rotation.order = 'YXZ'; l.rotation.y = j / 7 * Math.PI * 2; l.rotation.x = -0.5; f.add(l); }
+    f.position.set(Math.cos(a) * r * 1.2, 0.2, Math.sin(a) * r); f.scale.setScalar(rand(0.8, 1.6)); G.add(f);
+  }
+  // lianas colgando de los árboles cercanos
+  const vineM = mat('vine', () => toon(0x3f7f2a));
+  for (let k = 0; k < 18; k++) { const v = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, rand(5, 9), 5), vineM); const a = rand(0, 6.28), r = rand(30, 40); v.position.set(Math.cos(a) * r * 1.2, rand(6, 9), Math.sin(a) * r); G.add(v); }
+  // rayos de luz entre los árboles
+  const shaftM = new THREE.MeshBasicMaterial({ color: 0xfff4c0, transparent: true, opacity: 0.08, depthWrite: false, side: THREE.DoubleSide });
+  for (let k = 0; k < 6; k++) { const s = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 3.5, 30, 12, 1, true), shaftM); s.position.set(rand(-30, 30), 14, rand(-30, 30)); s.rotation.z = 0.35; s.rotation.y = rand(0, 6.3); G.add(s); }
+  for (let k = 0; k < 6; k++) { const c = makeCloud(rand(2.5, 4)); const a = k / 6 * Math.PI * 2; c.position.set(Math.cos(a) * 200, rand(45, 70), Math.sin(a) * 200); G.add(c); }
+}
+// ---------------- cambio de pista ----------------
+const ARENAS = {
+  pav: { name: 'Pabellón', sky: [0x7fbfff, 0xcfe6ff, 0xf6f9ff], fog: [0xe6f1ff, 80, 200], hemi: [0xffffff, 0xb9a88c, 0.58], key: [0xfff6e8, 0.72] },
+  beach: { name: 'Playa', sky: [0x1f8fff, 0x8fd6ff, 0xfff0d2], fog: [0xc8ecff, 120, 420], hemi: [0xfdfcff, 0xd8bf88, 0.6], key: [0xfff1d2, 0.82] },
+  jungle: { name: 'Jungla', sky: [0x4fb2ff, 0xbfe9ff, 0xe8f6d2], fog: [0xd2ecd2, 70, 260], hemi: [0xf6ffe6, 0x4f7a34, 0.6], key: [0xfff2cf, 0.75] }
+};
+let arenaKey = 'pav';
+try { arenaKey = localStorage.getItem('hoopblast.arena') || 'pav'; } catch (e) { /* sin almacenamiento */ }
+if (!ARENAS[arenaKey]) arenaKey = 'pav';
+function setArena(k) {
+  if (!ARENAS[k]) k = 'pav';
+  arenaKey = k; const A = ARENAS[k];
+  try { localStorage.setItem('hoopblast.arena', k); } catch (e) { /* nada */ }
+  if (k === 'beach' && !ENV.beach.children.length) buildBeach();
+  if (k === 'jungle' && !ENV.jungle.children.length) buildJungle();
+  for (const kk in ENV) ENV[kk].visible = kk === k;
+  if (skyMesh) { const u = skyMesh.material.uniforms; u.top.value.setHex(A.sky[0]); u.mid.value.setHex(A.sky[1]); u.bot.value.setHex(A.sky[2]); }
+  scene.background = new THREE.Color(A.sky[1]); scene.fog.color.setHex(A.fog[0]); scene.fog.near = A.fog[1]; scene.fog.far = A.fog[2];
+  hemi.color.setHex(A.hemi[0]); hemi.groundColor.setHex(A.hemi[1]); hemi.intensity = A.hemi[2];
+  key.color.setHex(A.key[0]); key.intensity = A.key[1];
+  document.querySelectorAll('.seg button[data-arena]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.arena === k)));
+}
+// olas del mar y agua de la cascada en movimiento
+function updateArena(dt) {
+  ARENA_ANIM.t += dt;
+  if (ARENA_ANIM.ocean && ENV.beach.visible) { ARENA_ANIM.ocean.offset.y = ARENA_ANIM.t * 0.02; ARENA_ANIM.ocean.offset.x = Math.sin(ARENA_ANIM.t * 0.3) * 0.02; }
+  if (ARENA_ANIM.falls && ENV.jungle.visible) ARENA_ANIM.falls.offset.y = ARENA_ANIM.t * 0.9;
 }
 
 /* ==============================================================================
@@ -4906,7 +5193,7 @@ function frame(now) {
   updateTrail(rdt);
   updateParticles(vdt);
   updateHoopFx(vdt, T);
-  updateCrowd(rdt, T);
+  updateCrowd(rdt, T); updateArena(rdt);
   updateCamera(rdt, T);
   updateHUD();
   renderer.render(scene, camera);
@@ -4922,6 +5209,8 @@ document.querySelectorAll('.seg button[data-d]').forEach(b => b.addEventListener
 }));
 document.body.append($('combos'), $('traintip'));   // paneles del entrenamiento fuera del marcador centrado (van a la derecha)
 document.querySelectorAll('.seg button[data-cam]').forEach(b => b.addEventListener('click', () => setCamMode(b.dataset.cam)));
+document.querySelectorAll('.seg button[data-arena]').forEach(b => b.addEventListener('click', () => setArena(b.dataset.arena)));
+setArena(arenaKey);
 setCamMode(camMode);
 $('play').addEventListener('click', startMatch);
 $('train').addEventListener('click', startTraining);
