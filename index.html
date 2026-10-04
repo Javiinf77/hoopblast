@@ -335,7 +335,7 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
 <section id="menu" class="overlay">
   <div class="col">
     <h1 class="title">HOOPBLAST<small>3v3</small></h1>
-    <span class="version">v0.3 alpha · 4 oct 2026 · 21:26</span>
+    <span class="version">v0.3 alpha · 4 oct 2026 · 21:32</span>
     <div class="split"></div>
     <p class="lead">Baloncesto tres contra tres en una jaula. Protege el balón con el cuerpo, rompe tobillos con tus regates y roba con un manotazo en el momento justo.</p>
     <div class="row">
@@ -373,6 +373,8 @@ body.pad button:focus{ outline:3px solid var(--gold); outline-offset:3px; }
       <dt><kbd>X</kbd> / paso atrás</dt><dd>Giro. <kbd>C</kbd>: retroceso con bote (ganas espacio sin dejar de botar). Paso atrás: S (hacia atrás, lejos del aro) + mantener clic; el tiro se va levantando mientras retrocedes y sale al soltar el clic. Paso lateral: esprintando (Mayús) hacia un lado + mantener clic (en diagonal hacia ese lado)</dd>
       <dt>Poste</dt><dd>Con balón, mantén clic derecho cerca del aro (a menos de 6 m, o de 7 m si tienes un defensor pegado): te pones de espaldas y, si hay defensor, le empujas hacia atrás. Mantén <kbd>G</kbd> para gancho o <kbd>C</kbd> para fadeaway y suelta para tirar; <kbd>F</kbd> giro de poste</dd>
       <dt>Entrenamiento</dt><dd><kbd>P</kbd> (Share con mando) cambia el rival: sin rival → te defiende → ataca él y defiendes tú (cuenta paradas, robos, tapones y canastas en contra)</dd>
+      <dt>Cerrar el rebote</dt><dd>Sin balón, mantén <kbd>L2</kbd> (clic derecho) cerca del aro cuando se tira: te pones de cara al aro, de espaldas al rival, y le empujas levemente hacia fuera sin que pueda devolvértelo</dd>
+      <dt>Sobresfuerzo</dt><dd>Doble <kbd>R1</kbd> (doble Mayús): gasta una carga azul y sales disparado hacia donde vas, con o sin balón</dd>
       <dt>Puntear</dt><dd>En postura defensiva y sin balón, apunta con el stick derecho (o las flechas con clic derecho mantenido): tu mano va hacia ese lado. Cuanto más centrada sobre el tirador, más estrecha su franja verde (hasta un 60 %)</dd>
       <dt>Reglas 3x3</dt><dd>Media pista. Tras cada canasta saca el otro equipo desde fuera del triple. Tras un rebote defensivo o un robo, hay que sacar el balón fuera del triple antes de poder anotar</dd>
       <dt>Eurostep / bandeja con giro</dt><dd>Corriendo hacia la canasta (de 3,6 a 6,8 m): clic + clic con una pequeña pausa = eurostep; clic + clic casi seguidos = bandeja con giro. El lado lo marca A/D (o tu mano de bote)</dd>
@@ -1352,7 +1354,7 @@ function makePlayer(team, idx) {
     handAim: new V3(), handAimAmt: 0, contestK: 0, fakeT: 0, fakeCd: 0,
     explodeWin: 0, burstT: 0, nextMove: null, chain: [], chainT: 9, chainHand: 1, reactT: 0, reactMode: '', reactDir: new V3(), beat: null, blockT: 0, blockCd: 0, blockDone: false, blockMissLand: false, swatT: 0, protectT: 0, heat: 0, hand: 1, spinAngle: 0, guarded: false,
     pickupCd: 0, anim: 0, land: 0, landVar: { dip: 1, tilt: 0, leg: 1, arms: 0.5, twist: 0 }, dunk: null, aimErr: 0, speedMul: 1, inbounding: false, missT: 0,
-    pend: { jump: false, shoot: false, pass: false, steal: false, move: null, block: false },
+    pend: { jump: false, shoot: false, pass: false, steal: false, move: null, block: false, dash: false },
     ai: { t: 0, target: new V3(), plan: 0.775, dunk: false, wasAir: false, blockDecided: false, willBlock: false, blockDelay: 0, countered: false }
   };
   players.push(p); return p;
@@ -1852,6 +1854,12 @@ function updatePlayer(p, inp, dt) {
   }
   if (p.post) maxSp = Math.min(maxSp, C.postSpeed);
   if (p.deadDribble && !holdingB) p.deadDribble = false;
+  // cerrar el rebote: L2 sin balón, en la zona cercana al aro, con el balón en el aire o suelto
+  const rimB = hoops[1].rimC;
+  p.boxout = p.isHuman && p.stance && !holdingB && hdist(p.pos, rimB) < 5 && !ball.holder && (!!ball.shot || ball.pos.y > 1.2 || ball.vel.length() > 1);
+  if (p.boxout) maxSp = Math.min(maxSp, 1.7);
+  p.boxedT = Math.max(0, (p.boxedT || 0) - dt);
+  if (p.boxedT > 0 && !p.boxout) maxSp *= 0.45;                    // te están cerrando: casi no puedes avanzar
   if (p.deadDribble && p.onGround && !p.dunkSeq) { maxSp = 0; p.vel.x = 0; p.vel.z = 0; p.stance = false; p.post = false; }   // bote muerto: clavado
   p.contactT = Math.max(0, (p.contactT || 0) - dt); p.pushT = Math.max(0, (p.pushT || 0) - dt);
   if (p.post && p.pushT > 0) maxSp = Math.min(maxSp, C.postPushSpeed);   // empujando a un defensor se avanza despacio
@@ -1950,7 +1958,8 @@ function updatePlayer(p, inp, dt) {
 
   let ty = null;
   if (p.move && p.move.type === 'spin') ty = null;
-  else if (p.deadDribble && !p.charging && p.shotT <= 0 && Math.hypot(move.x, move.z) > 0.3) ty = Math.atan2(move.x, move.z);   // bote muerto: pivota hacia donde apuntas
+  else if (p.deadDribble && !p.charging && p.shotT <= 0 && Math.hypot(move.x, move.z) > 0.3) ty = Math.atan2(move.x, move.z);
+  else if (p.boxout) { const c = hoops[1].rimC; ty = Math.atan2(c.x - p.pos.x, c.z - p.pos.z); }   // cerrando el rebote: de cara al aro, de espaldas al rival   // bote muerto: pivota hacia donde apuntas
   else if (p.move && p.move.type === 'spinlay') ty = null;
   else if (p.move && p.move.type === 'retreat') { const c = hoops[p.attackSide].rimC; ty = Math.atan2(c.x - p.pos.x, c.z - p.pos.z); }   // de cara al aro
   else if (p.move && p.move.type === 'euro') ty = Math.atan2(p.move.rim.x, p.move.rim.z);
@@ -2007,6 +2016,18 @@ function playersCollide(a, b) {
   // contacto con postura: la postura (L2) ocupa más espacio
   const C = CFG.player, opp = a.team !== b.team;
   const contactR = opp && (a.stance || b.stance || a.post || b.post) ? C.stanceReach : 0.72;
+  // cerrar el rebote: quien cierra mete el culo y empuja levemente al rival hacia fuera; el rival no puede devolver el empuje
+  if (opp && (a.boxout || b.boxout) && !(a.boxout && b.boxout) && d < 1.0) {
+    const bx = a.boxout ? a : b, ot = bx === a ? b : a, rim = hoops[1].rimC;
+    const ox = ot.pos.x - rim.x, oz = ot.pos.z - rim.z, ol = Math.hypot(ox, oz) || 1;
+    const behind = hdist(ot.pos, rim) > hdist(bx.pos, rim) - 0.2;   // el rival está detrás (más lejos del aro)
+    if (behind) {
+      ot.boxedT = 0.18;
+      ot.pos.x += ox / ol * 0.7 * CFG.step; ot.pos.z += oz / ol * 0.7 * CFG.step;     // empujón leve y continuo hacia fuera
+      if (d < 0.88) { const push = 0.88 - d, nx = dx / (d || 1), nz = dz / (d || 1), s = bx === a ? -1 : 1; ot.pos.x += -s * nx * push * 0.9; ot.pos.z += -s * nz * push * 0.9; bx.pos.x += s * nx * push * 0.1; bx.pos.z += s * nz * push * 0.1; }
+      return;
+    }
+  }
   if (d >= contactR + 0.06) return;
   if (opp && car && (car === a || car === b)) {   // contacto (con un margen): desgaste en el poste y frenado por la postura
     const atk = car, def = car === a ? b : a;
@@ -2977,6 +2998,12 @@ function handleActions(p, inp, dt) {
     if ((inp.shootPress || inp.dunkType) && canDunk(p)) { startDunk(p, dk && dk !== 'windmill' && dk !== 'spin360' && dk !== 'reverse' ? dk : 'one', false); return; }
   }
   // regates
+  // doble R1 (o doble Mayús): sobresfuerzo en cualquier momento, con o sin balón (gasta una carga)
+  if (inp.dash && p.onGround && !p.charging && !p.dunkSeq && !p.layupSeq && !p.move && p.stunT <= 0 && !p.deadDribble) {
+    const mm = Math.hypot(inp.move.x, inp.move.z);
+    if ((p.dash || 0) >= 1 && mm > 0.3) explode(p, inp.move);
+    else if (p === human && (p.dash || 0) < 1) banner2('Sin sobresfuerzo', 'var(--muted)', 0.6);
+  }
   if (p.deadDribble) inp.moveType = null;   // con el bote muerto no hay regates
   if (inp.moveType && p.post) {
     // en el poste: cualquier regate lateral es un giro de poste (gancho y fadeaway van con L2 + stick)
@@ -3360,16 +3387,18 @@ function humanFrameInput() {
 // Combina la entrada continua con los flancos (pulsaciones) pendientes y los consume.
 function withEdges(base, pend) {
   const i = { move: base.move, sprint: base.sprint, stance: base.stance, postShot: base.postShot, shootHold: base.shootHold, passTo: base.passTo, alley: base.alley, moveSide: base.moveSide, passType: base.passType, dunkType: base.dunkType,
-    jump: pend.jump, shootPress: pend.shoot, pass: pend.pass, steal: pend.steal, moveType: pend.move, block: pend.block, fake: pend.fake };
-  pend.block = false; pend.fake = false;
+    jump: pend.jump, shootPress: pend.shoot, pass: pend.pass, steal: pend.steal, moveType: pend.move, block: pend.block, fake: pend.fake, dash: pend.dash };
+  pend.block = false; pend.fake = false; pend.dash = false;
   pend.jump = pend.shoot = pend.pass = pend.steal = false; pend.move = null; return i;
 }
 const inMatch = () => state === 'countdown' || state === 'play' || state === 'scored';
 
 // Pide capturar el ratón (pointer lock).
 function lock() { try { const r = renderer.domElement.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (e) { /* sin pointer lock: flechas */ } }
+let shiftLast = 0;
 addEventListener('keydown', e => {
   setInputMode('kb');
+  if ((e.code === 'ShiftLeft' || e.code === 'ShiftRight') && !e.repeat && inMatch()) { const now = performance.now(); if (now - shiftLast < 300) { pendH.dash = true; shiftLast = 0; } else shiftLast = now; }   // doble Mayús: sobresfuerzo
   if (mode === 'anim' && state === 'play') {
     if (e.code === 'Escape') exitAnimMode();
     else if (e.code === 'Space') { ANIM.paused = !ANIM.paused; animUI(); }
@@ -3475,6 +3504,7 @@ function padFrame(dt) {
   if (any || lm > 0 || Math.hypot(rx, ry) > 0) setInputMode('pad');
   PAD.lx = lx; PAD.ly = ly; PAD.lm = lm; PAD.rx = rx; PAD.ry = ry;
   PAD.r2 = b(5) || b(7);                                             // R1 (o R2): correr
+  if (down(5) && inMatch()) { const now = performance.now(); if (now - (PAD.r1Last || 0) < 300) { pendH.dash = true; PAD.r1Last = 0; } else PAD.r1Last = now; }   // doble R1: sobresfuerzo
   // L2: postura. Algunos mandos dejan el gatillo con un valor residual al soltarlo: se toma su reposo como referencia
   const l2v = gp.buttons[6] ? gp.buttons[6].value : 0;
   PAD.l2Rest = PAD.l2Rest === undefined ? l2v : Math.min(PAD.l2Rest + dt * 0.02, l2v);
@@ -4360,6 +4390,11 @@ function animatePlayer(p, dt, T) {
     const up = p.shotT > 0 ? 1 - p.shotT / 0.16 : 0, k2 = p.shotT > 0 ? 1 : smooth(Math.min(1, p.charge / CFG.shot.sweet));
     tp.aR.wr = lerp(1.05, 0.2, up); tp.aL.wr = 0.15; tp.headX -= 0.2; tp.torsoZ = 0.2 * k2;
   }
+  // ---- cerrar el rebote: bajo, culo atrás, brazos abiertos con los codos arriba ----
+  if (p.boxout && !holding) {
+    tp.bodyX = -0.16; tp.torsoX += 0.3; tp.lL.z = 0.3; tp.lR.z = -0.3;
+    tp.aL.x = -0.5; tp.aL.z = 1.25; tp.aL.el = -1.5; tp.aR.x = -0.5; tp.aR.z = -1.25; tp.aR.el = -1.5; tp.ikL = tp.ikR = 0;
+  }
   // ---- punteo: el brazo del lado al que apuntas sube hacia ese punto (IK) ----
   if (p.isHuman && p.stance && !holding && p.handAimAmt > 0.2) { const F = carrierFrame(p); const side = (p.handAim.x * F.rx + p.handAim.z * F.rz) >= 0 ? 1 : -1; if (side > 0) tp.ikR = 1; else tp.ikL = 1; p.contestSide = side; }
   else p.contestSide = 0;
@@ -4640,6 +4675,32 @@ function updateBroadcastCam(dt) {
   camYaw = Math.atan2(-(camLook.x - camPos.x), -(camLook.z - camPos.z));
 }
 let fovKick = 0;
+// Punteo visible: halo en tu mano y una diana sobre la cabeza del rival que se ilumina cuanto mejor apuntas
+const contestMark = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), new THREE.MeshBasicMaterial({ color: 0x7fd7ff, transparent: true, opacity: 0.85, depthTest: false }));
+const contestRing = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.035, 8, 32), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthTest: false }));
+contestMark.renderOrder = contestRing.renderOrder = 10; contestMark.visible = contestRing.visible = false; scene.add(contestMark, contestRing);
+function updateContestMarks(T) {
+  const h = human, on = (mode !== 'anim') && h.stance && ball.holder !== h && h.handAimAmt > 0.2 && state === 'play';
+  contestMark.visible = on; contestRing.visible = false;
+  if (!on) return;
+  contestHand(h, contestMark.position);
+  // rival más cercano con balón (o el que tira) dentro del alcance del punteo
+  let tgt = null, bd = 2.4;
+  for (const o of live) if (o.team !== h.team && hdist(o.pos, h.pos) < bd && (ball.holder === o || o.charging || o.shotT > 0)) { bd = hdist(o.pos, h.pos); tgt = o; }
+  let k = 0;
+  if (tgt) {
+    contestRing.visible = true;
+    contestRing.position.set(tgt.pos.x, tgt.pos.y + 2.0, tgt.pos.z);
+    contestRing.lookAt(camera.position);
+    _cs.set(tgt.pos.x, tgt.pos.y + 2.0, tgt.pos.z);
+    k = clamp(1 - contestMark.position.distanceTo(_cs) / 1.1, 0, 1);
+    contestRing.material.color.setHex(k > 0.66 ? CFG.colors.gold : k > 0.2 ? 0x7fd7ff : 0xffffff);
+    contestRing.material.opacity = 0.35 + 0.55 * k;
+    contestRing.scale.setScalar(1 - 0.25 * k + 0.04 * Math.sin(T * 10) * k);
+  }
+  contestMark.material.color.setHex(k > 0.66 ? CFG.colors.gold : 0x7fd7ff);
+  contestMark.scale.setScalar(1 + 0.6 * k);
+}
 // Indicador del compañero que recibiría el pase (anillo blanco sobre su cabeza)
 let passPreview = null, lastAim = new V3();
 const passMark = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.035, 8, 24), new THREE.MeshBasicMaterial({ color: 0xffffff }));
@@ -4803,6 +4864,7 @@ function frame(now) {
 
   const vdt = state === 'paused' ? 0 : gdt;
   passMark.visible = false; passPreview = null;
+  updateContestMarks(T);
   if (passLock) { passLock.t -= rdt; if (passLock.t <= 0 || ball.holder !== human) passLock = null; }
   for (const p of live) animatePlayer(p, vdt, T);
   updateBallVisual(vdt);
