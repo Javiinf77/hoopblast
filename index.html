@@ -362,6 +362,9 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
 .menucard .lead{ margin-bottom:18px; }
 .ctlpanel{ width:min(760px, 96vw) !important; } .ctlpanel .cbody{ max-height:calc(100vh - 190px); }
 .ctlpanel .controls{ margin-top:6px; max-width:none; font-size:15px; }
+
+/* Vestuario: sin franjas ni velo encima del jugador; solo un degradado suave detrás del panel */
+#custom.overlay{ background:linear-gradient(90deg, rgba(233,246,255,.75) 0%, rgba(233,246,255,.35) 32%, rgba(233,246,255,0) 48%) !important; }
 </style>
 </head>
 <body>
@@ -483,7 +486,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
     </div>
     <p id="touchnote" class="note" hidden>Necesitas teclado y ratón para jugar.</p>
   </div>
-  <span class="version">v0.3 alpha «Resort» · 4 oct 2026 · 22:29</span>
+  <span class="version">v0.3 alpha «Resort» · 4 oct 2026 · 22:32</span>
 </section>
 
 <!-- ── Controles (pestaña aparte) ── -->
