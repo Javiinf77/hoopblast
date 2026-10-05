@@ -486,7 +486,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
     </div>
     <p id="touchnote" class="note" hidden>Necesitas teclado y ratón para jugar.</p>
   </div>
-  <span class="version">v0.3 alpha «Resort» · 5 oct 2026 · 11:31</span>
+  <span class="version">v0.3 alpha «Resort» · 5 oct 2026 · 13:12</span>
 </section>
 
 <!-- ── Controles (pestaña aparte) ── -->
@@ -1444,7 +1444,7 @@ const HEAD_C = [0, 0.336, 0.02], HEAD_R = [0.26, 0.335, 0.28];
 const HEAD_SHAPES = [   // [ancho, alto, fondo, estrechez de mandíbula, barbilla cuadrada]
   [1.0, 1.0, 1.0, 0.18, 0], [0.94, 1.04, 0.98, 0.26, 0], [1.04, 0.98, 1.0, 0.08, 0.6], [0.96, 1.0, 0.98, 0.42, 0],
   [1.08, 0.96, 1.02, 0.12, 0.2], [0.92, 1.08, 0.96, 0.2, 0.3]];
-const HAIR_NAMES = ['Corto', 'De punta', 'Rapado', 'Afro', 'Media melena', 'Melena larga', 'Coleta', 'Moño', 'Cresta', 'Raya al lado', 'Rizos', 'Calvo', 'Gorra', 'Gorro'];
+const HAIR_NAMES = ['Corto', 'Rapado', 'Afro', 'Rastas', 'Moño', 'Cresta', 'Coleta', 'Calvo'];   // los peinados originales del juego
 const NOSE_NAMES = ['Botón', 'Pequeña', 'Alargada', 'Respingona', 'Ancha', 'Sin nariz'];
 const BEARD_NAMES = ['Perilla', 'Barba corta', 'Barba completa'];
 const HEAD_N = HEAD_SHAPES.length;
@@ -1488,34 +1488,39 @@ function kitFace(i) {
 const cap = (th, grow, tilt, yOff) => { const g = new THREE.SphereGeometry(1, 36, 18, 0, Math.PI * 2, 0, th || 1.45);
   return place(g, HEAD_R[0] * (grow || 1.07), HEAD_R[1] * (grow || 1.07), HEAD_R[2] * (grow || 1.07), -(tilt === undefined ? 0.42 : tilt), 0, 0, HEAD_C[0], HEAD_C[1] + (yOff || 0.03), HEAD_C[2] - 0.01); };
 const fringe = (sx, rotZ, px) => place(ball3(20), 0.21 * sx, 0.07, 0.07, 0.25, 0, rotZ || 0, px || 0, 0.58, 0.22);
+// Peinados originales del juego (los de antes de las cabezas grandes), adaptados a la cabeza actual:
+// se construyen con las mismas medidas que tenían sobre la cabeza pequeña (radio 0,115) y se escalan a la nueva.
+const OLD_C = [0, 0.12, 0.005], OLD_S = [HEAD_R[0] / 0.115, HEAD_R[1] / 0.1288, HEAD_R[2] / 0.1196];
+function toNewHead(g) { g.translate(-OLD_C[0], -OLD_C[1], -OLD_C[2]); g.scale(OLD_S[0], OLD_S[1], OLD_S[2]); g.translate(HEAD_C[0], HEAD_C[1], HEAD_C[2]); g.computeVertexNormals(); return g; }
+// pieza en el espacio de la cabeza antigua: geometría, posición, giro y escala
+const oldPart = (g, px, py, pz, rx, ry, rz, sx, sy, sz) => {
+  const m = new THREE.Matrix4().compose(new THREE.Vector3(px, py, pz), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx || 0, ry || 0, rz || 0)), new THREE.Vector3(sx || 1, sy || 1, sz || 1));
+  g.applyMatrix4(m); return g; };
+const oldCap = (r, cover) => oldPart(new THREE.SphereGeometry(r, 28, 16, 0, Math.PI * 2, 0, Math.PI * cover), 0, 0.14, -0.01, -0.28, 0, 0, 1, 1.1, 1.07);
 function kitHair(i) {
-  const top = HEAD_C[1] + HEAD_R[1];
-  switch (i) {
-    case 0: return mergeGeos([cap(), fringe(1, 0.12, 0.03)]);                                                   // corto
-    case 1: { const parts = [cap(1.4, 1.06)]; for (let k = 0; k < 9; k++) { const a = (k / 9) * Math.PI * 2, r = 0.13;   // de punta
-        parts.push(place(new THREE.ConeGeometry(0.06, 0.16, 10), 1, 1, 1, Math.sin(a) * 0.55 - 0.15, 0, -Math.cos(a) * 0.55, Math.cos(a) * r, top + 0.02, Math.sin(a) * r - 0.02)); }
-      parts.push(place(new THREE.ConeGeometry(0.07, 0.18, 10), 1, 1, 1, 0, 0, 0, 0, top + 0.06, 0)); return mergeGeos(parts); }
-    case 2: return cap(1.5, 1.025, 0.3, 0.0);                                                                     // rapado
-    case 3: { const parts = [cap(1.6, 1.08)]; for (let k = 0; k < 14; k++) { const a = k * 2.4, e = 0.25 + (k % 4) * 0.2;   // afro
-        parts.push(place(ball3(16), 0.17, 0.17, 0.17, 0, 0, 0, Math.cos(a) * 0.26 * Math.cos(e), top - 0.02 + Math.sin(e) * 0.12, Math.sin(a) * 0.24 * Math.cos(e) - 0.05)); }
-      return mergeGeos(parts); }
-    case 4: case 5: { const len = i === 4 ? 0.26 : 0.5;                                                          // media melena / larga
-      const back = new THREE.CylinderGeometry(0.29, 0.3, len, 30, 1, true, Math.PI * 0.36, Math.PI * 1.28);   // lados y nuca (abierta por delante)
-      return mergeGeos([cap(), fringe(1.1, 0.05), place(back, 1, 1, 0.95, 0, 0, 0, 0, HEAD_C[1] + 0.06 - len / 2, 0.0)]); }
-    case 6: return mergeGeos([cap(), fringe(1, -0.1), place(ball3(16), 0.07, 0.07, 0.07, 0, 0, 0, 0, HEAD_C[1] + 0.14, -0.3),
-      place(ball3(18), 0.08, 0.2, 0.08, -0.3, 0, 0, 0, HEAD_C[1] - 0.04, -0.36)]);                              // coleta
-    case 7: return mergeGeos([cap(), fringe(0.9, 0.1), place(ball3(20), 0.12, 0.11, 0.12, 0, 0, 0, 0, top + 0.07, -0.08)]);   // moño
-    case 8: { const parts = [cap(1.5, 1.02, 0.3, 0.0)]; for (let k = 0; k < 6; k++) parts.push(place(ball3(12), 0.045, 0.09, 0.07, 0, 0, 0, 0, top - 0.02 + Math.sin(k / 5 * Math.PI) * 0.06, 0.2 - k * 0.09)); return mergeGeos(parts); }   // cresta
-    case 9: return mergeGeos([cap(), place(ball3(20), 0.24, 0.08, 0.1, 0.3, 0, -0.35, -0.06, 0.6, 0.2)]);       // raya al lado
-    case 10: { const parts = [cap(1.45, 1.06)]; for (let k = 0; k < 20; k++) { const a = k * 2.39996, r = 0.06 + 0.2 * Math.sqrt(k / 20);   // rizos
-        parts.push(place(ball3(10), 0.06, 0.06, 0.06, 0, 0, 0, Math.cos(a) * r, top + 0.01 - r * r * 1.2, Math.sin(a) * r - 0.02)); } return mergeGeos(parts); }
-    case 11: return null;                                                                                          // calvo
-    case 12: return mergeGeos([cap(1.45, 1.09, 0.25, 0.04), place(new THREE.CylinderGeometry(0.2, 0.2, 0.025, 28, 1, false, -Math.PI / 2, Math.PI), 1.15, 1, 1.25, 0.12, 0, 0, 0, 0.6, 0.2),
-      place(ball3(8), 0.025, 0.02, 0.025, 0, 0, 0, 0, top + 0.035, 0.0)]);                                        // gorra
-    default: return mergeGeos([cap(1.55, 1.1, 0.2, 0.06), place(new THREE.TorusGeometry(0.29, 0.03, 10, 32), 1.0, 1, 1.05, Math.PI / 2 - 0.2, 0, 0, 0, 0.5, 0.0),
-      place(ball3(14), 0.07, 0.07, 0.07, 0, 0, 0, 0, top + 0.12, -0.04)]);                                       // gorro
+  const parts = [];
+  switch (HAIR_NAMES[i]) {
+    case 'Corto': parts.push(oldCap(0.122, 0.5)); break;
+    case 'Rapado': parts.push(oldCap(0.118, 0.44)); break;
+    case 'Afro': parts.push(oldPart(new THREE.SphereGeometry(0.168, 26, 20), 0, 0.232, -0.078, 0, 0, 0, 1, 0.86, 0.8)); break;   // algo más arriba y atrás: deja la frente y los ojos a la vista
+    case 'Rastas':
+      parts.push(oldCap(0.124, 0.52));
+      for (let k = 0; k < 11; k++) {
+        const a = Math.PI * 0.5 + (k / 10) * Math.PI;   // rodeando la nuca de un lado a otro
+        parts.push(oldPart(new THREE.CylinderGeometry(0.016, 0.012, 0.24, 8), Math.sin(a) * 0.108, 0.05, Math.cos(a) * 0.108 - 0.01, -Math.cos(a) * 0.3, 0, Math.sin(a) * 0.3));
+      }
+      break;
+    case 'Moño': parts.push(oldCap(0.122, 0.5), oldPart(new THREE.SphereGeometry(0.06, 18, 14), 0, 0.27, -0.06)); break;
+    case 'Cresta': parts.push(oldPart(new THREE.BoxGeometry(0.045, 0.085, 0.25), 0, 0.245, -0.01, -0.15), oldCap(0.117, 0.3)); break;
+    case 'Coleta': parts.push(oldCap(0.122, 0.52), oldPart(capsuleGeo(0.035, 0.022, 0.16), 0, 0.16, -0.15, 0.5)); break;
+    default: return null;   // calvo
   }
+  return toNewHead(mergeGeos(parts));
 }
+// goma de la coleta (va con el color de los accesorios)
+function kitHairTie(i) { return HAIR_NAMES[i] === 'Coleta' ? toNewHead(oldPart(new THREE.SphereGeometry(0.03, 12, 10), 0, 0.17, -0.13)) : null; }
+// cinta del pelo (accesorio): rodea la frente
+function kitHeadband(i) { return toNewHead(oldPart(new THREE.TorusGeometry(HAIR_NAMES[i] === 'Afro' ? 0.128 : 0.119, 0.016, 10, 36), 0, 0.165, -0.004, Math.PI / 2 - 0.14)); }
 function kitNose(i) {
   const y = 0.32, z = HEAD_C[2] + HEAD_R[2] - 0.01;
   switch (i) {
@@ -1538,7 +1543,8 @@ function kitBeard(i) {
 // Geometría del kit con caché (kind: head | face | hair | nose | beard)
 function kitGeo(kind, i) {
   const key = kind + i; if (key in _kitCache) return _kitCache[key];
-  const g = kind === 'head' ? kitHead(i) : kind === 'face' ? kitFace(i) : kind === 'hair' ? kitHair(i) : kind === 'nose' ? kitNose(i) : kitBeard(i);
+  const g = kind === 'head' ? kitHead(i) : kind === 'face' ? kitFace(i) : kind === 'hair' ? kitHair(i) : kind === 'tie' ? kitHairTie(i) : kind === 'band' ? kitHeadband(i)
+    : kind === 'nose' ? kitNose(i) : kitBeard(i);
   return (_kitCache[key] = g);
 }
 // ---- Catálogo de la cara (diseños propios, dibujados por código) ----
@@ -1695,7 +1701,9 @@ function miiHead(head, L, skinM, hairM, accM, M) {
   add(kitGeo('face', L.miiHead | 0), face, false);
   add(kitGeo('nose', L.miiNose | 0), skinM, false);
   const nh = HAIR_NAMES.length, hi = ((L.miiHair % nh) + nh) % nh;
-  add(kitGeo('hair', hi), hi >= nh - 2 ? accM : hairM, true);   // los dos últimos son gorra y gorro (color de accesorios)
+  add(kitGeo('hair', hi), hairM, true);
+  add(kitGeo('tie', hi), accM, true);                       // goma de la coleta
+  if (L.headband) add(kitGeo('band', hi), accM, true);      // cinta
   if (L.miiBeard >= 0) add(kitGeo('beard', L.miiBeard), hairM, true);
   for (const s of [-1, 1]) add(place(ball3(14), 0.035, 0.06, 0.04, 0, 0, 0, s * HEAD_R[0] * 0.98, 0.33, 0.01), skinM, true);   // orejas
 }
@@ -1708,7 +1716,7 @@ function makeRig(team, idx, isHuman, look) {
     skin: hex(SKINS[(team * 3 + idx) % 6]), c1: hex(teamCol), c2: team === 0 ? '#1f4fd6' : '#d92c5a', detail: '#ffffff',
     number: NUMS[team][idx], hairColor: hex(HAIRS[(team * 3 + idx) % 6]), hair: ['corto', 'rapado', 'afro', 'corto', 'mono', 'rastas'][(team * 3 + idx) % 6],
     acc: '#ffffff', shoes: '#f4f4f8', wrist: 'both',
-    miiHead: (team * 3 + idx) % HEAD_N, miiHair: [0, 1, 4, 3, 9, 7][(team * 3 + idx) % 6], miiNose: (team * 3 + idx) % 5, miiBeard: idx === 2 ? team : -1,
+    miiHead: (team * 3 + idx) % HEAD_N, miiHair: [0, 2, 3, 5, 4, 6][(team * 3 + idx) % 6], headband: (team + idx) % 3 === 0, miiNose: (team * 3 + idx) % 5, miiBeard: idx === 2 ? team : -1,
     eyes: [0, 5, 6, 11, 14, 7][(team * 3 + idx) % 6], brows: [0, 1, 2, 3, 5, 7][(team * 2 + idx) % 6], mouth: [0, 4, 1, 2, 13, 9][(team * 3 + idx) % 6],
     eyeColor: EYE_COLORS[(team * 3 + idx * 2) % EYE_COLORS.length], glasses: idx === 1 && team === 1 ? 7 : 0, glassColor: '#1a1420',
     stache: idx === 2 && team === 0 ? 2 : 0, mark: team === 1 && idx === 0 ? 4 : idx === 1 && team === 0 ? 1 : 0 });
@@ -4428,7 +4436,7 @@ function custTabs() {
     ['Pelo', [['Peinado', 'named', 'miiHair', HAIR_NAMES], ['Color', 'color', 'hairColor', HAIR_COLORS], ['Barba', 'num', 'miiBeard', BEARD_NAMES.length, -1]]],
     ['Equipación', [['Estampado', 'list', 'pattern', PATTERNS], ['Principal', 'color', 'c1', KIT_COLORS], ['Secundario', 'color', 'c2', KIT_COLORS],
       ['Detalles', 'color', 'detail', KIT_COLORS], ['Dorsal', 'dorsal', 'number'], ['Zapatillas', 'color', 'shoes', KIT_COLORS]]],
-    ['Accesorios', [['Manga', 'list', 'sleeve', SIDES], ['Muñequeras', 'list', 'wrist', SIDES], ['Coderas', 'list', 'elbow', SIDES],
+    ['Accesorios', [['Cinta', 'list', 'headband', [[false, 'No'], [true, 'Sí']]], ['Manga', 'list', 'sleeve', SIDES], ['Muñequeras', 'list', 'wrist', SIDES], ['Coderas', 'list', 'elbow', SIDES],
       ['Rodilleras', 'list', 'knee', SIDES], ['Calcetines', 'list', 'socks', [['bajos', 'Bajos'], ['altos', 'Altos']]], ['Color', 'color', 'acc', KIT_COLORS]]]
   ];
 }
