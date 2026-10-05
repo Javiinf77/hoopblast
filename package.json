@@ -7,7 +7,8 @@
     "test": "bash tests/golden.sh salida.txt && diff tests/referencia_0.3-alpha.txt tests/salida.txt && echo 'Comportamiento idéntico a la referencia'",
     "smoke": "node tests/mintest.js index.html",
     "min": "node tools/minify.js index.html dist/hoopblast.min.html",
-    "test:kit": "node tests/testkit.js index.html"
+    "test:kit": "node tests/testkit.js index.html",
+    "test:hair": "node tests/testhair.js index.html"
   },
   "devDependencies": {
     "acorn": "^8.11.0",
