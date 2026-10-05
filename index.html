@@ -486,7 +486,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
     </div>
     <p id="touchnote" class="note" hidden>Necesitas teclado y ratón para jugar.</p>
   </div>
-  <span class="version">v0.3 alpha «Resort» · 5 oct 2026 · 10:33</span>
+  <span class="version">v0.3 alpha «Resort» · 5 oct 2026 · 10:47</span>
 </section>
 
 <!-- ── Controles (pestaña aparte) ── -->
@@ -1924,12 +1924,17 @@ function holdTarget(p, dt) {
       fw = 0.08; lat = p.hand * (0.235 + rr * Math.cos(th)); y = p.pos.y + 1.47 + rr * Math.sin(th);
     } else if (p.shotKind === 'fade') {
       // fadeaway: punto de tiro alto y algo por detrás de la cabeza
-      fw = lerp(0.3, 0.06, k); lat = lerp(0.05, -0.02, k); y = p.pos.y + lerp(1.25, 2.28, k);
+      fw = lerp(0.38, 0.16, k); lat = lerp(0.06, 0.04, k); y = p.pos.y + lerp(1.25, 2.28, k);
     } else {
       // punto de tiro: del pecho a encima de la frente, sobre el ojo del lado de tiro; en el salto el brazo lo empuja hacia arriba
       const up = p.shotT > 0 ? 1 - p.shotT / 0.16 : 0;
       fw = lerp(0.34, 0.36, k) + up * 0.08; lat = lerp(0.06, 0.15, k); y = p.pos.y + lerp(1.3, 2.1, k) + up * 0.24;
     }
+  }
+  else if (p.catchArc && p.catchArc.t < 0.3) {
+    // recogida de un balón que venía de atrás: rodea el cuerpo por su lado hasta quedar delante
+    const k = smooth(p.catchArc.t / 0.3), a = lerp(p.catchArc.a0, Math.sign(p.catchArc.a0) * 0.45, k);
+    lat = Math.sin(a) * 0.5; fw = Math.cos(a) * 0.5; y = p.pos.y + 1.15;
   }
   else if (p.layupSeq) {
     const k = smooth(Math.min(1, p.layupSeq.t / p.layupSeq.dur));
@@ -1938,7 +1943,7 @@ function holdTarget(p, dt) {
   else if (p.rebT > 0) {
     // rebote: el balón llega a las manos arriba y baja hasta el pecho, con los codos abiertos
     const k = smooth(clamp((0.75 - p.rebT) / 0.6, 0, 1));
-    fw = lerp(0.18, 0.3, k); lat = 0; y = p.pos.y + lerp(2.35, 1.25, k);
+    fw = lerp(0.2, 0.42, k); lat = 0; y = p.pos.y + lerp(2.35, 1.32, k);
   }
   else if (!p.onGround || p.stunT > 0) { fw = 0.38; lat = 0.05 * p.hand; y = p.pos.y + 1.55; }
   else if (p.post && !p.move) { ball.phase += dt * 3.5; fw = 0.32; lat = 0.2 * p.hand; y = R + (0.62 - R) * Math.abs(Math.cos(ball.phase)); }
@@ -1967,7 +1972,7 @@ function holdTarget(p, dt) {
     } else if (t === 'spin' || t === 'postspin') {
       // giro: último bote antes de plantar, balón controlado junto a la cadera del lado de la mano mientras gira; en el poste bota una vez
       const kb = clamp((k - 0.2) / 0.7, 0, 1);
-      lat = h0 * 0.42; fw = 0.14;
+      lat = h0 * 0.46; fw = 0.18;
       y = k < 0.2 ? R + (0.9 - R) * Math.abs(Math.cos(Math.PI * k / 0.2)) : t === 'postspin' ? R + (0.9 - R) * Math.abs(Math.cos(Math.PI * kb)) : 0.9 - 0.06 * Math.sin(Math.PI * kb);
     } else if (t === 'inout') {   // amago de cruce: el balón va hacia la otra mano y vuelve
       lat = h0 * (1 - 1.2 * Math.sin(Math.PI * k)) * 0.3; fw = 0.4; y = R + (0.62 - R) * Math.abs(Math.cos(Math.PI * k));
@@ -1975,7 +1980,7 @@ function holdTarget(p, dt) {
       if (k < 0.45) { lat = 0.3 * h0; fw = 0.3; y = R + (1.02 - R) * Math.abs(Math.cos(ball.phase * 0.55)); }
       else { ball.phase += dt * 6; lat = 0.24 * h0; fw = 0.62; y = R + (0.58 - R) * Math.abs(Math.cos(ball.phase)); }
     } else if (t === 'swap') {    // cambio rápido de mano: bote bajo por delante
-      lat = lerp(h0 * 0.4, s * 0.4, smooth(k)); fw = 0.48; y = R + (0.8 - R) * Math.abs(Math.cos(Math.PI * k));
+      lat = lerp(h0 * 0.4, s * 0.4, smooth(k)); fw = 0.5 + 0.06 * Math.sin(Math.PI * k); y = R + (0.85 - R) * Math.abs(Math.cos(Math.PI * k));
     } else if (t === 'retreat') { // retroceso: sigue botando en su mano, dos botes bajos
       lat = 0.38 * h0; fw = 0.32; y = R + (0.75 - R) * Math.abs(Math.cos(Math.PI * 2 * k));
     } else if (t === 'euro') {    // eurostep: balón al pecho, se lleva al lado contrario al de cada paso (protegido)
@@ -2184,6 +2189,7 @@ function updatePlayer(p, inp, dt) {
   p.cutT = Math.max(0, (p.cutT || 0) - dt);
   p.fakeCd = Math.max(0, p.fakeCd - dt);
   p.rebT = Math.max(0, p.rebT - dt);
+  if (p.catchArc) { p.catchArc.t += dt; if (p.catchArc.t > 0.3 || ball.holder !== p) p.catchArc = null; }
   if (p.layupSeq) { p.layupSeq.t += dt; if (p.layupSeq.t >= p.layupSeq.dur || p.vel.y < -0.5) releaseLayup(p); }
   if (p.fakeT > 0) { p.fakeT -= dt; if (p.fakeT <= 0) p.explodeWin = CFG.moves.explodeWin; }   // tras el amago, ventana para explotar
   p.blockCd = Math.max(0, p.blockCd - dt); p.swatT = Math.max(0, p.swatT - dt);
@@ -2222,6 +2228,7 @@ function updatePlayer(p, inp, dt) {
     else if (dRim < C.postRim) for (const o of live) if (o.team !== p.team && hdist(o.pos, p.pos) < C.postRange) { p.post = true; break; }
   }
   if (p.post) maxSp = Math.min(maxSp, C.postSpeed);
+  if (p.move && p.move.type === 'swap') maxSp *= 1 - 0.3 * Math.sin(Math.PI * Math.min(1, p.move.t / p.move.dur));   // cambio de mano: pequeño cambio de ritmo
   if (p.deadDribble && !holdingB) p.deadDribble = false;
   // cerrar el rebote: L2 sin balón, en la zona cercana al aro, con el balón en el aire o suelto
   const rimB = hoops[1].rimC;
@@ -2352,6 +2359,12 @@ function updatePlayer(p, inp, dt) {
   }
   else if (p.charging || p.shotT > 0 || (ball.holder === p && !p.onGround)) { const c = hoops[p.attackSide].rimC; ty = Math.atan2(c.x - p.pos.x, c.z - p.pos.z); }
   else if (p.swipeT > 0) ty = null;
+  else if (!ball.holder && ball.pass && ball.pass.to === p && p.onGround && hdist(ball.pos, p.pos) < 9) {
+    // recibir: si el pase llega desde atrás o muy de lado, el jugador se gira hacia el balón (si va rápido, solo el torso)
+    const by = Math.atan2(ball.pos.x - p.pos.x, ball.pos.z - p.pos.z), rel = wrapA(by - p.yaw);
+    if (Math.abs(rel) > 1.2 && Math.hypot(p.vel.x, p.vel.z) < 4.5) ty = by;
+    else if (Math.hypot(p.vel.x, p.vel.z) > 0.8) ty = Math.atan2(p.vel.x, p.vel.z);
+  }
   else if (!ball.holder || ball.holder.team === p.team || ball.holder === p) {
     if (Math.hypot(p.vel.x, p.vel.z) > 0.8) ty = Math.atan2(p.vel.x, p.vel.z);
   } else {
@@ -2360,7 +2373,7 @@ function updatePlayer(p, inp, dt) {
     if (p.stance && hdist(c.pos, p.pos) < 6) ty = Math.atan2(c.pos.x - p.pos.x, c.pos.z - p.pos.z);
     else if (Math.hypot(p.vel.x, p.vel.z) > 0.8) ty = Math.atan2(p.vel.x, p.vel.z);
   }
-  const turnRate = p.charging && p.shotKind !== 'jump' ? 7 : 14;   // los tiros de poste giran más despacio: se ve el pivote
+  const turnRate = p.charging && p.shotKind !== 'jump' ? 7 : 11.5;   // los tiros de poste giran más despacio: se ve el pivote
   if (ty !== null && p.stunT <= 0) p.yaw = lerpAngle(p.yaw, ty, 1 - Math.exp(-turnRate * dt));
 }
 
@@ -2439,7 +2452,7 @@ function playersCollide(a, b) {
 function finishSwap(p) { if (p.move && p.move.type === 'swap') { p.hand = p.move.side; p.move = null; ball.phase = 0; } }
 function startSwap(p, side) {
   if (ball.holder !== p || p.move || !p.onGround || p.charging || p.shotT > 0 || p.stunT > 0 || p.inbounding || side === p.hand) return false;
-  p.move = { type: 'swap', t: 0, dur: 0.18, side, from: p.hand, burst: false, static: true };
+  p.move = { type: 'swap', t: 0, dur: 0.24, side, from: p.hand, burst: false, static: true };
   p.protectT = Math.max(p.protectT, 0.08);
   return true;
 }
@@ -2595,8 +2608,10 @@ function moveSteer(p, dt) {
   const drag = smooth(clamp((k - 0.2) / 0.7, 0, 1));                    // 0,2→0,9: arrastre al otro lado
   const O = m.oldDir, N = m.newDir;
   const dx = O.x * (1 - drag) + N.x * drag - r.x * s * 0.3 * sell, dz = O.z * (1 - drag) + N.z * drag - r.z * s * 0.3 * sell, l = Math.hypot(dx, dz) || 1;
+  // cambio de ritmo: al vender el amago se frena (hasta un 55 %) y al arrastrar al otro lado acelera por encima de la velocidad de entrada
+  const rhythm = k < 0.38 ? lerp(1, 0.55, smooth(k / 0.38)) : lerp(0.55, 1.18, smooth(clamp((k - 0.38) / 0.45, 0, 1)));
   const sp = m.static ? 1.1 * Math.sin(Math.PI * k)                                                       // parado: solo un pequeño balanceo del peso
-    : m.sp0 * (1 - 0.25 * Math.sin(Math.PI * Math.min(1, k * 1.4))) + (m.boost ? 3.6 : 1.6) * drag;   // frena un poco al cambiar el peso y sale
+    : m.sp0 * rhythm + (m.boost ? 3.2 : 1.2) * drag;
   const a = 1 - Math.exp(-10 * dt);
   p.vel.x += (dx / l * sp - p.vel.x) * a; p.vel.z += (dz / l * sp - p.vel.z) * a;
 }
@@ -2806,6 +2821,12 @@ function tryPickup() {
   }
   best.assistT = 0; best.assistFrom = null;
   best.hand = 1; best.deadDribble = false;
+  {
+    const F = carrierFrame(best), ox = ball.pos.x - best.pos.x, oz = ball.pos.z - best.pos.z;
+    const ang = Math.atan2(ox * F.rx + oz * F.rz, ox * F.fx + oz * F.fz);
+    best.catchArc = Math.abs(ang) > 1.2 ? { t: 0, a0: ang } : null;
+    if (best.catchArc) best.hand = Math.sign(ang) || 1;
+  }
   if (!best.onGround && !ps) { best.rebT = 0.75; ball.phase = 0; }   // rebote: recoger arriba y bajar el balón al pecho
   if (ps) {
     if (ps.to === best || ps.team === best.team) {
@@ -3065,20 +3086,21 @@ function dunkBallTarget(p, out) {
   if (s.released || s.t >= s.rise) return out.copy(_slamP);
   const k = s.t / s.rise;
   const toSlam = k0 => { if (k > k0) out.lerp(_slamP, smooth((k - k0) / (1 - k0))); return out; };
-  if (s.type === 'one') { const e = smooth(Math.min(1, k / 0.5)); toW(lerp(0.35, -0.05, e), lerp(0, 0.22, e), lerp(1.3, 2.35, e)); return toSlam(0.55); }
-  if (s.type === 'two') { const e = smooth(Math.min(1, k / 0.55)); toW(lerp(0.35, -0.2, e), 0, lerp(1.3, 2.4, e)); return toSlam(0.6); }
-  if (s.type === 'tomahawk') { const e = smooth(Math.min(1, k / 0.6)); toW(lerp(0.35, -0.5, e), lerp(0, 0.14, e), lerp(1.3, 2.2, e)); return toSlam(0.62); }
+  const bulge = e => 0.32 * Math.sin(Math.PI * Math.min(1, e * 1.15));   // el balón pasa por delante de la cara al subir
+  if (s.type === 'one') { const e = smooth(Math.min(1, k / 0.5)); toW(lerp(0.42, -0.05, e) + bulge(e), lerp(0, 0.24, e), lerp(1.3, 2.35, e)); return toSlam(0.55); }
+  if (s.type === 'two') { const e = smooth(Math.min(1, k / 0.55)); toW(lerp(0.42, -0.2, e) + bulge(e), 0, lerp(1.3, 2.45, e)); return toSlam(0.6); }
+  if (s.type === 'tomahawk') { const e = smooth(Math.min(1, k / 0.6)); toW(lerp(0.42, -0.45, e) + bulge(e), lerp(0, 0.22, e), lerp(1.3, 2.4, e)); return toSlam(0.62); }
   if (s.type === 'windmill') {
     // el brazo da una vuelta completa: delante, abajo, atrás, arriba y al aro
     const th = -0.5 - 4.583 * smooth(Math.min(1, k / 0.8));
     toW(Math.cos(th) * 0.62, 0.28, 1.5 + Math.sin(th) * 0.62); return toSlam(0.8);
   }
   if (s.type === 'spin360') {
-    if (k < 0.8) toW(0.3, 0, lerp(1.3, 1.55, smooth(k / 0.8)));
-    else { const e = (k - 0.8) / 0.2; toW(lerp(0.3, -0.1, e), 0, lerp(1.55, 2.4, e)); }
+    if (k < 0.8) toW(0.42, 0, lerp(1.3, 1.55, smooth(k / 0.8)));
+    else { const e = (k - 0.8) / 0.2; toW(lerp(0.42, -0.1, e) + 0.2 * Math.sin(Math.PI * e), 0, lerp(1.55, 2.45, e)); }
     return toSlam(0.88);
   }
-  const e = smooth(Math.min(1, k / 0.7)); toW(lerp(0.35, -0.25, e), 0, lerp(1.3, 2.45, e)); return toSlam(0.75);   // reverso
+  const e = smooth(Math.min(1, k / 0.7)); toW(lerp(0.42, -0.25, e) + bulge(e), 0, lerp(1.3, 2.5, e)); return toSlam(0.75);   // reverso
 }
 
 // Momento del machaque: suelta el balón dentro del aro.
@@ -4557,6 +4579,14 @@ function solveArm(arm, torso, targetWorld, pole, outQ) {
 function crouchLeg(d) { const th = Math.acos(clamp(1 - d / 0.9, -1, 1)); return { x: -th, k: th * 2 }; }
 
 // Mezcla recursiva de una pose hacia otra.
+// Muelle crítico por articulación: cada ángulo lleva su propia velocidad, así las transiciones entre poses
+// se encadenan con inercia (sin saltos ni frenazos secos). w = rigidez (más alto = más rápido).
+function springPose(cur, vel, tgt, w, dt) {
+  for (const key in tgt) {
+    if (typeof tgt[key] === 'object') { if (!vel[key]) vel[key] = {}; springPose(cur[key], vel[key], tgt[key], w, dt); }
+    else { const v0 = vel[key] || 0, v = v0 + (w * w * (tgt[key] - cur[key]) - 2 * w * v0) * dt; vel[key] = v; cur[key] += v * dt; }
+  }
+}
 function blendNum(cur, tgt, k) { for (const key in tgt) { if (typeof tgt[key] === 'object') blendNum(cur[key], tgt[key], k); else cur[key] += (tgt[key] - cur[key]) * k; } }
 
 // Pose base de pie antes de aplicar cada estado.
@@ -4637,7 +4667,7 @@ function animatePlayer(p, dt, T) {
   // ---- con balón ----
   const F = carrierFrame(p);
   if (holding) {
-    if (p.charging || p.shotT > 0 || air || p.inbounding || p.fakeT > 0 || p.rebT > 0 || p.deadDribble || p.layupSeq || (p.move && ((p.move.type === 'step' && p.move.t / p.move.dur > 0.22) || p.move.type === 'euro' || p.move.type === 'spinlay'))) {
+    if (p.charging || p.shotT > 0 || air || p.inbounding || p.fakeT > 0 || p.rebT > 0 || p.deadDribble || p.layupSeq || p.catchArc || (p.move && ((p.move.type === 'step' && p.move.t / p.move.dur > 0.22) || p.move.type === 'euro' || p.move.type === 'spinlay'))) {
       tp.ikL = tp.ikR = 1;
       tp.torsoX = air ? 0 : 0.05 + crouchD * 0.6;
       if (p.move && p.move.type === 'step') {
@@ -4686,7 +4716,12 @@ function animatePlayer(p, dt, T) {
         tp.torsoY = -mv.from * 0.25 * sw; tp.torsoX += 0.15;
         const off = mv.from > 0 ? tp.aL : tp.aR; off.z = mv.from * 0.6; off.x = -0.45; off.el = -0.5;   // la mano que recibe espera abierta, separada de la cadera
       }
-      else if (mv.type === 'swap') { tp.torsoY = s * 0.12 * sw; tp.torsoZ = -s * 0.06 * sw; }
+      else if (mv.type === 'swap') {
+        // cambio de mano: los hombros acompañan al balón, el peso pasa de una pierna a otra y la cadera baja un poco
+        tp.torsoY = s * 0.2 * sw; tp.torsoZ = -s * 0.08 * sw; tp.bodyZ = s * 0.07 * Math.sin(Math.PI * (k - 0.15)); tp.hipsY -= 0.04 * sw;
+        tp.headY -= s * 0.08 * sw;
+        const free = s > 0 ? tp.aL : tp.aR; free.x = -0.5 * sw; free.z = (s > 0 ? 1 : -1) * (0.4 + 0.3 * sw); free.el = -0.7;
+      }
       else if (mv.type === 'retreat') {
         const st = Math.sin(Math.PI * 4 * k) * Math.sin(Math.PI * k);
         tp.lL.x = 0.45 * st + cr.x; tp.lR.x = -0.45 * st + cr.x; tp.lL.k = 0.5 + 0.3 * Math.max(0, st); tp.lR.k = 0.5 + 0.3 * Math.max(0, -st);
@@ -4782,7 +4817,7 @@ function animatePlayer(p, dt, T) {
     const k = p.shotT > 0 ? 1 : smooth(Math.min(1, p.charge / CFG.shot.sweet));
     const shoot = p.hand > 0 ? tp.aR : tp.aL, guard = p.hand > 0 ? tp.aL : tp.aR, sg = p.hand > 0 ? 1 : -1;
     const knee = p.hand > 0 ? tp.lR : tp.lL, plant = p.hand > 0 ? tp.lL : tp.lR;
-    if (p.hand > 0) tp.ikL = k < 0.3 ? 1 : 0; else tp.ikR = k < 0.3 ? 1 : 0;   // la mano libre suelta el balón pronto
+    if (p.hand > 0) tp.ikL = 0; else tp.ikR = 0;   // la mano libre suelta el balón pronto
     guard.x = -1.35; guard.z = sg * 1.15; guard.el = -0.5;
     knee.x = -1.25 * k; knee.k = 1.5 * k; plant.x = 0.1; plant.k = 0.15 + 0.3 * (1 - k); plant.a = 0.4 * k;
     tp.bodyZ = -sg * 0.2 * k; tp.torsoZ = -sg * 0.18 * k; tp.torsoX = 0.15 * (1 - k); tp.headY = -sg * 0.6;   // mira al aro por encima del hombro
@@ -4864,13 +4899,17 @@ function animatePlayer(p, dt, T) {
     }
   }
   // ---- rebote: en el aire sin balón, brazos hacia el balón si viene cayendo cerca ----
-  const reachReb = !holding && !ball.holder && !p.onGround && !p.dunkSeq && p.blockT <= 0 && Math.hypot(ball.pos.x - p.pos.x, ball.pos.y - p.pos.y - 2, ball.pos.z - p.pos.z) < 2.4;
+  const reachReb = !holding && !ball.holder && !p.onGround && !p.dunkSeq && p.blockT <= 0 && !(p.throwT > 0 && p.throwKind === 'dunk') && ball.pos.y > p.pos.y + 1.3 && Math.abs(wrapA(Math.atan2(ball.pos.x - p.pos.x, ball.pos.z - p.pos.z) - p.yaw)) < 1.7 && Math.hypot(ball.pos.x - p.pos.x, ball.pos.y - p.pos.y - 2, ball.pos.z - p.pos.z) < 2.4;
+  p.reachReb = reachReb;
   if (reachReb) { tp.ikL = tp.ikR = 1; tp.torsoX -= 0.1; }
   if (holding && p.rebT > 0) { tp.ikL = tp.ikR = 1; tp.torsoX += 0.12 * (1 - p.rebT / 0.75); }
   // ---- recibir un pase: manos al balón ----
   if (!holding && ball.pass && ball.pass.to === p && p.stunT <= 0 && !p.dunkSeq) {
     const bd = Math.hypot(ball.pos.x - p.pos.x, ball.pos.y - p.pos.y - 1.2, ball.pos.z - p.pos.z);
     if (bd < 4.5) { tp.ikL = tp.ikR = clamp((4.5 - bd) / 2.5, 0, 1); tp.torsoX += 0.08; }
+    // el tronco y la cabeza se orientan hacia el balón que llega (hasta ~70°), así los brazos no tienen que ir por detrás
+    const rel = wrapA(Math.atan2(ball.pos.x - p.pos.x, ball.pos.z - p.pos.z) - (p.yaw + p.spinAngle));
+    tp.torsoY += clamp(rel, -1.2, 1.2) * 0.6; tp.headY += clamp(rel, -1.4, 1.4) * 0.4;
   }
   // ---- inclinarse en las curvas y balanceo en parado ----
   const yawRate = dt > 0 ? wrapA(yawTot - p.prevYaw) / dt : 0; p.prevYaw = yawTot;
@@ -4884,7 +4923,12 @@ function animatePlayer(p, dt, T) {
   }
 
   // mezcla suave hacia la pose objetivo
-  blendNum(cur, tp, dt > 0 ? 1 - Math.exp(-(p.move || p.burstT > 0 || p.fakeT > 0 ? 28 : 20) * dt) : 0);   // regates más secos
+  if (dt > 0) {
+    const w = p.move || p.burstT > 0 || p.fakeT > 0 ? 26 : p.charging || p.shotT > 0 || p.throwT > 0 ? 24 : 17;   // regates y tiros algo más vivos
+    if (!r.pvel) r.pvel = {};
+    const n = Math.max(1, Math.ceil(w * dt / 0.35));                                    // subpasos: estable aunque baje la tasa de fotogramas
+    for (let i = 0; i < n; i++) springPose(cur, r.pvel, tp, w, dt / n);
+  }
   r.root.rotation.set(cur.bodyX, yawTot, cur.bodyZ, 'YXZ');
   const sq = cur.squash + (p.land > 0 ? p.land * 0.1 : 0);
   r.root.scale.set(1 + sq * 0.5, 1 - sq, 1 + sq * 0.5);
@@ -4913,7 +4957,7 @@ function animatePlayer(p, dt, T) {
   for (const [arm, c, ikw] of [[r.armL, cur.aL, cur.ikL], [r.armR, cur.aR, cur.ikR]]) {
     _eul.set(c.x - L * 0.3 * LV.arms, c.y, c.z + L * 0.7 * LV.arms * arm.side, 'YXZ'); _qFK.setFromEuler(_eul);
     let el = c.el - L * 0.3 * LV.arms;
-    const catching = (!holding && ball.pass && ball.pass.to === p) || (!holding && !ball.holder && !p.onGround && !p.dunkSeq && p.blockT <= 0 && cur.ikL > 0.3);
+    const catching = (!holding && ball.pass && ball.pass.to === p) || (p.reachReb && cur.ikL > 0.3);
     if (ikw > 0.01 && p.dunkSeq && p.dunkSeq.t >= p.dunkSeq.rise) {
       // colgado: manos agarrando el borde delantero del aro
       const s = p.dunkSeq, H = CFG.hoop, off = -arm.side * 0.12, rx = -s.dir.z, rz = s.dir.x;
@@ -4925,7 +4969,14 @@ function animatePlayer(p, dt, T) {
       // mate (subiendo) o recepción: manos a los lados del balón
       const two = catching || p.dunkSeq.D.hands === 2 || cur.ikL > 0.5;
       const side = two ? R + 0.02 : 0;
-      _ikT.set(ball.pos.x + F.rx * -arm.side * side - F.fx * 0.05, ball.pos.y + (two ? 0 : R * 0.4), ball.pos.z + F.rz * -arm.side * side - F.fz * 0.05);
+      let bx = ball.pos.x, bz = ball.pos.z;
+      if (catching && !p.dunkSeq) {
+        // balón por detrás: se lleva el objetivo de las manos a ±95° del frente, a distancia del cuerpo
+        const ox = bx - p.pos.x, oz = bz - p.pos.z, fwd = ox * F.fx + oz * F.fz, lat = ox * F.rx + oz * F.rz, ang = Math.atan2(lat, fwd);
+        const lim = 1.65, a2 = clamp(ang, -lim, lim), rr = Math.max(0.45, Math.hypot(ox, oz));
+        if (a2 !== ang) { bx = p.pos.x + F.fx * Math.cos(a2) * rr + F.rx * Math.sin(a2) * rr; bz = p.pos.z + F.fz * Math.cos(a2) * rr + F.rz * Math.sin(a2) * rr; }
+      }
+      _ikT.set(bx + F.rx * -arm.side * side - F.fx * 0.05, ball.pos.y + (two ? 0 : R * 0.4), bz + F.rz * -arm.side * side - F.fz * 0.05);
       _pole.set(arm.side * 0.5, catching ? -0.6 : 0.3, catching ? -0.4 : 0.9);
       const elIK = solveArm(arm, r.torso, _ikT, _pole, _qIK);
       _qFK.slerp(_qIK, clamp(ikw, 0, 1)); el = lerp(el, elIK, clamp(ikw, 0, 1));
@@ -5037,7 +5088,8 @@ function updateBroadcastCam(dt) {
   const fx = clamp(lerp(fp.x, h.pos.x, 0.2), -17, 17), fz = clamp(lerp(fp.z, h.pos.z, 0.2), -9, 9);
   _cw.set(clamp(fx - s * 11, -21, 21), 8.2, fz * 0.45);
   const rimX = hoops[atkIdx].rimC.x;
-  _cl.set(lerp(fx, rimX, 0.22), 0.4, fz * 0.75);   // el jugador queda en el tercio inferior, con la canasta al fondo
+  const hv = ball.holder ? ball.holder.vel : ball.vel;
+  _cl.set(lerp(fx, rimX, 0.22) + clamp(hv.x, -8, 8) * 0.12, 0.4, fz * 0.75 + clamp(hv.z, -8, 8) * 0.12);   // mira un poco hacia donde va la jugada   // el jugador queda en el tercio inferior, con la canasta al fondo
   camPos.lerp(_cw, 1 - Math.exp(-3.2 * dt));
   camLook.lerp(_cl, 1 - Math.exp(-4.5 * dt));
   camera.position.copy(camPos);
@@ -5405,6 +5457,10 @@ const ANIMS = [
   ...[['chest', 'Pase directo'], ['bounce', 'Pase picado'], ['lob', 'Pase bombeado']].map(([ty, name]) => ({ cat: 'Pases', name, dur: 2.4,
     setup() { animPlace(H(), -3, 0); giveBall(H()); animPlace(P1(), 4, 0, -Math.PI / 2); },
     tick(t) { ANIM.inp.move.set(t < 0.6 ? 0.35 : 0, 0, 0); once(t, 0.5, () => tap('pass', ty)); } })),
+  { cat: 'Pases', name: 'Recibir un pase por detrás', dur: 2.4, setup() { animPlace(H(), 0, 0, Math.PI / 2); animPlace(P1(), -7, 0.6); giveBall(P1()); },
+    tick(t) { once(t, 0.4, () => pass(P1(), H(), false, 'chest')); } },
+  { cat: 'Pases', name: 'Recibir por detrás corriendo', dur: 2.4, setup() { animPlace(H(), -2, 0, Math.PI / 2); animPlace(P1(), -9, -1); giveBall(P1()); },
+    tick(t) { fwd(0.7); once(t, 0.3, () => pass(P1(), H(), false, 'chest')); } },
   { cat: 'Pases', name: 'Recibir un pase', dur: 2.4, setup() { animPlace(H(), 0, 0, -Math.PI / 2); animPlace(P1(), -7, 0); giveBall(P1()); },
     tick(t) { once(t, 0.4, () => pass(P1(), H(), false, 'chest')); } },
   { cat: 'Defensa', name: 'Robo (manotazo)', dur: 2.2, setup() { animPlace(H(), 1.3, 0, -Math.PI / 2); animPlace(R0(), 0, 0); giveBall(R0()); },
@@ -5434,7 +5490,7 @@ function playAnim(i, looping) {
   const a = ANIMS[i]; ANIM.cur = i; ANIM.t = 0; ANIM.frame = 0; ANIM.acc = 0; ANIM.fired = new Set(); ANIM.npc.clear();
   if (!looping) ANIM.real = 0;
   animSeed = 987654321;                                       // misma secuencia aleatoria en cada reproducción
-  for (const p of players) { resetPose(p.rig.cur); resetPose(p.rig.tp); p.prevYaw = p.yaw; p.land = 0; }
+  for (const p of players) { resetPose(p.rig.cur); resetPose(p.rig.tp); p.rig.pvel = {}; p.prevYaw = p.yaw; p.land = 0; }
   for (const k in particlesReset) particlesReset[k]();
   ball.phase = 0; ball.w.set(0, 0, 0); ball.ignore = null; ball.ignoreT = 0; shake = 0;
   for (const h of hoops) { h.jiggle = 0; h.bend = 0; h.bendV = 0; h.hang = null; if ('waveT' in h) h.waveT = 0; }
