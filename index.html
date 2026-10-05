@@ -470,6 +470,13 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
       </div>
     </div>
     <div class="row">
+      <span class="lbl">Formato</span>
+      <div class="seg" role="group" aria-label="Formato">
+        <button data-size="3" aria-pressed="true">3 contra 3</button>
+        <button data-size="1" aria-pressed="false">1 contra 1</button>
+      </div>
+    </div>
+    <div class="row">
       <span class="lbl">Cámara</span>
       <div class="seg camseg" role="group" aria-label="Cámara">
         <button data-cam="broad" aria-pressed="true">Retransmisión</button>
@@ -486,7 +493,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
     </div>
     <p id="touchnote" class="note" hidden>Necesitas teclado y ratón para jugar.</p>
   </div>
-  <span class="version">v0.3 alpha «Resort» · 5 oct 2026 · 13:12</span>
+  <span class="version">v0.3 alpha «Resort» · 5 oct 2026 · 18:03</span>
 </section>
 
 <!-- ── Controles (pestaña aparte) ── -->
@@ -511,7 +518,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
       <dt>Cerrar el rebote</dt><dd>Sin balón, mantén <kbd>L2</kbd> (clic derecho) cerca del aro cuando se tira: te pones de cara al aro, de espaldas al rival, y le empujas levemente hacia fuera sin que pueda devolvértelo</dd>
       <dt>Sobresfuerzo</dt><dd>Doble <kbd>R1</kbd> (doble Mayús): gasta una carga azul y sales disparado hacia donde vas, con o sin balón</dd>
       <dt>Puntear</dt><dd>En postura defensiva y sin balón, apunta con el stick derecho (o las flechas con clic derecho mantenido): tu mano va hacia ese lado. Cuanto más centrada sobre el tirador, más estrecha su franja verde (hasta un 60 %)</dd>
-      <dt>Reglas 3x3</dt><dd>Media pista. Tras cada canasta saca el otro equipo desde fuera del triple. Tras un rebote defensivo o un robo, hay que sacar el balón fuera del triple antes de poder anotar</dd>
+      <dt>Reglas 3x3</dt><dd>Media pista (también en 1 contra 1, elige el formato en el menú). Tras cada canasta saca el otro equipo desde fuera del triple. Tras un rebote defensivo o un robo, hay que sacar el balón fuera del triple antes de poder anotar</dd>
       <dt>Eurostep / bandeja con giro</dt><dd>Corriendo hacia la canasta (de 3,6 a 6,8 m): clic + clic con una pequeña pausa = eurostep; clic + clic casi seguidos = bandeja con giro. El lado lo marca A/D (o tu mano de bote)</dd>
       <dt>Explosión</dt><dd>Gasta una de las 3 cargas azules de sobresfuerzo (se recargan despacio, más rápido con la energía alta). Justo después de un regate, dirección + <kbd>Mayús</kbd>: sales disparado. Un regate sirve para provocar al defensor; la explosión es lo que lo supera</dd>
       <dt>Corriendo al aro</dt><dd>Mates: clic una mano, <kbd>F</kbd> dos manos, <kbd>R</kbd> molino, <kbd>X</kbd> 360. Con Mayús: clic tomahawk, <kbd>F</kbd> reverso. Saltando junto al aro, clic también machaca</dd>
@@ -1816,7 +1823,7 @@ function makePlayer(team, idx) {
 for (let t = 0; t < 2; t++) for (let i = 0; i < 3; i++) makePlayer(t, i);
 let human = players[0];   // jugador controlado: en 3v3 cambia (siempre el que tiene el balón en ataque)
 let mode = 'match', live = players; // en entrenamiento solo existe tu jugador
-const teamOf = t => players.filter(p => p.team === t);
+const teamOf = t => live.filter(p => p.team === t);   // solo los que están en pista (1 contra 1, online 2 contra 2)
 const facing = p => new V3(Math.sin(p.yaw), 0, Math.cos(p.yaw));
 const teamColor = t => t === 0 ? 'var(--blue)' : 'var(--rival)';
 const involvesHuman = (...ps) => ps.includes(human);
@@ -3594,11 +3601,11 @@ function moveTo(p, t, out) {
 }
 
 // Distancia al rival más cercano (lo libre que está un jugador).
-function openness(p) { let m = 1e9; for (const f of players) if (f.team !== p.team) m = Math.min(m, hdist(f.pos, p.pos)); return m; }
+function openness(p) { let m = 1e9; for (const f of live) if (f.team !== p.team) m = Math.min(m, hdist(f.pos, p.pos)); return m; }
 
 // ¿Línea de pase libre de rivales entre a y b?
-function laneClear(a, b) { for (const f of players) if (f.team !== a.team && segDist(f.pos.x, f.pos.z, a.pos.x, a.pos.z, b.pos.x, b.pos.z) < 1.1) return false; return true; }
-const markOf = p => players.find(o => o.team !== p.team && o.idx === p.idx);
+function laneClear(a, b) { for (const f of live) if (f.team !== a.team && segDist(f.pos.x, f.pos.z, a.pos.x, a.pos.z, b.pos.x, b.pos.z) < 1.1) return false; return true; }
+const markOf = p => live.find(o => o.team !== p.team && o.idx === p.idx) || live.find(o => o.team !== p.team);
 const teamPlan = [{ cutter: null, cutT: 3 }, { cutter: null, cutT: 3 }];
 
 // Elige cada cierto tiempo qué compañero corta hacia el aro.
@@ -3617,7 +3624,7 @@ function updateTeamPlans(dt) {
 // la IA elige el tipo de pase: bombeado si hay alguien en medio, picado si el defensor está cerca de la línea
 function passTypeFor(me, to) {
   let near = 1e9;
-  for (const f of players) if (f.team !== me.team) near = Math.min(near, segDist(f.pos.x, f.pos.z, me.pos.x, me.pos.z, to.pos.x, to.pos.z));
+  for (const f of live) if (f.team !== me.team) near = Math.min(near, segDist(f.pos.x, f.pos.z, me.pos.x, me.pos.z, to.pos.x, to.pos.z));
   if (near < 0.9) return Math.random() < 0.6 ? 'lob' : 'bounce';
   if (near < 1.8 && Math.random() < 0.45) return 'bounce';
   return hdist(me.pos, to.pos) > 11 && Math.random() < 0.4 ? 'lob' : 'chest';
@@ -3637,8 +3644,8 @@ function aiThink(me, dt) {
   if (state === 'scored') { moveTo(me, me.home, out); return out; }
   st.t -= dt;
   const atk = hoops[me.attackSide].rimC, def = hoops[1].rimC, s = Math.sign(atk.x);   // media pista: se defiende la misma canasta
-  const mates = players.filter(p => p.team === me.team && p !== me);
-  const foes = players.filter(p => p.team !== me.team);
+  const mates = live.filter(p => p.team === me.team && p !== me);
+  const foes = live.filter(p => p.team !== me.team);
   let fd = 1e9, nearFoe = null;
   for (const f of foes) { const d = hdist(f.pos, me.pos); if (d < fd) { fd = d; nearFoe = f; } }
 
@@ -4123,6 +4130,8 @@ function startPlay() {
 function startMatch() {
   SFX.init();
   mode = 'match'; live = players; setTrainingVisible(false);
+  if (matchSize === 1) live = [players[0], players[3]];   // 1 contra 1: tú contra el base rival
+  for (const p of players) { const on = live.includes(p); p.rig.root.visible = p.rig.ring.visible = on; if (!on) { p.pos.set(0, -50, 0); p.vel.set(0, 0, 0); } }
   diff = DIFF[diffKey];
   for (const p of players) { p.speedMul = p.team === 1 ? diff.speedMul : (p.isHuman ? 1 : MATES.speedMul); p.stamina = 1; p.exhausted = false; }
   eGhost = 1;
@@ -4234,6 +4243,7 @@ function togglePause() { if (state === 'paused') resume(); else pause(); }
 
 // Vuelve al menú principal.
 function toMenu() {
+  if (mode === 'match') { live = players; for (const p of players) p.rig.root.visible = p.rig.ring.visible = true; }
   if (mode === 'train') { mode = 'match'; live = players; setTrainingVisible(false); }
   state = 'menu'; resetEntities();
   $('pause').hidden = true; $('over').hidden = true; $('hud').hidden = true; $('menu').hidden = false; $('play').focus();
@@ -5436,6 +5446,16 @@ document.querySelectorAll('.seg button[data-d]').forEach(b => b.addEventListener
   diffKey = b.dataset.d;
 }));
 document.body.append($('combos'), $('traintip'));   // paneles del entrenamiento fuera del marcador centrado (van a la derecha)
+// formato del partido: 3 contra 3 o 1 contra 1 (se recuerda)
+let matchSize = 3;
+try { matchSize = +(localStorage.getItem('hoopblast.size') || 3) === 1 ? 1 : 3; } catch (e) { /* sin almacenamiento */ }
+function setMatchSize(n) {
+  matchSize = n === 1 ? 1 : 3;
+  try { localStorage.setItem('hoopblast.size', String(matchSize)); } catch (e) { /* sin almacenamiento */ }
+  document.querySelectorAll('.seg button[data-size]').forEach(x => x.setAttribute('aria-pressed', String(+x.dataset.size === matchSize)));
+}
+document.querySelectorAll('.seg button[data-size]').forEach(b => b.addEventListener('click', () => setMatchSize(+b.dataset.size)));
+setMatchSize(matchSize);
 document.querySelectorAll('.seg button[data-cam]').forEach(b => b.addEventListener('click', () => setCamMode(b.dataset.cam)));
 document.querySelectorAll('.seg button[data-arena]').forEach(b => b.addEventListener('click', () => setArena(b.dataset.arena)));
 setArena(arenaKey);
