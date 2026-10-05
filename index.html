@@ -249,6 +249,9 @@ button:focus-visible{ outline:3px solid var(--gold); outline-offset:3px; }
 .netstatus b{ font-size:22px; letter-spacing:.18em; color:var(--chalk); }
 .netplayers{ margin:0; padding-left:22px; font-weight:700; font-size:15px; color:var(--chalk); display:grid; gap:4px; }
 .netplayers .t0{ color:#7fb0ff; } .netplayers .t1{ color:#ff7f9e; } .netplayers small{ color:var(--muted); font-weight:600; margin-left:6px; }
+/* selector de pista: ◀ nombre ▶ */
+.arenapick{ align-items:center; }
+.arenapick span{ min-width:170px; text-align:center; font-weight:800; padding:0 8px; }
 /* ── Indicador de postura (L2) ── */
 .stancelbl{ display:flex; align-items:center; gap:6px; font-weight:700; font-size:14px; color:var(--muted); }
 .stancelbl.on{ color:var(--gold); }
@@ -443,7 +446,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
 <section id="titlescreen" class="titlescreen">
   <div class="tcard">
     <h1 class="tlogo">HOOPBLAST<small>3v3</small></h1>
-    <p class="tsub">Baloncesto callejero en la playa, la jungla y el pabellón</p>
+    <p class="tsub">Baloncesto callejero en 10 pistas: del pabellón a la Luna</p>
   </div>
   <p class="tpress">Pulsa cualquier botón</p>
   <span id="tversion" class="tversion"></span>
@@ -485,15 +488,15 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
     </div>
     <div class="row">
       <span class="lbl">Pista</span>
-      <div class="seg" role="group" aria-label="Pista">
-        <button data-arena="pav" aria-pressed="true">Pabellón</button>
-        <button data-arena="beach" aria-pressed="false">Playa</button>
-        <button data-arena="jungle" aria-pressed="false">Jungla</button>
+      <div class="seg arenapick" role="group" aria-label="Pista">
+        <button id="arenaPrev" aria-label="Pista anterior">◀</button>
+        <span id="arenaName">Pabellón</span>
+        <button id="arenaNext" aria-label="Pista siguiente">▶</button>
       </div>
     </div>
     <p id="touchnote" class="note" hidden>Necesitas teclado y ratón para jugar.</p>
   </div>
-  <span class="version">v0.3 alpha «Resort» · 5 oct 2026 · 20:06</span>
+  <span class="version">v0.3 alpha «Resort» · 5 oct 2026 · 20:18</span>
 </section>
 
 <!-- ── Controles (pestaña aparte) ── -->
@@ -939,8 +942,9 @@ function sfx(name, ...args) { if (!SFX.ctx) return; try { SFX[name](...args); } 
    ============================================================================== */
 // Pinta la pista (parqué, zonas, líneas) en un canvas para usarlo como textura.
 // Cada pista es un grupo; lo que se construye en esta sección pertenece al pabellón
-const ENV = { pav: new THREE.Group(), beach: new THREE.Group(), jungle: new THREE.Group() };
-scene.add(ENV.pav, ENV.beach, ENV.jungle);
+const ENV = { pav: new THREE.Group(), beach: new THREE.Group(), jungle: new THREE.Group(),
+  roof: new THREE.Group(), park: new THREE.Group(), snow: new THREE.Group(), desert: new THREE.Group(), pier: new THREE.Group(), neon: new THREE.Group(), moon: new THREE.Group() };
+scene.add(...Object.values(ENV));
 const _sceneAdd = scene.add.bind(scene);
 scene.add = (...o) => ENV.pav.add(...o);
 function makeCourtCanvas(style) {
@@ -949,7 +953,12 @@ function makeCourtCanvas(style) {
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const g = cv.getContext('2d');
   const X = x => (x + 20) * S, Y = z => (z + 12) * S;
-  const PAL = { wood: { out: '#3d8ce0' }, beach: { out: '#e9d7a7' }, clay: { out: '#6f9a4a' } }[style] || { out: '#3d8ce0' };
+  const PAL = { wood: { out: '#3d8ce0' }, beach: { out: '#e9d7a7' }, clay: { out: '#6f9a4a' }, roof: { out: '#8d929b' }, park: { out: '#5d6a73' },
+    ice: { out: '#9fb7c9' }, desert: { out: '#c99a62' }, pier: { out: '#7a5a3c' }, neon: { out: '#0f0c1e' }, moon: { out: '#6f747c' } }[style] || { out: '#3d8ce0' };
+  // superficies lisas con motas: [color, mota clara, mota oscura]
+  const FLAT = { roof: ['#2f6bb8', 'rgba(255,255,255,.05)', 'rgba(0,20,60,.07)'], park: ['#2f8a5c', 'rgba(255,255,255,.05)', 'rgba(0,40,20,.07)'],
+    ice: ['#e8f3fb', 'rgba(255,255,255,.4)', 'rgba(120,160,200,.07)'], desert: ['#c4643c', 'rgba(255,220,180,.07)', 'rgba(90,30,10,.07)'],
+    neon: ['#1b1436', 'rgba(120,90,255,.06)', 'rgba(0,0,0,.2)'], moon: ['#a8adb5', 'rgba(255,255,255,.06)', 'rgba(30,30,40,.09)'] }[style];
   g.fillStyle = PAL.out; g.fillRect(0, 0, W, H);
   if (style === 'wood') {
     // parqué claro
@@ -963,6 +972,12 @@ function makeCourtCanvas(style) {
         x += len;
       }
     }
+  } else if (style === 'pier') {
+    // tablones de madera oscura
+    for (let y = Y(-11); y < Y(11); y += S * 0.5) { g.fillStyle = 'hsl(28 ' + (38 + Math.random() * 8).toFixed(0) + '% ' + (38 + Math.random() * 8).toFixed(1) + '%)'; g.fillRect(X(-19), y, 38 * S, S * 0.5 - 2); }
+  } else if (FLAT) {
+    g.fillStyle = FLAT[0]; g.fillRect(X(-19), Y(-11), 38 * S, 22 * S);
+    for (let k = 0; k < 8000; k++) { g.fillStyle = Math.random() < 0.5 ? FLAT[1] : FLAT[2]; g.fillRect(X(-19) + Math.random() * 38 * S, Y(-11) + Math.random() * 22 * S, 2 + Math.random() * 4, 2 + Math.random() * 4); }
   } else if (style === 'beach') {
     // hormigón pintado de turquesa con motas
     g.fillStyle = '#4bb3c8'; g.fillRect(X(-19), Y(-11), 38 * S, 22 * S);
@@ -972,7 +987,8 @@ function makeCourtCanvas(style) {
     g.fillStyle = '#c47a52'; g.fillRect(X(-19), Y(-11), 38 * S, 22 * S);
     for (let k = 0; k < 7000; k++) { g.fillStyle = Math.random() < 0.5 ? 'rgba(255,220,180,.06)' : 'rgba(90,30,10,.06)'; g.fillRect(X(-19) + Math.random() * 38 * S, Y(-11) + Math.random() * 22 * S, 2 + Math.random() * 6, 2); }
   }
-  g.lineWidth = 0.07 * S; g.strokeStyle = '#ffffff';
+  g.lineWidth = 0.07 * S; g.strokeStyle = style === 'neon' ? '#5ff4ff' : '#ffffff';
+  if (style === 'neon') { g.shadowColor = '#5ff4ff'; g.shadowBlur = 18; }
   const th = Math.asin(6.6 / 6.75), off = Math.sqrt(6.75 * 6.75 - 6.6 * 6.6);
   for (const s of [-1, 1]) {
     const team = s < 0 ? '47,107,255' : '255,61,110';
@@ -1265,12 +1281,181 @@ function buildJungle() {
   for (let k = 0; k < 6; k++) { const s = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 3.5, 30, 12, 1, true), shaftM); s.position.set(rand(-30, 30), 14, rand(-30, 30)); s.rotation.z = 0.35; s.rotation.y = rand(0, 6.3); G.add(s); }
   for (let k = 0; k < 6; k++) { const c = makeCloud(rand(2.5, 4)); const a = k / 6 * Math.PI * 2; c.position.set(Math.cos(a) * 200, rand(45, 70), Math.sin(a) * 200); G.add(c); }
 }
+
+// ---------------- PISTAS NUEVAS (azotea, parque, montaña, desierto, puerto, ciudad de noche, luna) ----------------
+// suelo grande alrededor de la pista
+function envGround(G, base, spots, size, repeat) { const t = noiseTex(base, spots, 2400); t.repeat.set(repeat || 30, repeat || 30);
+  const m = new THREE.Mesh(new THREE.CircleGeometry(size || 160, 48), toon(0xffffff, { map: t, shininess: 4 })); m.rotation.x = -Math.PI / 2; m.position.y = -0.02; m.receiveShadow = true; G.add(m); return m; }
+// la pista (con su estilo) sobre una base
+function envCourt(G, style, baseColor, shin) {
+  if (baseColor !== undefined) { const b = new THREE.Mesh(new THREE.BoxGeometry(43, 0.3, 27), toon(baseColor)); b.position.y = -0.16; b.receiveShadow = true; G.add(b); }
+  const ct = new THREE.CanvasTexture(makeCourtCanvas(style)); ct.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  const c = new THREE.Mesh(new THREE.PlaneGeometry(40, 24), style === 'neon' ? new THREE.MeshBasicMaterial({ map: ct }) : toon(0xffffff, { map: ct, shininess: shin || 20 }));
+  c.rotation.x = -Math.PI / 2; c.position.y = 0.002; c.receiveShadow = true; G.add(c);
+}
+// valla alta de rejilla (canchas urbanas)
+function tallFence(G, color, h) {
+  const postM = mat('fpost' + color, () => toon(color)), netM = mat('fnet' + color, () => { const t = stripeTex(['rgba(0,0,0,0)', 'rgba(60,60,60,.55)'], 16); t.repeat.set(60, 4);
+    return new THREE.MeshBasicMaterial({ map: t, transparent: true, side: THREE.DoubleSide, depthWrite: false }); });
+  const ax = CFG.arena.hx + 0.6, az = CFG.arena.hz + 0.6;
+  for (const [x1, z1, x2, z2] of [[-ax, -az, ax, -az], [-ax, az, ax, az], [-ax, -az, -ax, az], [ax, -az, ax, az]]) {
+    const L = Math.hypot(x2 - x1, z2 - z1), n = Math.ceil(L / 4);
+    for (let k = 0; k <= n; k++) { const pp = new THREE.Mesh(mat('postG', () => new THREE.CylinderGeometry(0.09, 0.11, 1, 8)), postM); pp.scale.y = h; pp.position.set(lerp(x1, x2, k / n), h / 2, lerp(z1, z2, k / n)); G.add(pp); }
+    const net = new THREE.Mesh(new THREE.PlaneGeometry(L, h), netM); net.position.set((x1 + x2) / 2, h / 2, (z1 + z2) / 2); net.rotation.y = Math.atan2(-(z2 - z1), x2 - x1); G.add(net);
+  }
+}
+// edificio con ventanas (lit = fracción de ventanas encendidas; glow = de noche)
+function windowTex(wall, win, lit, glow) {
+  const c = document.createElement('canvas'); c.width = 64; c.height = 128; const g = c.getContext('2d');
+  g.fillStyle = wall; g.fillRect(0, 0, 64, 128);
+  for (let y = 6; y < 124; y += 12) for (let x = 5; x < 60; x += 11) { g.fillStyle = Math.random() < lit ? (glow ? ['#ffe58a', '#ffd06a', '#9fe8ff'][Math.floor(Math.random() * 3)] : win) : (glow ? '#1a1830' : 'rgba(30,40,60,.5)'); g.fillRect(x, y, 7, 8); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+}
+function cityRing(G, n, rMin, rMax, hMin, hMax, palette, night) {
+  const texs = palette.map(w => windowTex(w, '#cfe6ff', night ? 0.45 : 0.35, night));
+  for (let k = 0; k < n; k++) {
+    const a = k / n * Math.PI * 2 + rand(-0.05, 0.05), r = rand(rMin, rMax), w = rand(8, 16), d = rand(8, 16), h = rand(hMin, hMax), t = texs[k % texs.length].clone();
+    t.needsUpdate = true; t.repeat.set(Math.max(1, Math.round(w / 6)), Math.max(1, Math.round(h / 12)));
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), night ? new THREE.MeshBasicMaterial({ map: t, color: 0xbfbfd8 }) : toon(0xffffff, { map: t, shininess: 8 }));
+    m.position.set(Math.cos(a) * r * 1.2, h / 2 - 0.1, Math.sin(a) * r); m.rotation.y = rand(0, 6.28); G.add(m);
+  }
+}
+const cone = (r, h, c, seg) => new THREE.Mesh(new THREE.ConeGeometry(r, h, seg || 10), mat('c' + c, () => toon(c)));
+function makePine(h, snow) {
+  const g = new THREE.Group(), tr = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, h * 0.25, 7), mat('ptrunk', () => toon(0x6b4a2e))); tr.position.y = h * 0.12; g.add(tr);
+  for (let k = 0; k < 3; k++) { const c = cone(h * (0.32 - k * 0.07), h * 0.42, 0x2f6b45); c.position.y = h * (0.35 + k * 0.2); c.castShadow = true; g.add(c);
+    if (snow) { const s2 = cone(h * (0.32 - k * 0.07) * 0.55, h * 0.18, 0xffffff); s2.position.y = h * (0.35 + k * 0.2) + h * 0.13; g.add(s2); } }
+  return g;
+}
+function buildRoof() {   // AZOTEA AL ATARDECER: tejado de hormigón entre rascacielos
+  const G = ENV.roof;
+  envGround(G, '#9aa0a8', ['#8c929a', '#a9afb7', '#80868e'], 34, 12);
+  envCourt(G, 'roof', 0x6f747c, 30);
+  tallFence(G, 0x3a3f46, 3.4);
+  const parM = mat('parapet', () => toon(0xb7bcc4));
+  for (const [x, z, w, d] of [[0, -27, 66, 1], [0, 27, 66, 1], [-33, 0, 1, 55], [33, 0, 1, 55]]) { const b = new THREE.Mesh(new THREE.BoxGeometry(w, 1.2, d), parM); b.position.set(x, 0.6, z); G.add(b); }
+  for (const [x, z] of [[-27, -20], [27, 21], [-28, 18]]) {   // depósitos de agua sobre patas
+    const t = new THREE.Group(), tank = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 3.4, 16), mat('tank', () => toon(0x9c6b46))); tank.position.y = 5; t.add(tank);
+    const roofC = cone(2.4, 1.2, 0x7a5236, 16); roofC.position.y = 7.3; t.add(roofC);
+    for (const [lx, lz] of [[1.4, 1.4], [-1.4, 1.4], [1.4, -1.4], [-1.4, -1.4]]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 3.4, 6), mat('leg', () => toon(0x3a3f46))); l.position.set(lx, 1.7, lz); t.add(l); }
+    t.position.set(x, 0, z); G.add(t);
+  }
+  for (let k = 0; k < 6; k++) { const ac = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.4, 1.6), mat('ac', () => toon(0xdfe3e8))); ac.position.set(rand(-30, 30), 0.7, Math.random() < 0.5 ? -24 : 24); G.add(ac); }
+  cityRing(G, 60, 55, 150, 20, 95, ['#d8b9a0', '#9fb3c8', '#c9c2b8', '#a7a2b8'], false);
+}
+function buildPark() {   // PARQUE DEL BARRIO: cancha verde con valla de rejilla, árboles y bloques de pisos
+  const G = ENV.park;
+  envGround(G, '#5fae4a', ['#4f9a3f', '#6fbf55', '#58a646'], 160, 40);
+  envCourt(G, 'park', 0x8a9096, 25);
+  tallFence(G, 0x2e7d4f, 3.6);
+  const gT = (cols) => { const t = stripeTex(cols, 6, true); return toon(0xffffff, { map: t }); };   // paneles de grafiti de colores
+  [[-25, -16, 0], [25, 16, Math.PI], [-25, 15, 0.3]].forEach(([x, z, r], k) => { const w = new THREE.Mesh(new THREE.BoxGeometry(10, 3.2, 0.4), gT([['#ff5470', '#ffd23f', '#2fb7c9'], ['#8a4dff', '#4fe08a', '#ff7a3d'], ['#1fa2ff', '#ff5fa2', '#ffd23f']][k])); w.position.set(x, 1.6, z); w.rotation.y = r + Math.PI / 2; G.add(w); });
+  for (let k = 0; k < 8; k++) { const b = new THREE.Group(), seat = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.12, 0.6), mat('bench', () => toon(0xb3743f))); seat.position.y = 0.5; b.add(seat);
+    for (const sx of [-1, 1]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, 0.5), mat('leg', () => toon(0x3a3f46))); l.position.set(sx, 0.25, 0); b.add(l); }
+    const a = k / 8 * Math.PI * 2; b.position.set(Math.cos(a) * 28, 0, Math.sin(a) * 19); b.rotation.y = -a + Math.PI / 2; G.add(b); }
+  for (let k = 0; k < 34; k++) { const a = k / 34 * Math.PI * 2 + rand(-0.08, 0.08), r = rand(30, 46); const t = makeTree(rand(6, 10), rand(2.5, 4)); t.position.set(Math.cos(a) * r * 1.2, 0, Math.sin(a) * r); G.add(t); }
+  cityRing(G, 26, 70, 120, 14, 40, ['#e8b47a', '#d98f6a', '#f0d6a8', '#b9c7d6'], false);
+  for (let k = 0; k < 8; k++) { const c = makeCloud(rand(2.5, 4)); const a = k / 8 * Math.PI * 2; c.position.set(Math.cos(a) * 190, rand(45, 70), Math.sin(a) * 190); G.add(c); }
+}
+function buildSnow() {   // MONTAÑA NEVADA: pista de hielo pintado entre pinos y picos
+  const G = ENV.snow;
+  envGround(G, '#f4f8fc', ['#e6eef6', '#ffffff', '#dbe6f0'], 200, 40);
+  envCourt(G, 'ice', 0xb7865a, 60);
+  lowFence(G, mat('wpost', () => toon(0xa86b3c)), mat('rope', () => toon(0xf3e6c4)), 1.1);
+  for (let k = 0; k < 70; k++) { const a = k / 70 * Math.PI * 2 + rand(-0.05, 0.05), r = rand(30, 80); const t = makePine(rand(7, 14), true); t.position.set(Math.cos(a) * r * 1.2, 0, Math.sin(a) * r); G.add(t); }
+  for (let k = 0; k < 9; k++) { const a = k / 9 * Math.PI * 2, h = rand(60, 110), r = rand(40, 60), m = new THREE.Group();
+    const rock = cone(r, h, 0x7d8796, 7); rock.position.y = h / 2; m.add(rock);
+    const cap = cone(r * 0.42, h * 0.42, 0xffffff, 7); cap.position.y = h * 0.79; m.add(cap);
+    m.position.set(Math.cos(a) * 230, -2, Math.sin(a) * 230); G.add(m); }
+  const cabin = new THREE.Group(), body = new THREE.Mesh(new THREE.BoxGeometry(8, 4, 6), mat('cabin', () => toon(0x8a5a36))); body.position.y = 2; cabin.add(body);
+  const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 6, 3.2, 4), mat('snowroof', () => toon(0xffffff))); roof.position.y = 5.6; roof.rotation.y = Math.PI / 4; roof.scale.set(1, 1, 0.8); cabin.add(roof);
+  cabin.position.set(-30, 0, -24); cabin.rotation.y = 0.5; G.add(cabin);
+}
+function buildDesert() {   // OASIS DEL DESIERTO: dunas, mesetas de roca roja, cactus y un pequeño oasis
+  const G = ENV.desert;
+  envGround(G, '#e9b878', ['#dca86a', '#f3c98d', '#d49a5a'], 260, 50);
+  envCourt(G, 'desert', 0xc99a62, 15);
+  lowFence(G, mat('dpost', () => toon(0x8b5a3a)), mat('drope', () => toon(0xe9d2a8)), 1.1);
+  for (let k = 0; k < 22; k++) { const d = new THREE.Mesh(mat('ball', () => new THREE.SphereGeometry(1, 12, 9)), mat('dune', () => toon(0xe7b06f))); const a = rand(0, 6.28), r = rand(45, 150);
+    d.scale.set(rand(12, 26), rand(3, 8), rand(10, 20)); d.position.set(Math.cos(a) * r, -1, Math.sin(a) * r); G.add(d); }
+  for (let k = 0; k < 7; k++) { const a = k / 7 * Math.PI * 2 + 0.3, h = rand(18, 40), m = new THREE.Mesh(new THREE.CylinderGeometry(rand(14, 24), rand(20, 30), h, 9), mat('mesa', () => toon(0xb8553a)));
+    m.position.set(Math.cos(a) * 190, h / 2 - 1, Math.sin(a) * 190); G.add(m); }
+  const cM = mat('cactus', () => toon(0x3f9a4a));
+  for (let k = 0; k < 18; k++) { const c = new THREE.Group(), h = rand(2.5, 5), t = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, h, 8), cM); t.position.y = h / 2; c.add(t);
+    for (const sd of [-1, 1]) { const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.25, h * 0.4, 7), cM); arm.position.set(sd * 0.6, h * rand(0.45, 0.7), 0); c.add(arm); }
+    const a = rand(0, 6.28), r = rand(26, 60); c.position.set(Math.cos(a) * r * 1.2, 0, Math.sin(a) * r); G.add(c); }
+  const pond = new THREE.Mesh(new THREE.CircleGeometry(8, 32), new THREE.MeshPhongMaterial({ color: 0x3fc3e8, shininess: 90 })); pond.rotation.x = -Math.PI / 2; pond.position.set(34, 0.04, -26); G.add(pond);
+  for (const [x, z] of [[28, -30], [40, -22], [38, -33]]) { const pm = makePalm(rand(7, 9), rand(0.1, 0.25), rand(0, 6)); pm.position.set(x, 0, z); G.add(pm); }
+}
+function buildPier() {   // PUERTO AL ATARDECER: pista sobre un muelle de madera, barcos, faro y contenedores
+  const G = ENV.pier;
+  const seaT = stripeTex(['#2a6fb0', '#3a82c4', '#2a6fb0', '#5b9bd6'], 8); seaT.repeat.set(40, 40);
+  const sea = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), new THREE.MeshPhongMaterial({ color: 0xffffff, map: seaT, shininess: 90, specular: 0xffc8a0 })); sea.rotation.x = -Math.PI / 2; sea.position.y = -1.2; G.add(sea);
+  ARENA_ANIM.pier = seaT;
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(56, 0.6, 38), mat('pdeck', () => toon(0x9b7350))); deck.position.y = -0.31; deck.receiveShadow = true; G.add(deck);
+  envCourt(G, 'pier', undefined, 12);
+  lowFence(G, mat('wpost', () => toon(0xa86b3c)), mat('rope', () => toon(0xf3e6c4)), 1.1);
+  for (let x = -26; x <= 26; x += 6.5) for (const z of [-18.5, 18.5]) { const pl = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 3, 8), mat('pile', () => toon(0x6b4a2e))); pl.position.set(x, -1, z); G.add(pl); }
+  const boat = (c) => { const b = new THREE.Group(), hull = new THREE.Mesh(new THREE.BoxGeometry(9, 2, 3.2), toon(c)); hull.position.y = 0.2; b.add(hull);
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(3, 1.8, 2.4), mat('cabw', () => toon(0xffffff))); cab.position.set(-1, 2, 0); b.add(cab);
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 7, 6), mat('mast', () => toon(0xdddddd))); mast.position.set(1.5, 4, 0); b.add(mast); return b; };
+  [[-14, -32, 0xff5470], [12, 34, 0x1fa2ff], [40, -10, 0xffd23f], [-42, 18, 0x2bb673]].forEach(([x, z, c]) => { const b = boat(c); b.position.set(x, -1, z); b.rotation.y = rand(0, 6.28); G.add(b); });
+  const lh = new THREE.Group(); for (let k = 0; k < 6; k++) { const r = new THREE.Mesh(new THREE.CylinderGeometry(2.6 - k * 0.25, 2.8 - k * 0.25, 3, 14), toon(k % 2 ? 0xff3d3d : 0xffffff)); r.position.y = 1.5 + k * 3; lh.add(r); }
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(1.4, 12, 10), new THREE.MeshBasicMaterial({ color: 0xffe9a0 })); lamp.position.y = 19.5; lh.add(lamp); lh.position.set(-70, -1, -60); G.add(lh);
+  const contC = [0xd94a3a, 0x2f6bb8, 0x2bb673, 0xe39b2b];
+  for (let k = 0; k < 14; k++) { const ct = new THREE.Mesh(new THREE.BoxGeometry(12, 2.6, 2.6), mat('cont' + (k % 4), () => toon(contC[k % 4]))); ct.position.set(60 + (k % 3) * 0.2, -1 + 1.3 + Math.floor(k / 3) * 2.6, -30 + (k % 3) * 2.8); ct.rotation.y = Math.PI / 2; G.add(ct); }
+  for (let k = 0; k < 8; k++) { const c = makeCloud(rand(2.5, 4)); const a = k / 8 * Math.PI * 2; c.position.set(Math.cos(a) * 210, rand(40, 70), Math.sin(a) * 210); G.add(c); }
+}
+function buildNeon() {   // CIUDAD DE NOCHE: cancha oscura con líneas de neón, tubos de luz y rascacielos iluminados
+  const G = ENV.neon;
+  envGround(G, '#1e2230', ['#191c28', '#252a3a', '#15182a'], 160, 40);
+  envCourt(G, 'neon', 0x1a1d2a);
+  tallFence(G, 0x22263a, 3.6);
+  const neonC = [0xff3df0, 0x3dfcff, 0xffe23d, 0x7a5bff];
+  const ax = CFG.arena.hx + 0.5, az = CFG.arena.hz + 0.5;
+  for (const [x, z, w, d] of [[0, -az, ax * 2, 0.12], [0, az, ax * 2, 0.12], [-ax, 0, 0.12, az * 2], [ax, 0, 0.12, az * 2]]) {
+    const t = new THREE.Mesh(new THREE.BoxGeometry(w, 0.12, d), new THREE.MeshBasicMaterial({ color: neonC[(x + z > 0) ? 0 : 1] })); t.position.set(x, 3.7, z); G.add(t);
+    const t2 = t.clone(); t2.position.y = 0.08; G.add(t2);
+  }
+  for (let k = 0; k < 10; k++) { const lamp = new THREE.Group(), pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 7, 6), mat('lpole', () => toon(0x2b2f40))); pole.position.y = 3.5; lamp.add(pole);
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.4, 10, 8), new THREE.MeshBasicMaterial({ color: neonC[k % 4] })); bulb.position.y = 7.1; lamp.add(bulb);
+    const a = k / 10 * Math.PI * 2; lamp.position.set(Math.cos(a) * 30, 0, Math.sin(a) * 21); G.add(lamp); }
+  cityRing(G, 70, 50, 150, 20, 110, ['#151829', '#1c1f36', '#201a33'], true);
+  for (let k = 0; k < 12; k++) { const sign = new THREE.Mesh(new THREE.PlaneGeometry(rand(6, 12), rand(2, 4)), new THREE.MeshBasicMaterial({ color: neonC[k % 4], side: THREE.DoubleSide }));
+    const a = k / 12 * Math.PI * 2; sign.position.set(Math.cos(a) * 60 * 1.2, rand(10, 30), Math.sin(a) * 60); sign.lookAt(0, sign.position.y, 0); G.add(sign); }
+}
+function buildMoon() {   // BASE LUNAR: suelo gris con cráteres, cúpulas, antenas y la Tierra en el cielo
+  const G = ENV.moon;
+  envGround(G, '#9a9ea6', ['#8a8e96', '#adb1b9', '#7e828a'], 300, 50);
+  envCourt(G, 'moon', 0xc8ccd4, 20);
+  lowFence(G, mat('mpost', () => toon(0xe8ecf2)), mat('mrail', () => toon(0x9aa0aa)), 1.1);
+  for (let k = 0; k < 30; k++) { const r = rand(3, 14), cr = new THREE.Mesh(new THREE.TorusGeometry(r, r * 0.12, 6, 28), mat('crater', () => toon(0x858991))); cr.rotation.x = Math.PI / 2;
+    const a = rand(0, 6.28), d = rand(35, 180); cr.position.set(Math.cos(a) * d, 0, Math.sin(a) * d); cr.scale.z = 0.4; G.add(cr); }
+  const domeM = mat('dome', () => toon(0xf2f4f8, { shininess: 60 }));
+  for (const [x, z, s] of [[-34, -22, 7], [36, -26, 9], [-38, 24, 6], [32, 26, 5]]) { const d = new THREE.Mesh(new THREE.SphereGeometry(s, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), domeM); d.position.set(x, 0, z); G.add(d); }
+  for (const [x, z] of [[-26, 30], [42, 2]]) { const an = new THREE.Group(), m = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 9, 6), mat('ant', () => toon(0xdfe3e8))); m.position.y = 4.5; an.add(m);
+    const dish = new THREE.Mesh(new THREE.SphereGeometry(2, 16, 8, 0, Math.PI * 2, 0, 0.9), domeM); dish.position.y = 9; dish.rotation.x = -0.8; an.add(dish); an.position.set(x, 0, z); G.add(an); }
+  const earth = new THREE.Mesh(new THREE.SphereGeometry(26, 32, 24), new THREE.MeshBasicMaterial({ color: 0x3a7fe0, fog: false })); earth.position.set(-180, 120, -260); G.add(earth);
+  const land = new THREE.Mesh(new THREE.SphereGeometry(26.3, 16, 12, 0.6, 1.4, 0.6, 1.1), new THREE.MeshBasicMaterial({ color: 0x4fbf55, fog: false })); land.position.copy(earth.position); G.add(land);
+  const sp = new Float32Array(900 * 3); for (let k = 0; k < 900; k++) { const a = rand(0, 6.28), e = rand(0.05, 1.4), r = 380; sp[k * 3] = Math.cos(a) * Math.cos(e) * r; sp[k * 3 + 1] = Math.sin(e) * r; sp[k * 3 + 2] = Math.sin(a) * Math.cos(e) * r; }
+  const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
+  G.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, fog: false })));
+}
+const ARENA_BUILD = { beach: buildBeach, jungle: buildJungle, roof: buildRoof, park: buildPark, snow: buildSnow, desert: buildDesert, pier: buildPier, neon: buildNeon, moon: buildMoon };
 // ---------------- cambio de pista ----------------
 const ARENAS = {
   pav: { name: 'Pabellón', sky: [0x7fbfff, 0xcfe6ff, 0xf6f9ff], fog: [0xe6f1ff, 80, 200], hemi: [0xffffff, 0xb9a88c, 0.58], key: [0xfff6e8, 0.72] },
   beach: { name: 'Playa', sky: [0x1f8fff, 0x8fd6ff, 0xfff0d2], fog: [0xc8ecff, 120, 420], hemi: [0xfdfcff, 0xd8bf88, 0.6], key: [0xfff1d2, 0.82] },
-  jungle: { name: 'Jungla', sky: [0x4fb2ff, 0xbfe9ff, 0xe8f6d2], fog: [0xd2ecd2, 70, 260], hemi: [0xf6ffe6, 0x4f7a34, 0.6], key: [0xfff2cf, 0.75] }
+  jungle: { name: 'Jungla', sky: [0x4fb2ff, 0xbfe9ff, 0xe8f6d2], fog: [0xd2ecd2, 70, 260], hemi: [0xf6ffe6, 0x4f7a34, 0.6], key: [0xfff2cf, 0.75] },
+  roof: { name: 'Azotea', sky: [0x3b3a8f, 0xff9a62, 0xffd7a0], fog: [0xf7c79a, 90, 320], hemi: [0xffe8d2, 0x8a7a8a, 0.62], key: [0xffc489, 0.8] },
+  park: { name: 'Parque', sky: [0x3f9fff, 0xaedcff, 0xf2f8ff], fog: [0xdcefff, 90, 300], hemi: [0xffffff, 0x6f9a52, 0.62], key: [0xfff2dc, 0.78] },
+  snow: { name: 'Montaña', sky: [0x5f9fe0, 0xcfe4f7, 0xffffff], fog: [0xeef5fb, 70, 300], hemi: [0xffffff, 0xcfdce8, 0.7], key: [0xfffaf0, 0.72] },
+  desert: { name: 'Desierto', sky: [0x3f8fe8, 0xffd59a, 0xffecc8], fog: [0xffe0b0, 110, 380], hemi: [0xfff3e0, 0xc98f52, 0.62], key: [0xfff0c8, 0.88] },
+  pier: { name: 'Puerto', sky: [0x5b4a9f, 0xff9a8a, 0xffd3a8], fog: [0xffc8b0, 120, 420], hemi: [0xffe6dc, 0x6f7aa0, 0.6], key: [0xffb98a, 0.8] },
+  neon: { name: 'Ciudad de noche', sky: [0x05040f, 0x1a1240, 0x3a1f5f], fog: [0x1a1438, 70, 260], hemi: [0x9a8cff, 0x201a3a, 0.5], key: [0xc8b8ff, 0.42] },
+  moon: { name: 'Luna', sky: [0x000000, 0x05060c, 0x14161f], fog: [0x0a0b12, 150, 520], hemi: [0xe8ecff, 0x40444f, 0.55], key: [0xffffff, 0.95] }
 };
+const ARENA_ORDER = Object.keys(ARENAS);
 let arenaKey = 'pav';
 try { arenaKey = localStorage.getItem('hoopblast.arena') || 'pav'; } catch (e) { /* sin almacenamiento */ }
 if (!ARENAS[arenaKey]) arenaKey = 'pav';
@@ -1278,20 +1463,20 @@ function setArena(k) {
   if (!ARENAS[k]) k = 'pav';
   arenaKey = k; const A = ARENAS[k];
   try { localStorage.setItem('hoopblast.arena', k); } catch (e) { /* nada */ }
-  if (k === 'beach' && !ENV.beach.children.length) buildBeach();
-  if (k === 'jungle' && !ENV.jungle.children.length) buildJungle();
+  if (ARENA_BUILD[k] && !ENV[k].children.length) ARENA_BUILD[k]();   // cada pista se construye la primera vez que se elige
   for (const kk in ENV) ENV[kk].visible = kk === k;
   if (skyMesh) { const u = skyMesh.material.uniforms; u.top.value.setHex(A.sky[0]); u.mid.value.setHex(A.sky[1]); u.bot.value.setHex(A.sky[2]); }
   scene.background = new THREE.Color(A.sky[1]); scene.fog.color.setHex(A.fog[0]); scene.fog.near = A.fog[1]; scene.fog.far = A.fog[2];
   hemi.color.setHex(A.hemi[0]); hemi.groundColor.setHex(A.hemi[1]); hemi.intensity = A.hemi[2];
   key.color.setHex(A.key[0]); key.intensity = A.key[1];
-  document.querySelectorAll('.seg button[data-arena]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.arena === k)));
+  const an = document.getElementById('arenaName'); if (an) an.textContent = A.name + '  ·  ' + (ARENA_ORDER.indexOf(k) + 1) + '/' + ARENA_ORDER.length;
 }
 // olas del mar y agua de la cascada en movimiento
 function updateArena(dt) {
   ARENA_ANIM.t += dt;
   if (ARENA_ANIM.ocean && ENV.beach.visible) { ARENA_ANIM.ocean.offset.y = ARENA_ANIM.t * 0.02; ARENA_ANIM.ocean.offset.x = Math.sin(ARENA_ANIM.t * 0.3) * 0.02; }
   if (ARENA_ANIM.falls && ENV.jungle.visible) ARENA_ANIM.falls.offset.y = ARENA_ANIM.t * 0.9;
+  if (ARENA_ANIM.pier && ENV.pier.visible) { ARENA_ANIM.pier.offset.y = ARENA_ANIM.t * 0.015; ARENA_ANIM.pier.offset.x = Math.sin(ARENA_ANIM.t * 0.25) * 0.02; }
 }
 
 /* ==============================================================================
@@ -5492,7 +5677,8 @@ function setMatchSize(n) {
 document.querySelectorAll('.seg button[data-size]').forEach(b => b.addEventListener('click', () => setMatchSize(+b.dataset.size)));
 setMatchSize(matchSize);
 document.querySelectorAll('.seg button[data-cam]').forEach(b => b.addEventListener('click', () => setCamMode(b.dataset.cam)));
-document.querySelectorAll('.seg button[data-arena]').forEach(b => b.addEventListener('click', () => setArena(b.dataset.arena)));
+const stepArena = d => { const i = ARENA_ORDER.indexOf(arenaKey); setArena(ARENA_ORDER[(i + d + ARENA_ORDER.length) % ARENA_ORDER.length]); };
+$('arenaPrev').addEventListener('click', () => stepArena(-1)); $('arenaNext').addEventListener('click', () => stepArena(1));
 setArena(arenaKey);
 setTimeout(enterTitle, 0);   // el juego arranca en la pantalla de título
 setCamMode(camMode);
