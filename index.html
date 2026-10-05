@@ -486,7 +486,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
     </div>
     <p id="touchnote" class="note" hidden>Necesitas teclado y ratón para jugar.</p>
   </div>
-  <span class="version">v0.3 alpha «Resort» · 5 oct 2026 · 10:47</span>
+  <span class="version">v0.3 alpha «Resort» · 5 oct 2026 · 11:00</span>
 </section>
 
 <!-- ── Controles (pestaña aparte) ── -->
@@ -2055,9 +2055,9 @@ function stepBall(dt) {
     ball.vel.y += (k * (t.y - ball.pos.y) - c * (ball.vel.y - h.vel.y)) * dt;
     ball.vel.z += (k * (t.z - ball.pos.z) - c * (ball.vel.z - h.vel.z)) * dt;
     if (ball.pos.distanceTo(t) > 3) { ball.pos.copy(t); ball.vel.copy(h.vel); }
-    if (h.move && (h.move.type === 'spin' || h.move.type === 'spinlay' || h.move.type === 'postspin') && h.move.t / h.move.dur > 0.2 && h.move.type !== 'postspin') {
+    if ((h.move && (h.move.type === 'spin' || h.move.type === 'spinlay') && h.move.t / h.move.dur > 0.2) || (h.dunkSeq && h.dunkSeq.type === 'windmill' && !h.dunkSeq.released)) {
       // en los giros el balón va pegado a las manos (el muelle no alcanza la velocidad de rotación y se metería en el cuerpo)
-      ball.vel.subVectors(t, ball.pos).multiplyScalar(1 / dt); ball.pos.copy(t);
+      ball.vel.subVectors(t, ball.pos).multiplyScalar(1 / dt);   // la integración lo deja justo en el objetivo
     }
     _tmp.crossVectors(UP, ball.vel).multiplyScalar(1 / CFG.ball.r);
     ball.w.lerp(_tmp, 0.1);
@@ -3066,7 +3066,8 @@ function startDunk(p, type, alley) {
   if (p.exhausted && type !== 'one' && type !== 'two') type = 'one';
   const c = hoops[p.attackSide].rimC, dx = c.x - p.pos.x, dz = c.z - p.pos.z, d = Math.hypot(dx, dz) || 1;
   const dir = new V3(dx / d, 0, dz / d), D = DUNKS[type];
-  const P1 = type === 'reverse' ? new V3(c.x + dir.x * 0.12, 0.95, c.z + dir.z * 0.12) : new V3(c.x - dir.x * 0.5, 0.99, c.z - dir.z * 0.5);
+  const P1 = type === 'reverse' ? new V3(c.x + dir.x * 0.1, 0.82, c.z + dir.z * 0.1)
+    : new V3(c.x - dir.x * (type === 'spin360' || type === 'windmill' ? 0.58 : 0.5), type === 'spin360' ? 0.92 : 0.99, c.z - dir.z * (type === 'spin360' || type === 'windmill' ? 0.58 : 0.5));
   p.dunkSeq = { type, D, alley: !!alley, t: 0, rise: D.rise, hang: D.hang, P0: p.pos.clone(), P1, dir, rim: c, released: false, yaw0: Math.atan2(dir.x, dir.z) };
   p.charging = false; p.charge = 0; p.move = null; p.spinAngle = 0; p.shotT = 0; p.onGround = false;
   spend(p, D.cost);
@@ -3078,6 +3079,7 @@ function startDunk(p, type, alley) {
 // trayectoria del balón en cada mate (espacio local del jugador) que termina encima del aro
 const _slamP = new V3();
 
+const _millSh = new V3();
 // Trayectoria del balón en manos durante cada tipo de mate.
 function dunkBallTarget(p, out) {
   const s = p.dunkSeq, F = carrierFrame(p), c = s.rim;
@@ -3091,9 +3093,13 @@ function dunkBallTarget(p, out) {
   if (s.type === 'two') { const e = smooth(Math.min(1, k / 0.55)); toW(lerp(0.42, -0.2, e) + bulge(e), 0, lerp(1.3, 2.45, e)); return toSlam(0.6); }
   if (s.type === 'tomahawk') { const e = smooth(Math.min(1, k / 0.6)); toW(lerp(0.42, -0.45, e) + bulge(e), lerp(0, 0.22, e), lerp(1.3, 2.4, e)); return toSlam(0.62); }
   if (s.type === 'windmill') {
-    // el brazo da una vuelta completa: delante, abajo, atrás, arriba y al aro
-    const th = -0.5 - 4.583 * smooth(Math.min(1, k / 0.8));
-    toW(Math.cos(th) * 0.62, 0.28, 1.5 + Math.sin(th) * 0.62); return toSlam(0.8);
+    // el brazo estirado gira sobre el hombro: delante-abajo, atrás, arriba y por encima hasta el aro.
+    // s.millA es el ángulo del hombro (el mismo que usa la pose) y el balón va justo en la mano
+    const a = lerp(-1.0, 3.75, smooth(Math.min(1, k / 0.82)));
+    s.millA = a;
+    const sh = p.rig.armR.shoulder.getWorldPosition(_millSh), L = ARM1 + ARM2 + 0.12;
+    out.set(sh.x + (F.fx * -Math.sin(a)) * L + F.rx * 0.05, sh.y - Math.cos(a) * L, sh.z + (F.fz * -Math.sin(a)) * L + F.rz * 0.05);
+    return toSlam(0.82);
   }
   if (s.type === 'spin360') {
     if (k < 0.8) toW(0.42, 0, lerp(1.3, 1.55, smooth(k / 0.8)));
@@ -4591,7 +4597,7 @@ function blendNum(cur, tgt, k) { for (const key in tgt) { if (typeof tgt[key] ==
 
 // Pose base de pie antes de aplicar cada estado.
 const h0side = p => p.move ? p.move.from : p.hand;
-const _ank = new V3(), ANKLE_REST = 0.058;   // altura del tobillo con el pie apoyado (medida en reposo)
+const _ank = new V3(), _hc = new V3(), ANKLE_REST = 0.058;   // altura del tobillo con el pie apoyado (medida en reposo)
 function resetPose(tp) {
   tp.hipsY = 0; tp.torsoX = 0.04; tp.torsoY = 0; tp.torsoZ = 0; tp.headX = 0; tp.headY = 0; tp.ikL = 0; tp.ikR = 0; tp.bodyX = 0; tp.bodyZ = 0; tp.squash = 0;
   Object.assign(tp.aL, { x: 0.05, y: 0, z: 0.12, el: -0.2, wr: 0 }); Object.assign(tp.aR, { x: 0.05, y: 0, z: -0.12, el: -0.2, wr: 0 });
@@ -4889,7 +4895,10 @@ function animatePlayer(p, dt, T) {
         tp.ikR = 1; tp.ikL = k < 0.2 ? 1 : 0;
         tp.aL.x = s.type === 'windmill' ? -2.3 : -1.5; tp.aL.z = s.type === 'windmill' ? 0.5 : 0.85; tp.aL.el = -0.45;
       }
-      if (s.type === 'windmill') tp.torsoY = -0.35 * Math.sin(Math.PI * Math.min(1, k / 0.8));
+      if (s.type === 'windmill') {
+        tp.torsoY = -0.25 * Math.sin(Math.PI * Math.min(1, k / 0.8));
+        if (s.millA !== undefined && k < 0.82) { tp.ikR = 0; tp.aR.x = s.millA; tp.aR.y = 0; tp.aR.z = -0.12; tp.aR.el = 0; tp.aR.wr = 0.2; }   // rotación del hombro, codo estirado
+      }
       if (s.type === 'spin360') tp.torsoZ = 0.12;
     } else {
       tp.ikR = 1; tp.ikL = two ? 1 : 0;
@@ -4928,6 +4937,10 @@ function animatePlayer(p, dt, T) {
     if (!r.pvel) r.pvel = {};
     const n = Math.max(1, Math.ceil(w * dt / 0.35));                                    // subpasos: estable aunque baje la tasa de fotogramas
     for (let i = 0; i < n; i++) springPose(cur, r.pvel, tp, w, dt / n);
+    if (p.dunkSeq && p.dunkSeq.type === 'windmill' && p.dunkSeq.millA !== undefined) {
+      if (p.dunkSeq.t < p.dunkSeq.rise * 0.82) { Object.assign(cur.aR, tp.aR); cur.ikR = 0; r.pvel.aR = {}; }   // vuelta del brazo: pose directa
+      else { cur.ikR = 1; if (r.pvel) r.pvel.ikR = 0; }                                                       // al final, la mano sigue al balón hasta el aro
+    }
   }
   r.root.rotation.set(cur.bodyX, yawTot, cur.bodyZ, 'YXZ');
   const sq = cur.squash + (p.land > 0 ? p.land * 0.1 : 0);
@@ -4945,6 +4958,22 @@ function animatePlayer(p, dt, T) {
     l.knee.rotation.x = c.k + kn; l.ankle.rotation.x = c.a - (fwd - kn * 0.45 + kn) * 0.9;
   }
   r.root.updateMatrixWorld(true);
+  // mates: si la cabeza (grande) o el pecho se meten en el aro o en el tablero, el cuerpo se aparta lo justo
+  if (p.dunkSeq || (p.pos.y > 0.4 && hdist(p.pos, hoops[p.attackSide].rimC) < 1.2)) {
+    const c = hoops[p.attackSide].rimC, H = CFG.hoop, sx = Math.sign(c.x), boardX = sx * (H.x + H.r + 0.15);
+    let push = 0, down = 0;
+    for (const [o, y, rad] of [[r.head, 0.2, 0.24], [r.torso, 0.3, 0.2]]) {
+      o.localToWorld(_hc.set(0, y, 0));
+      const dh = Math.hypot(_hc.x - c.x, _hc.z - c.z), dRing = Math.hypot(dh - H.r, _hc.y - c.y), gap = rad + H.tube + 0.02 - dRing;
+      if (gap > 0 && _hc.y > c.y - rad - 0.05) { if (dh < H.r) down = Math.max(down, gap); else push = Math.max(push, gap); }
+      const gb = (_hc.x - boardX) * sx + rad;                                         // atraviesa el plano del tablero
+      if (gb > 0 && _hc.y > c.y - 0.2) push = Math.max(push, gb);
+    }
+    if (push > 0 || down > 0) {
+      const dx = r.root.position.x - c.x, dz = r.root.position.z - c.z, dl = Math.hypot(dx, dz) || 1;
+      r.root.position.x += dx / dl * push; r.root.position.z += dz / dl * push; r.root.position.y -= down; r.root.updateMatrixWorld(true);
+    }
+  }
   // apoyo en el suelo: ninguna pose (zancadas, pasos atrás, giros) puede meter un pie bajo el parqué
   if (p.pos.y < 0.4) {
     let low = 9;
@@ -5502,6 +5531,7 @@ function playAnim(i, looping) {
   a.setup();
   live = [human, P1(), R0()].filter(p => p === human || p.pos.y > -1);
   for (const p of live) { p.rig.root.visible = p.rig.ring.visible = true; p.rig.root.position.copy(p.pos); }
+  for (const p of live) animatePlayer(p, 0, 0);   // el muñeco arranca sincronizado con el estado inicial (repetible al rebobinar)
   animUI();
 }
 // cada fotograma: tiempo de la animación, entrada guionizada y bucle
