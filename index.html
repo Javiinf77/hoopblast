@@ -486,7 +486,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
     </div>
     <p id="touchnote" class="note" hidden>Necesitas teclado y ratón para jugar.</p>
   </div>
-  <span class="version">v0.3 alpha «Resort» · 5 oct 2026 · 11:00</span>
+  <span class="version">v0.3 alpha «Resort» · 5 oct 2026 · 11:14</span>
 </section>
 
 <!-- ── Controles (pestaña aparte) ── -->
@@ -818,7 +818,24 @@ function outlineMat(th) {
 const OL = { thin: outlineMat(0.008), mid: outlineMat(0.014), thick: outlineMat(0.03) };
 
 // Añade el contorno cel-shading a una malla.
-function outlined(mesh, ol) { return mesh; }   // sin contorno negro: estética limpia (el contorno cel-shading queda desactivado)
+function outlined(mesh, ol) { return mesh; }   // escenario sin contorno negro (estética limpia)
+// Contorno de los personajes estilo anime: casco invertido con grosor CONSTANTE EN PANTALLA (se ve igual de cerca o de lejos
+// y desde cualquier ángulo). El grosor se corrige con la escala del objeto (la cabeza está escalada).
+const CHAR_OL = (() => {
+  const m = new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide });
+  m.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      vec4 olView = modelViewMatrix * vec4(position, 1.0);
+      float olScale = length(modelMatrix[0].xyz);
+      transformed += normalize(normal) * (0.0034 * max(0.6, -olView.z)) / max(olScale, 0.0001);`);
+  };
+  m.customProgramCacheKey = () => 'charOutline';
+  return m;
+})();
+function charOutline(mesh) {
+  const o = new THREE.Mesh(mesh.geometry, CHAR_OL); o.renderOrder = -1; o.castShadow = false; o.receiveShadow = false;
+  mesh.add(o); return mesh;
+}
 
 // cielo degradado
 let skyMesh = null;   // cielo degradado (sus colores cambian con la pista)
@@ -1340,7 +1357,7 @@ function ballTexture() {
 }
 const ballMesh = new THREE.Mesh(new THREE.SphereGeometry(CFG.ball.r, 28, 20), toon(0xffffff, { map: ballTexture() }));
 ballMesh.castShadow = true;
-outlined(ballMesh, OL.thin);
+charOutline(ballMesh);
 scene.add(ballMesh);
 const ballMark = new THREE.Mesh(new THREE.RingGeometry(CFG.ball.r * 1.3, CFG.ball.r * 1.8, 28), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthWrite: false }));
 ballMark.rotation.x = -Math.PI / 2;
@@ -1612,7 +1629,7 @@ function miiFaceTex(L) {
 // Monta cabeza, cara, pelo, nariz y barba estilo Mii dentro del grupo "head"
 function miiHead(head, L, skinM, hairM, accM, M) {
   const root = new THREE.Group(); root.scale.setScalar(MII_SCALE); root.position.y = -0.04; head.add(root);
-  const add = (geo, mat, ol) => { if (!geo) return null; const m = new THREE.Mesh(geo, mat); m.castShadow = true; if (ol) outlined(m, OL.thin); root.add(m); return m; };
+  const add = (geo, mat, ol) => { if (!geo) return null; const m = new THREE.Mesh(geo, mat); m.castShadow = true; if (mat.map === undefined || !mat.transparent) charOutline(m); root.add(m); return m; };
   add(miiGeo('head', L.miiHead), skinM, true);
   const face = new THREE.MeshBasicMaterial({ map: miiFaceTex(L), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
   add(miiGeo('face', L.miiHead, true), face, false);
@@ -1639,7 +1656,7 @@ function makeRig(team, idx, isHuman, look) {
   const shoeM = toon(L.shoes), soleM = toon(0x1a1d33), accM = toon(L.acc), sockM = toon(0xffffff);
   const root = new THREE.Group();
   const hips = new THREE.Group(); hips.position.y = 1.0; root.add(hips);
-  const M = (geo, mat, parent, x, y, z, ol) => { const m = new THREE.Mesh(geo, mat); m.position.set(x || 0, y || 0, z || 0); m.castShadow = true; outlined(m, ol || OL.mid); parent.add(m); return m; };
+  const M = (geo, mat, parent, x, y, z, ol) => { const m = new THREE.Mesh(geo, mat); m.position.set(x || 0, y || 0, z || 0); m.castShadow = true; charOutline(m); parent.add(m); return m; };
   M(new THREE.CylinderGeometry(0.2, 0.215, 0.14, 16), shortsM, hips, 0, 0.0, 0).scale.z = 0.78;   // cintura: solo la parte fija
   const torso = new THREE.Group(); torso.position.y = 0.02; hips.add(torso);
   const chestGeo = new THREE.LatheGeometry([[0.0001, -0.02], [0.18, -0.02], [0.195, 0.12], [0.215, 0.3], [0.21, 0.44], [0.17, 0.53], [0.08, 0.57], [0.0001, 0.57]].map(a => new THREE.Vector2(a[0], a[1])), 24);
