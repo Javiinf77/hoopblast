@@ -486,7 +486,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
     </div>
     <p id="touchnote" class="note" hidden>Necesitas teclado y ratón para jugar.</p>
   </div>
-  <span class="version">v0.3 alpha «Resort» · 4 oct 2026 · 22:32</span>
+  <span class="version">v0.3 alpha · 5 oct 2026 · 10:32</span>
 </section>
 
 <!-- ── Controles (pestaña aparte) ── -->
@@ -728,6 +728,8 @@ const CFG = {
             // contacto: en postura el cuerpo ocupa más (piernas abiertas) y frena o empuja
             stanceReach: 0.88, contactSlow: 0.82, postDrainAtk: 0.08, postDrainDef: 0.02, postPushSpeed: 1.1,
             // poste (L2 con balón, de espaldas a un defensor cerca del aro)
+            // tras tirar: aterrizaje (clavado) y recuperación progresiva de la velocidad
+            shotLandLock: 0.32, shotRecover: 0.45,
             postRange: 1.7, postRim: 7, postRimSolo: 6, postSpeed: 2.4 },
   // Energía estilo Rematch: solo el sprint gasta; al soltarlo se recupera rápido
   energy: { sprintDrain: 0.22, regenBase: 0.1, regenScale: 0.25, moveRegenMul: 0.8,
@@ -2229,6 +2231,7 @@ function updatePlayer(p, inp, dt) {
   if (p.boxedT > 0 && !p.boxout) maxSp *= 0.45;                    // te están cerrando: casi no puedes avanzar
   if (p.deadDribble && p.onGround && !p.dunkSeq) { maxSp = 0; p.vel.x = 0; p.vel.z = 0; p.stance = false; p.post = false; }   // bote muerto: clavado
   p.contactT = Math.max(0, (p.contactT || 0) - dt); p.pushT = Math.max(0, (p.pushT || 0) - dt);
+  if (p.recoverT > 0) { p.recoverT = Math.max(0, p.recoverT - dt); maxSp *= 1 - 0.6 * (p.recoverT / C.shotRecover); p.sprinting = false; }   // recuperándose del aterrizaje: no esprinta y va acelerando
   if (p.post && p.pushT > 0) maxSp = Math.min(maxSp, C.postPushSpeed);   // empujando a un defensor se avanza despacio
   if (p.contactT > 0 && holdingB && !p.move && !p.dunkSeq) maxSp *= C.contactSlow;   // pegado a un defensor en postura: va más lento
   // mano natural: al girar o desplazarte hacia el lado contrario al de la mano del balón, el balón pasa a la otra mano
@@ -2298,12 +2301,14 @@ function updatePlayer(p, inp, dt) {
   p.vel.y += CFG.gravity * dt * (p.vel.y < 0 ? 1.2 : 1);
   p.pos.addScaledVector(p.vel, dt);
   if (p.pos.y <= 0) {
-    if (!p.onGround && p.throwT > 0 && (p.throwKind === 'shot' || p.throwKind === 'hook' || p.throwKind === 'fade')) {
-      // al caer de un tiro, gancho o fadeaway: se acaba el gesto del remate y vuelve a la pose de juego (breve apoyo sin moverse)
-      p.throwT = Math.min(p.throwT, 0.08); p.ctrlT = Math.max(p.ctrlT, 0.12); p.vel.x *= 0.3; p.vel.z *= 0.3;
+    if (!p.onGround && p.throwT > 0 && (p.throwKind === 'shot' || p.throwKind === 'hook' || p.throwKind === 'fade' || p.throwKind === 'layup' || p.throwKind === 'layupUp')) {
+      // al caer de un tiro: aterrizaje con flexión de rodillas, un instante clavado y luego recupera la velocidad poco a poco
+      const L = CFG.player;
+      p.throwT = Math.min(p.throwT, 0.08); p.ctrlT = Math.max(p.ctrlT, L.shotLandLock); p.vel.x *= 0.2; p.vel.z *= 0.2;
+      p.recoverT = L.shotRecover; p.landForce = true;
     }
-    if (!p.onGround && p.vel.y < -2) {
-      p.land = Math.min(1, -p.vel.y / 8);
+    if (!p.onGround && (p.vel.y < -2 || p.landForce)) {
+      p.land = Math.max(p.landForce ? 0.85 : 0, Math.min(1, -p.vel.y / 8)); p.landForce = false;   // tras un tiro, aterrizaje bien marcado
       // cada aterrizaje es un poco distinto: flexión, inclinación, pierna adelantada y brazos
       p.landVar = { dip: rand(0.7, 1.3), tilt: rand(-1, 1), leg: Math.random() < 0.5 ? 1 : -1, arms: rand(0.2, 1), twist: rand(-0.6, 0.6) };
       if (p === human || hdist(p.pos, human.pos) < 10) sfx('bounce', 3 + p.land * 4);
