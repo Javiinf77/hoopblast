@@ -454,7 +454,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
     <span class="tn-logo">HOOPBLAST<small>3v3</small></span>
     <button id="play" class="btn"><span>Jugar partido</span></button>
     <button id="train" class="btn ghost"><span>Entrenamiento</span></button>
-    <button id="onlineBtn" class="btn ghost"><span>Online 2 contra 2</span></button>
+    <button id="onlineBtn" class="btn ghost"><span>Online</span></button>
     <button id="customize" class="btn ghost"><span>Personalizar</span></button>
     <button id="controlsBtn" class="btn ghost"><span>Controles</span></button>
     <button id="animMode" class="btn ghost"><span>Animaciones</span></button>
@@ -493,7 +493,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
     </div>
     <p id="touchnote" class="note" hidden>Necesitas teclado y ratón para jugar.</p>
   </div>
-  <span class="version">v0.3 alpha «Resort» · 5 oct 2026 · 18:03</span>
+  <span class="version">v0.3 alpha «Resort» · 5 oct 2026 · 18:07</span>
 </section>
 
 <!-- ── Controles (pestaña aparte) ── -->
@@ -580,16 +580,17 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
   <p class="ahint">Arrastra para girar la cámara · rueda para acercar · ← → fotograma a fotograma · espacio pausa · Esc salir</p>
 </section>
 
-<!-- ── Online: sala para jugar 2 contra 2 con amigos ── -->
+<!-- ── Online: sala para jugar con amigos (de 1 contra 1 a 5 contra 5) ── -->
 <section id="online" class="overlay" hidden>
   <div class="cpanel">
-    <header class="chead"><h2>Online 2 contra 2</h2><span>Uno crea la sala; los demás se unen con el código</span></header>
+    <header class="chead"><h2>Online</h2><span>Uno crea la sala; los demás se unen con el código. De 1 contra 1 a 5 contra 5</span></header>
     <div class="cbody">
       <div class="crow"><label>Tu nombre</label><input id="netName" class="netin" maxlength="12" placeholder="Jugador"></div>
       <div class="crow"><label>Nueva sala</label><button id="netCreate" class="cbtn">Crear sala</button></div>
       <div class="crow"><label>Unirse</label><div class="netrow"><input id="netCode" class="netin" maxlength="5" placeholder="CÓDIGO"><button id="netJoin" class="cbtn">Unirse</button></div></div>
       <p id="netStatus" class="netstatus">Elige: crear una sala o unirte con un código.</p>
-      <ol id="netPlayers" class="netplayers"></ol>
+      <p id="netSize" class="note" style="margin:6px 0"></p>
+    <ol id="netPlayers" class="netplayers"></ol>
     </div>
     <footer class="cfoot"><button id="netBack" class="cbtn">Salir</button><button id="netStart" class="cbtn primary" hidden>Empezar partido</button></footer>
   </div>
@@ -674,7 +675,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
    §30  BUCLE PRINCIPAL                  Paso de física fijo (120 Hz) y fotograma: entrada, física, animación, cámara, HUD y render.
    §31  MENÚS Y ARRANQUE                 Botones de los menús y puesta en marcha del bucle.
    §33  MODO ANIMACIONES (debug)       Reproducir cada animación por separado: lista, pausa, fotograma a fotograma, velocidad.
-   §34  ONLINE 2 CONTRA 2              Salas con código (PeerJS): el anfitrión simula, los invitados envían mando y reciben el estado.
+   §34  ONLINE (1c1 A 5c5)             Salas con código (PeerJS): el anfitrión simula, los invitados envían mando y reciben el estado.
    ==============================================================================
    CÓMO FUNCIONA (resumen para orientarse rápido)
    · Un fotograma: frame() §30 → padFrame() §23 → entrada humana (humanFrameInput §22) o IA (aiThink §21)
@@ -804,12 +805,6 @@ addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
 });
 
-// rampa de 3 tonos para el cel-shading
-const toonGrad = (() => {
-  const d = new Uint8Array([110, 110, 110, 255, 185, 185, 185, 255, 255, 255, 255, 255]);
-  const t = new THREE.DataTexture(d, 3, 1, THREE.RGBAFormat);
-  t.minFilter = t.magFilter = THREE.NearestFilter; t.generateMipmaps = false; t.needsUpdate = true; return t;
-})();
 // Estética de plástico suave y brillante (estilo deportes de consola): sombreado liso con un brillo leve
 const toon = (color, extra) => new THREE.MeshPhongMaterial(Object.assign({ color, shininess: 24, specular: 0x141414 }, extra || {}));
 const INK = 0x10132b;
@@ -1370,8 +1365,6 @@ ballMark.rotation.x = -Math.PI / 2;
 scene.add(ballMark);
 const ball = { pos: new V3(0, 4, 0), prev: new V3(), vel: new V3(), w: new V3(), holder: null, ignore: null, ignoreT: 0, shot: null, pass: null, guide: null, phase: 0 };
 
-// Mueve el balón por un arco guiado (bandejas) hasta un punto y lo suelta con endVel.
-function guideTo(target, dur, arc, endVel) { ball.guide = { from: ball.pos.clone(), to: target, t: 0, dur, arc, endVel }; }
 
 /* ==============================================================================
    §08 MODELO DE JUGADOR Y VESTUARIO
@@ -1492,9 +1485,6 @@ function kitFace(i) {
   return g;
 }
 // casquete de pelo: media esfera algo mayor que la cabeza, inclinada hacia atrás (cubre más por detrás que por delante)
-const cap = (th, grow, tilt, yOff) => { const g = new THREE.SphereGeometry(1, 36, 18, 0, Math.PI * 2, 0, th || 1.45);
-  return place(g, HEAD_R[0] * (grow || 1.07), HEAD_R[1] * (grow || 1.07), HEAD_R[2] * (grow || 1.07), -(tilt === undefined ? 0.42 : tilt), 0, 0, HEAD_C[0], HEAD_C[1] + (yOff || 0.03), HEAD_C[2] - 0.01); };
-const fringe = (sx, rotZ, px) => place(ball3(20), 0.21 * sx, 0.07, 0.07, 0.25, 0, rotZ || 0, px || 0, 0.58, 0.22);
 // Peinados originales del juego (los de antes de las cabezas grandes), adaptados a la cabeza actual:
 // se construyen con las mismas medidas que tenían sobre la cabeza pequeña (radio 0,115) y se escalan a la nueva.
 const OLD_C = [0, 0.12, 0.005], OLD_S = [HEAD_R[0] / 0.115, HEAD_R[1] / 0.1288, HEAD_R[2] / 0.1196];
@@ -1821,9 +1811,12 @@ function makePlayer(team, idx) {
   players.push(p); return p;
 }
 for (let t = 0; t < 2; t++) for (let i = 0; i < 3; i++) makePlayer(t, i);
+for (let i = 3; i < 5; i++) for (let t = 0; t < 2; t++) makePlayer(t, i);   // 4º y 5º de cada equipo (solo online hasta 5 contra 5)
+const BASE = players.slice(0, 6);                                          // el 3 contra 3 de siempre
+for (const p of players) if (!BASE.includes(p)) { p.rig.root.visible = p.rig.ring.visible = false; p.pos.set(0, -50, 0); }
 let human = players[0];   // jugador controlado: en 3v3 cambia (siempre el que tiene el balón en ataque)
-let mode = 'match', live = players; // en entrenamiento solo existe tu jugador
-const teamOf = t => live.filter(p => p.team === t);   // solo los que están en pista (1 contra 1, online 2 contra 2)
+let mode = 'match', live = BASE; // en entrenamiento solo existe tu jugador
+const teamOf = t => live.filter(p => p.team === t);   // solo los que están en pista (1 contra 1, online)
 const facing = p => new V3(Math.sin(p.yaw), 0, Math.cos(p.yaw));
 const teamColor = t => t === 0 ? 'var(--blue)' : 'var(--rival)';
 const involvesHuman = (...ps) => ps.includes(human);
@@ -4092,7 +4085,7 @@ let hitstop = 0, slowT = 0, timeScale = 1, shake = 0, menuKickT = 0;
 // Coloca jugadores y balón en posiciones iniciales y limpia su estado.
 function resetEntities() {
   if (human !== players[0]) { const m = mode; mode = 'match'; setControlled(players[0]); mode = m; }
-  const spots = [[-5, 0], [-9, -5.5], [-9, 5.5]];
+  const spots = [[-5, 0], [-9, -5.5], [-9, 5.5], [-12, -2.5], [-12, 2.5]];
   for (const p of players) {
     p.deadDribble = false; p.dash = CFG.dash.max;
     const sp = spots[p.idx], s = p.team === 0 ? 1 : -1;
@@ -4129,7 +4122,7 @@ function startPlay() {
 // Empieza un partido nuevo (3v3 con IA).
 function startMatch() {
   SFX.init();
-  mode = 'match'; live = players; setTrainingVisible(false);
+  mode = 'match'; live = BASE; setTrainingVisible(false);
   if (matchSize === 1) live = [players[0], players[3]];   // 1 contra 1: tú contra el base rival
   for (const p of players) { const on = live.includes(p); p.rig.root.visible = p.rig.ring.visible = on; if (!on) { p.pos.set(0, -50, 0); p.vel.set(0, 0, 0); } }
   diff = DIFF[diffKey];
@@ -4162,9 +4155,9 @@ function bestInboundTarget(p) {
 function setupCheck(team) {
   const c = hoops[1].rimC, sx = Math.sign(c.x);
   const at = (dist, ang) => new V3(c.x - sx * Math.cos(ang) * dist, 0, Math.sin(ang) * dist);
-  const offSpots = [at(8.2, 0), at(7.4, 0.95), at(7.4, -0.95)], defSpots = [at(6.4, 0), at(5.6, 0.85), at(5.6, -0.85)];
+  const offSpots = [at(8.2, 0), at(7.4, 0.95), at(7.4, -0.95), at(7.0, 1.45), at(7.0, -1.45)], defSpots = [at(6.4, 0), at(5.6, 0.85), at(5.6, -0.85), at(5.2, 1.35), at(5.2, -1.35)];
   for (const p of players) {
-    if (!live.includes(p)) { p.pos.set(0, -50, 0); p.vel.set(0, 0, 0); continue; }   // (online 2 contra 2: los que no juegan, fuera)
+    if (!live.includes(p)) { p.pos.set(0, -50, 0); p.vel.set(0, 0, 0); continue; }   // (1 contra 1 / online: los que no juegan, fuera)
     p.charging = false; p.charge = 0; p.move = null; p.nextMove = null; p.spinAngle = 0; p.inbounding = false; p.dunkSeq = null; p.shotT = 0; p.stunT = 0; p.swipeT = 0; p.blockT = 0; p.deadDribble = false;
     const sp = (p.team === team ? offSpots : defSpots)[p.idx];
     p.pos.copy(sp); p.home.copy(p.team === team ? sp : defSpots[p.idx]); p.vel.set(0, 0, 0); p.onGround = true;
@@ -4243,8 +4236,8 @@ function togglePause() { if (state === 'paused') resume(); else pause(); }
 
 // Vuelve al menú principal.
 function toMenu() {
-  if (mode === 'match') { live = players; for (const p of players) p.rig.root.visible = p.rig.ring.visible = true; }
-  if (mode === 'train') { mode = 'match'; live = players; setTrainingVisible(false); }
+  if (mode === 'match') { live = BASE; for (const p of players) { const on = BASE.includes(p); p.rig.root.visible = p.rig.ring.visible = on; if (!on) p.pos.set(0, -50, 0); } }
+  if (mode === 'train') { mode = 'match'; live = BASE; setTrainingVisible(false); }
   state = 'menu'; resetEntities();
   $('pause').hidden = true; $('over').hidden = true; $('hud').hidden = true; $('menu').hidden = false; $('play').focus();
 }
@@ -4393,6 +4386,7 @@ function stepTraining(dt) {
 function setTrainingVisible(on) {
   for (const p of players) {
     if (p === human) continue;
+    if (!BASE.includes(p)) { p.rig.root.visible = p.rig.ring.visible = p.rig.cdRing.visible = false; p.pos.set(0, -50, 0); continue; }
     p.rig.root.visible = p.rig.ring.visible = p.rig.cdRing.visible = !on;
     if (on) p.pos.set(0, -50, 0);
   }
@@ -4505,7 +4499,7 @@ function openCustomizer() {
 // Cierra el vestuario y vuelve al menú.
 function closeCustomizer() {
   $('custom').hidden = true;
-  for (const p of players) p.rig.root.visible = p.rig.ring.visible = true;
+  for (const p of players) p.rig.root.visible = p.rig.ring.visible = BASE.includes(p);
   ballMesh.visible = ballMark.visible = true;
   toMenu();
 }
@@ -5707,8 +5701,8 @@ function exitTitle() {
 }
 function exitAnimMode() {
   $('animdbg').hidden = true;
-  for (const p of players) { p.rig.root.visible = p.rig.ring.visible = true; p.attackSide = 1; }
-  ANIM.npc.clear(); Math.random = RANDOM0; mode = 'match'; live = players; toMenu();
+  for (const p of players) { p.rig.root.visible = p.rig.ring.visible = BASE.includes(p); p.attackSide = 1; }
+  ANIM.npc.clear(); Math.random = RANDOM0; mode = 'match'; live = BASE; toMenu();
 }
 $('animBack').addEventListener('click', exitAnimMode);
 $('animPause').addEventListener('click', () => { ANIM.paused = !ANIM.paused; animUI(); });
@@ -5721,13 +5715,16 @@ addEventListener('mouseup', () => { ANIM.drag = null; });
 renderer.domElement.addEventListener('wheel', e => { if (mode !== 'anim') return; ANIM.dist = clamp(ANIM.dist * (e.deltaY > 0 ? 1.1 : 0.9), 2, 14); e.preventDefault(); }, { passive: false });
 
 /* ==============================================================================
-   §34 ONLINE 2 CONTRA 2 (PeerJS / WebRTC)
+   §34 ONLINE DE 1 CONTRA 1 A 5 CONTRA 5 (PeerJS / WebRTC)
    El anfitrión ejecuta el partido; los invitados envían su mando y reciben el estado ~30 veces por segundo.
-   Huecos: 0 = anfitrión (equipo azul), 1 = equipo rojo, 2 = azul, 3 = rojo. Los huecos vacíos los juega la IA.
+   Huecos: 0 = anfitrión (azul), 1 = rojo, 2 = azul, 3 = rojo… hasta 10. Se juega N contra N con N = mitad (redondeando
+   hacia arriba) de los que hayan entrado; si un equipo tiene uno menos, ese hueco lo juega la IA.
    Funciones: openOnline, netCreate, netJoin, netLeave, netStart, netHostTick, netClientFrame
    ============================================================================== */
 const NET = { role: null, inGame: false, peer: null, conns: [], code: '', slots: [], mySlot: 0, sendT: 0, last: null, names: [] };
 const NET_SLOT = i => players.find(p => p.team === (i % 2) && p.idx === (i >> 1));   // hueco → jugador
+const NET_MAX = 10;
+const netSize = () => clamp(Math.ceil(NET.names.filter(Boolean).length / 2), 1, 5);   // N contra N según los que hay
 const NET_PREFIX = 'hoopblast-v1-';
 function netLoadPeer() {
   if (window.Peer) return Promise.resolve();
@@ -5737,11 +5734,14 @@ function netLoadPeer() {
 const netStatus = html => { $('netStatus').innerHTML = html; };
 function netLobby() {
   const ol = $('netPlayers'); ol.innerHTML = '';
-  for (let i = 0; i < 4; i++) {
-    const li = document.createElement('li'), n = NET.names[i];
+  const size = netSize();
+  for (let i = 0; i < NET_MAX; i++) {
+    const n = NET.names[i]; if (!n && i >= size * 2) continue;   // solo los huecos que se van a jugar
+    const li = document.createElement('li');
     li.className = 't' + (i % 2); li.innerHTML = (n || '— IA —') + '<small>' + (i % 2 ? 'Rojo' : 'Azul') + (i === NET.mySlot && n ? ' · tú' : '') + '</small>';
     ol.appendChild(li);
   }
+  const info = $('netSize'); if (info) info.textContent = 'Se jugará ' + size + ' contra ' + size + ' (hasta 5 contra 5; los huecos que falten los juega la IA)';
   $('netStart').hidden = NET.role !== 'host';
 }
 function openOnline() {
@@ -5756,7 +5756,7 @@ function netCreate() {
   netLoadPeer().then(() => {
     const code = Array.from({ length: 5 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
     const peer = new Peer(NET_PREFIX + code);
-    NET.peer = peer; NET.role = 'host'; NET.code = code; NET.mySlot = 0; NET.names = [netName(), null, null, null]; NET.conns = [null, null, null, null];
+    NET.peer = peer; NET.role = 'host'; NET.code = code; NET.mySlot = 0; NET.names = [netName()].concat(new Array(NET_MAX - 1).fill(null)); NET.conns = new Array(NET_MAX).fill(null);
     peer.on('open', () => { netStatus('Sala creada. Código: <b>' + code + '</b> — pásaselo a tus amigos'); netLobby(); });
     peer.on('connection', conn => netHostAccept(conn));
     peer.on('error', e => netStatus('Error de conexión: ' + (e.type || e)));
@@ -5768,7 +5768,7 @@ function netHostAccept(conn) {
 }
 function netHostData(conn, m) {
   if (m.t === 'hello') {
-    const slot = [1, 2, 3].find(i => !NET.conns[i]);
+    const slot = Array.from({ length: NET_MAX - 1 }, (_, k) => k + 1).find(i => !NET.conns[i]);
     if (slot === undefined || NET.inGame) { conn.send({ t: 'full' }); return; }
     NET.conns[slot] = conn; NET.names[slot] = String(m.name || 'Amigo').slice(0, 12); conn.slot = slot;
     netBroadcast({ t: 'lobby', names: NET.names }); conn.send({ t: 'welcome', slot, names: NET.names, code: NET.code }); netLobby();
@@ -5793,14 +5793,14 @@ const netBroadcast = m => { for (const c of NET.conns) if (c && c.open) try { c.
 function netStart() {
   if (NET.role !== 'host') return;
   NET.inGame = true;
-  const four = [0, 1, 2, 3].map(NET_SLOT);
-  for (let i = 0; i < 6; i++) { const p = players[i]; p.netCtl = false; }
-  four.forEach((p, i) => { if (i > 0 && NET.conns[i]) { p.netCtl = true; p.isHuman = true; p.netIn = { move: new V3(), sprint: false, stance: false, shootHold: false, postShot: null }; } });
+  const size = netSize(), inGame = Array.from({ length: size * 2 }, (_, i) => NET_SLOT(i));
+  for (const p of players) p.netCtl = false;
+  inGame.forEach((p, i) => { if (i > 0 && NET.conns[i]) { p.netCtl = true; p.isHuman = true; p.netIn = { move: new V3(), sprint: false, stance: false, shootHold: false, postShot: null }; } });
   $('online').hidden = true;
   startMatch();
-  live = four; for (const p of players) if (!live.includes(p)) { p.rig.root.visible = p.rig.ring.visible = false; p.pos.set(0, -50, 0); } else p.rig.root.visible = p.rig.ring.visible = true;
+  live = inGame; for (const p of players) if (!live.includes(p)) { p.rig.root.visible = p.rig.ring.visible = false; p.pos.set(0, -50, 0); } else p.rig.root.visible = p.rig.ring.visible = true;
   setupCheck(0);
-  netBroadcast({ t: 'start', names: NET.names });
+  netBroadcast({ t: 'start', names: NET.names, size });
 }
 // estado de un jugador para los invitados (solo lo que hace falta para dibujarlo y animarlo)
 const NET_KEYS = ['yaw', 'spinAngle', 'hand', 'onGround', 'stance', 'post', 'boxout', 'charging', 'charge', 'shotKind', 'shotT', 'throwT', 'throwKind', 'stunT', 'swipeT', 'blockT', 'fakeT', 'rebT',
@@ -5840,14 +5840,14 @@ function netClientData(m) {
   if (m.t === 'welcome') { NET.mySlot = m.slot; NET.names = m.names; netStatus('Dentro de la sala <b>' + m.code + '</b>. Esperando a que el anfitrión empiece…'); netLobby(); }
   else if (m.t === 'lobby') { NET.names = m.names; netLobby(); }
   else if (m.t === 'full') netStatus('La sala está llena o el partido ya ha empezado.');
-  else if (m.t === 'start') netClientStart();
+  else if (m.t === 'start') netClientStart(m.size || 2);
   else if (m.t === 'snap') NET.last = m;
   else if (m.t === 'fx') { if (m.f === 'sfx') sfx(...m.a); else if (m.f === 'ban') showBanner($(m.a[0]), m.a[1], m.a[2], m.a[3]); }
 }
-function netClientStart() {
+function netClientStart(size) {
   SFX.init(); NET.inGame = true; mode = 'match';
   human.isHuman = false; human = NET_SLOT(NET.mySlot); human.isHuman = true; pendH = human.pend;
-  live = [0, 1, 2, 3].map(NET_SLOT);
+  live = Array.from({ length: size * 2 }, (_, i) => NET_SLOT(i));
   for (const p of players) { const on = live.includes(p); p.rig.root.visible = p.rig.ring.visible = on; if (!on) p.pos.set(0, -50, 0); p.rig.ring.material.color.setHex(p === human ? CFG.colors.gold : p.team === 0 ? CFG.colors.blue : CFG.colors.rival); }
   setTrainingVisible(false);
   score = [0, 0]; stats = newStats(); clock = CFG.matchTime; updateScore(); state = 'countdown';
@@ -5898,9 +5898,9 @@ function netLeave(silent) {
   try { for (const c of NET.conns) if (c) c.close(); if (NET.peer) NET.peer.destroy(); } catch (e) { /* nada */ }
   const wasIn = NET.inGame;
   NET.role = null; NET.inGame = false; NET.conns = []; NET.peer = null; NET.last = null; NET.names = [];
-  for (const p of players) { p.netCtl = false; p.isHuman = false; p.netIn = null; p.rig.root.visible = p.rig.ring.visible = true; }
+  for (const p of players) { p.netCtl = false; p.isHuman = false; p.netIn = null; p.rig.root.visible = p.rig.ring.visible = BASE.includes(p); if (!BASE.includes(p)) p.pos.set(0, -50, 0); }
   human = players[0]; human.isHuman = true; pendH = human.pend;
-  live = players;
+  live = BASE;
   $('online').hidden = true;
   if (wasIn || !silent) toMenu(); else { $('menu').hidden = false; }
 }
