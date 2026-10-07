@@ -496,7 +496,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
     </div>
     <p id="touchnote" class="note" hidden>Necesitas teclado y ratón para jugar.</p>
   </div>
-  <span class="version">v0.5 alpha «Flow» · 7 oct 2026 · 16:30</span>
+  <span class="version">v0.5 alpha «Flow» · 7 oct 2026 · 16:38</span>
 </section>
 
 <!-- ── Controles (pestaña aparte) ── -->
@@ -2358,14 +2358,29 @@ function orientOutward(pos, nor, I) {
   for (let k = 0; k < nor.length; k++) nor[k] = -nor[k];
   return true;
 }
+// Las narices de origen traen, además del volumen, la tarjeta plana donde el Mii original pinta la nariz 2D:
+// un rectángulo vertical en z = 0,303 (delante de la cara) que se veía detrás de la nariz. Se quitan esos triángulos
+// (planos en ese z y grandes); los triangulitos de la base de la nariz, también en ese plano, se conservan.
+function dropNoseCard(pos, I) {
+  const keep = [];
+  for (let t = 0; t < I.length; t += 3) {
+    const a = I[t] * 3, b = I[t + 1] * 3, c = I[t + 2] * 3;
+    const flat = Math.abs(pos[a + 2] - 0.303) < 0.002 && Math.abs(pos[b + 2] - 0.303) < 0.002 && Math.abs(pos[c + 2] - 0.303) < 0.002;
+    const area = Math.abs((pos[b] - pos[a]) * (pos[c + 1] - pos[a + 1]) - (pos[c] - pos[a]) * (pos[b + 1] - pos[a + 1])) / 2;
+    if (!(flat && area > 0.002)) keep.push(I[t], I[t + 1], I[t + 2]);
+  }
+  return new Uint16Array(keep);
+}
 // Decodifica una malla compacta (Int16 posiciones, Int8 normales, Uint16 índices) a BufferGeometry
 function miiGeo(kind, i, faceUV) {
   const key = kind + i; if (miiGeoCache[key]) return miiGeoCache[key];
   const d = MII_DATA[kind][i]; if (!d) return null;
   const b64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0)).buffer;
-  const P = new Int16Array(b64(d.p)), N = new Int8Array(b64(d.n)), I = new Uint16Array(b64(d.i));
+  const P = new Int16Array(b64(d.p)), N = new Int8Array(b64(d.n));
+  let I = new Uint16Array(b64(d.i));
   const pos = new Float32Array(P.length), nor = new Float32Array(N.length);
   for (let k = 0; k < P.length; k++) { pos[k] = P[k] / 20000; nor[k] = N[k] / 127; }
+  if (kind === 'nose') I = dropNoseCard(pos, I);
   if (kind !== 'head' && kind !== 'face') orientOutward(pos, nor, I);
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
