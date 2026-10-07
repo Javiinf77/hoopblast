@@ -199,6 +199,21 @@ button:focus-visible{ outline:3px solid var(--gold); outline-offset:3px; }
 .crow:last-child{ border-bottom:0; }
 .crow > label{ font-weight:700; font-size:15px; color:var(--muted); }
 .crow.cwide{ grid-template-columns:1fr; gap:6px; }
+.adjbar{ position:relative; display:inline-block; width:46%; height:6px; margin-right:10px; vertical-align:middle; border-radius:3px; background:rgba(120,140,170,.35); }
+.adjbar b{ position:absolute; top:50%; width:12px; height:12px; margin:-6px 0 0 -6px; border-radius:50%; background:#1f9bff; }
+.cpadhint{ display:none; flex-wrap:wrap; gap:6px 14px; justify-content:center; padding:8px 14px 12px; font-size:12px; font-weight:700; color:var(--muted); }
+.cpadhint kbd{ margin-right:4px; }
+body.pad .cpadhint{ display:flex; }
+body.pad #custform .crow{ border-radius:12px; padding-left:8px; padding-right:8px; transition:background .12s; }
+body.pad #custform .crow:focus-within{ background:rgba(31,155,255,.12); box-shadow:inset 3px 0 0 #1f9bff; }
+body.pad #custform .crow:focus-within > label{ color:#1f8ff0; }
+body.pad .cico{ height:56px; }
+body.pad .cico:focus{ outline:3px solid #1f9bff; outline-offset:2px; transform:scale(1.08); }
+body.pad .cstep{ height:44px; }
+body.pad .cstep:focus-within{ box-shadow:0 0 0 3px #1f9bff; }
+body.pad .cstep button:focus{ outline:none; background:rgba(31,155,255,.18); }
+body.pad .sw:focus{ outline:3px solid #1f9bff; outline-offset:2px; }
+body.pad .ctab:focus, body.pad .cbtn:focus{ outline:3px solid #1f9bff; outline-offset:2px; }
 .cgrid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(48px, 1fr)); gap:6px; max-height:224px; overflow-y:auto; padding:2px 4px 4px 0; }
 .cico{ height:50px; padding:4px; display:grid; place-items:center; background:rgba(150,156,176,.35); border:2px solid transparent; border-radius:10px; cursor:pointer; }
 .cico img, .cico canvas{ max-width:100%; max-height:100%; image-rendering:auto; pointer-events:none; }
@@ -502,7 +517,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
     </div>
     <p id="touchnote" class="note" hidden>Necesitas teclado y ratón para jugar.</p>
   </div>
-  <span class="version">v0.5 alpha «Flow» · 7 oct 2026 · 17:48</span>
+  <span class="version">v0.5 alpha «Flow» · 7 oct 2026 · 20:05</span>
 </section>
 
 <!-- ── Controles (pestaña aparte) ── -->
@@ -566,6 +581,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
       <button id="custReset" class="cbtn">Restablecer</button>
       <button id="custDone" class="cbtn primary">Listo</button>
     </footer>
+    <div class="cpadhint"><span><kbd>✛</kbd>Moverse / cambiar</span><span><kbd>✕</kbd>Elegir icono</span><span><kbd>L1</kbd><kbd>R1</kbd>Pestaña</span><span><kbd>△</kbd>Aleatorio</span><span><kbd>□</kbd>Restablecer</span><span><kbd>RS</kbd>Girar</span><span><kbd>○</kbd>Listo</span></div>
   </div>
 </section>
 
@@ -2296,7 +2312,7 @@ const DEFAULT_LOOK = { skin: '#f1c7a0', pattern: 'liso', c1: '#2f6bff', c2: '#1f
   hair: 'corto', hairColor: '#1b1410', headband: true, sleeve: 'none', wrist: 'both', elbow: 'none', knee: 'none', socks: 'bajos',
   acc: '#ffc61a', shoes: '#ffc61a', miiHead: 0, miiHair: 0, miiNose: 0, miiBeard: -1, eyes: 0, brows: 0, mouth: 0,
   eyeColor: '#3b2a1e', glasses: 0, glassColor: '#1a1420', stache: 0, mark: 0, lipColor: '#c9474f', mole: false,
-  eyeSize: 0, eyeY: 0, eyeGap: 0, noseSize: 0, noseY: 0, mouthSize: 0, mouthY: 0 };   // ajustes de -3 a +3
+  eyeSize: 0, eyeY: 0, eyeGap: 0, noseSize: 0, noseY: 0, mouthSize: 0, mouthY: 0 };   // ajustes de -6 a +6
 
 // Textura de la camiseta según el estampado y colores del aspecto.
 function jerseyTex(L) {
@@ -2639,9 +2655,9 @@ function paintMiiParts(g, L, S, X, Y) {
   const m = L.mark | 0, rg = MII_PARTS.rasgos[m];
   if (m > 0 && m < MII_PARTS.rasgos.length && rg && PART_IMG['rasgos' + m]) { const im = PART_IMG['rasgos' + m], f = rg[3]; drawPart(g, im, cx + rg[1] * ds, cy + rg[2] * ds, ds / f, false); }
   const eye = tintPart('ojos' + ei, EYE_PAL(L)), brow = tintPart('cejas' + bi, BROW_PAL(L), 'tint');
-  // ajustes del vestuario (de -3 a +3): tamaño, altura y separación de los ojos (las cejas y las gafas los acompañan); tamaño y altura de la boca
-  const eS = PART_SC.ojos * (1 + 0.09 * (L.eyeSize | 0)), eV = 0.5 + 0.016 * (L.eyeY | 0), eD = 0.13 + 0.01 * (L.eyeGap | 0);
-  const mS = PART_SC.boca * (1 + 0.09 * (L.mouthSize | 0)), mV = 0.225 + 0.014 * (L.mouthY | 0);
+  // ajustes del vestuario (de -6 a +6): tamaño, altura y separación de los ojos (las cejas y las gafas los acompañan); tamaño y altura de la boca
+  const eS = PART_SC.ojos * (1 + 0.085 * (L.eyeSize | 0)), eV = 0.5 + 0.012 * (L.eyeY | 0), eD = 0.13 + 0.013 * (L.eyeGap | 0);
+  const mS = PART_SC.boca * (1 + 0.085 * (L.mouthSize | 0)), mV = 0.225 + 0.011 * (L.mouthY | 0);
   for (const sd of [-1, 1]) {
     const ex = X(0.5 + sd * eD);
     drawPart(g, eye, ex, Y(eV) + MII_PARTS.ojos[ei][1] * eS, eS, sd < 0);
@@ -2659,7 +2675,7 @@ function paintMiiParts(g, L, S, X, Y) {
   const gt = L.glasses | 0;
   if (gt > 0 && MII_PARTS.gafas[gt]) {   // los iconos las dibujan muy grandes para la cara: al 75 %
     const e = MII_PARTS.gafas[gt], dark = gt >= 6;
-    drawPart(g, tintPart('gafas' + gt, { r: L.glassColor || GLASS_COLORS[0], g: dark ? '#2a2c38' : '#bcd8ff', lensA: dark ? '#d0d0d0' : '#4a4a4a' }, 'layer'), cx + e[1] * ds, Y(eV) + 4, ds * 0.75 / e[3] * (1 + 0.04 * (L.eyeGap | 0)), false);
+    drawPart(g, tintPart('gafas' + gt, { r: L.glassColor || GLASS_COLORS[0], g: dark ? '#2a2c38' : '#bcd8ff', lensA: dark ? '#d0d0d0' : '#4a4a4a' }, 'layer'), cx + e[1] * ds, Y(eV) + 4, ds * 0.75 / e[3] * (1 + 0.045 * (L.eyeGap | 0)) * (1 + 0.03 * (L.eyeSize | 0)), false);
   }
 }
 loadMiiParts();
@@ -2830,8 +2846,8 @@ function miiHead(head, L, skinM, hairM, accM, M) {
   const nN = MII_DATA.nose.length, noseG = miiGeo('nose', (((L.miiNose | 0) % nN) + nN) % nN), nose = add(noseG, skinM, false);
   if (nose) {   // tamaño y altura de la nariz: escala alrededor de su base (donde se une a la cara)
     if (!noseG.boundingBox) noseG.computeBoundingBox();
-    const bb = noseG.boundingBox, px = (bb.min.x + bb.max.x) / 2, py = (bb.min.y + bb.max.y) / 2, pz = bb.min.z, ns = 1 + 0.09 * (L.noseSize | 0);
-    nose.scale.setScalar(ns); nose.position.set(px * (1 - ns), py * (1 - ns) + 0.012 * (L.noseY | 0), pz * (1 - ns));
+    const bb = noseG.boundingBox, px = (bb.min.x + bb.max.x) / 2, py = (bb.min.y + bb.max.y) / 2, pz = bb.min.z, ns = 1 + 0.08 * (L.noseSize | 0);
+    nose.scale.setScalar(ns); nose.position.set(px * (1 - ns), py * (1 - ns) + 0.008 * (L.noseY | 0), pz * (1 - ns));
   }
   const nh = MII_DATA.hair.length, hi = (((L.miiHair | 0) % nh) + nh) % nh, bald = L.miiHair === -1;
   if (!bald) add(miiGeo('hair', hi), hi >= nh - 2 ? accM : hairM, true);   // los dos últimos son gorra y gorro (color de accesorios); -1 = calvo
@@ -5119,6 +5135,39 @@ function rumble(strong, weak, ms) {
 const stick = (x, y, dz) => { const m = Math.hypot(x, y); if (m < dz) return [0, 0, 0]; const k = Math.min(1, (m - dz) / (1 - dz)) / m; return [x * k, y * k, Math.min(1, (m - dz) / (1 - dz))]; };
 
 // Mueve el foco entre los botones del menú visible (mando).
+function custFocusFirst() {
+  const r = document.querySelector('#custform .crow'); if (!r) return;
+  const t = r.querySelector('.cico[aria-pressed="true"], .sw[aria-pressed="true"]') || r.querySelector('.cstep button:last-child') || r.querySelector('button');
+  if (t) { t.focus(); if (t.scrollIntoView) t.scrollIntoView({ block: 'nearest' }); }
+}
+// Vestuario con mando: arriba/abajo cambia de fila (en una rejilla de iconos, primero recorre sus filas);
+// izquierda/derecha: en colores y ajustes cambia el valor al momento; en las rejillas de iconos mueve el cursor y ✕ elige.
+function custPadNav(dx, dy) {
+  const rows = [...document.querySelectorAll('#custform .crow')], foot = [...document.querySelectorAll('#custom .cfoot button')];
+  const el = document.activeElement, row = el && el.closest ? el.closest('#custform .crow') : null;
+  const show = t => { if (t) { t.focus(); if (t.scrollIntoView) t.scrollIntoView({ block: 'nearest' }); } };
+  const focusRow = r => show(r.querySelector('.cico[aria-pressed="true"], .sw[aria-pressed="true"]') || r.querySelector('.cstep button:last-child') || r.querySelector('button'));
+  if (!row) {
+    if (foot.includes(el)) { if (dy < 0 && rows.length) focusRow(rows[rows.length - 1]); else if (dx) show(foot[(foot.indexOf(el) + dx + foot.length) % foot.length]); return; }
+    if (el && el.classList.contains('ctab')) { if (dy > 0 && rows.length) focusRow(rows[0]); else if (dx) { const t = [...document.querySelectorAll('#ctabs .ctab')], i = t.indexOf(el); t[(i + dx + t.length) % t.length].click(); } return; }
+    if (rows.length) focusRow(rows[0]); return;
+  }
+  const ri = rows.indexOf(row), grid = row.querySelector('.cgrid'), step = row.querySelector('.cstep'), sw = row.querySelector('.cswatch');
+  if (grid && el.classList.contains('cico')) {
+    const items = [...grid.querySelectorAll('.cico')], i = items.indexOf(el);
+    const cols = Math.max(1, (getComputedStyle(grid).gridTemplateColumns || '').split(' ').filter(Boolean).length);
+    const j = dx ? i + dx : i + dy * cols;
+    if (j >= 0 && j < items.length) { show(items[j]); return; }   // en las rejillas el cursor se mueve y ✕ elige
+    if (dx) return;
+  } else if (dx && step) { step.querySelectorAll('button')[dx < 0 ? 0 : 1].click(); return; }
+  else if (dx && sw) {
+    const s = [...sw.querySelectorAll('.sw')], i = s.findIndex(b => b.getAttribute('aria-pressed') === 'true');
+    s[((i < 0 ? 0 : i + dx) + s.length) % s.length].click(); return;
+  }
+  if (!dy) return;
+  const nr = rows[ri + dy];
+  if (nr) focusRow(nr); else if (dy > 0) show(foot[foot.length - 1]); else show(document.querySelector('#ctabs [aria-selected="true"]'));
+}
 // Navegación espacial: va al botón más cercano en esa dirección (rejillas de iconos); si no hay, recorre la lista en orden.
 function menuNav(dx, dy) {
   const btns = [...document.querySelectorAll('section.overlay:not([hidden]) button')].filter(b => b.offsetParent !== null && !b.closest('[hidden]'));
@@ -5164,13 +5213,17 @@ function padFrame(dt) {
     // navegación de menús: cruceta o stick, ✕ acepta, ○ vuelve
     PAD.navT -= dt;
     const ny = b(12) ? -1 : b(13) ? 1 : Math.abs(ly) > 0.6 ? Math.sign(ly) : 0, nx = ny ? 0 : b(14) ? -1 : b(15) ? 1 : Math.abs(lx) > 0.6 ? Math.sign(lx) : 0;
-    if ((nx || ny) && PAD.navT <= 0) { menuNav(nx, ny); PAD.navT = 0.18; } else if (!nx && !ny) PAD.navT = 0;
+    if ((nx || ny) && PAD.navT <= 0) { if (state === 'custom') custPadNav(nx, ny); else menuNav(nx, ny); PAD.navT = PAD.navHeld ? 0.11 : 0.24; PAD.navHeld = true; }
+    else if (!nx && !ny) { PAD.navT = 0; PAD.navHeld = false; }   // mantener la cruceta repite (más rápido tras la primera)
     if (down(0) && document.activeElement && document.activeElement.tagName === 'BUTTON') { SFX.init(); document.activeElement.click(); }
     if (down(1)) { if (state === 'paused') resume(); else if (state === 'custom') closeCustomizer(); }
     if (down(9) && state === 'paused') resume();
     if (state === 'custom') {
       previewYaw += rx * 2.5 * dt;
-      if (down(4) || down(5)) { const nt = custTabs().length; custTab = (custTab + (down(5) ? 1 : nt - 1)) % nt; buildCustomForm('ctab' + custTab); }   // L1/R1: pestañas
+      if (down(4) || down(5)) { const nt = custTabs().length; custTab = (custTab + (down(5) ? 1 : nt - 1)) % nt; buildCustomForm(); custFocusFirst(); }   // L1/R1: pestañas (el foco va a la primera fila)
+      if (down(3)) $('custRand').click();    // △ aleatorio
+      if (down(2)) $('custReset').click();   // □ restablecer
+      if (down(9)) closeCustomizer();        // Options: listo
     }
   } else if (inMatch() && mode !== 'anim') {
     if (down(9)) { pause(); PAD.prev = gp.buttons.map(x => x.pressed); return; }
@@ -5642,12 +5695,12 @@ function buildCustomForm(focusId) {
       pk.appendChild(inp); box.appendChild(pk);
     } else {
       // selector ◀ valor ▶ para números, listas y lados
-      const lo = type === 'adj' ? -3 : type === 'num' ? (min || 0) : 0, n = type === 'adj' ? 4 : type === 'num' ? opts : type === 'dorsal' ? 100 : opts.length;
+      const lo = type === 'adj' ? -6 : type === 'num' ? (min || 0) : 0, n = type === 'adj' ? 7 : type === 'num' ? opts : type === 'dorsal' ? 100 : opts.length;
       const idx = type === 'list' ? Math.max(0, opts.findIndex(o => o[0] === myLook[key])) : (myLook[key] | 0);
-      const show = type === 'adj' ? (idx > 0 ? '+' + idx : String(idx)) : type === 'list' ? opts[idx][1] : type === 'named' ? opts[idx] + '<small>' + (idx + 1) + '/' + n + '</small>' : type === 'dorsal' ? String(idx) : idx < 0 ? 'Ninguna' : (idx + 1) + '<small>/ ' + n + '</small>';
+      const show = type === 'adj' ? '<i class="adjbar"><b style="left:' + ((idx + 6) / 12 * 100).toFixed(1) + '%"></b></i>' + (idx > 0 ? '+' + idx : String(idx)) : type === 'list' ? opts[idx][1] : type === 'named' ? opts[idx] + '<small>' + (idx + 1) + '/' + n + '</small>' : type === 'dorsal' ? String(idx) : idx < 0 ? 'Ninguna' : (idx + 1) + '<small>/ ' + n + '</small>';
       const box = document.createElement('div'); box.className = 'cstep'; row.appendChild(box);
       const step = dir => {
-        const span = n - lo, v = ((idx - lo + dir) % span + span) % span + lo;
+        const span = n - lo, v = type === 'adj' ? clamp(idx + dir, lo, n - 1) : ((idx - lo + dir) % span + span) % span + lo;
         set(key, type === 'list' ? opts[v][0] : v, key + (dir < 0 ? '-' : '+'));
       };
       const bl = document.createElement('button'); bl.textContent = '◀'; bl.id = key + '-'; bl.setAttribute('aria-label', label + ' anterior'); bl.onclick = () => step(-1);
@@ -5666,7 +5719,7 @@ function openCustomizer() {
   for (const p of players) if (p !== human) p.rig.root.visible = p.rig.ring.visible = false;
   human.pos.set(0, 0, 0); human.vel.set(0, 0, 0); human.onGround = true; human.move = null; human.stunT = 0; human.exhausted = false;
   ball.holder = null; ballMesh.visible = ballMark.visible = false;
-  previewYaw = 0.35; custTab = 0; buildCustomForm(); $('custDone').focus();
+  previewYaw = 0.35; custTab = 0; buildCustomForm(); if (inputMode === 'pad') custFocusFirst(); else $('custDone').focus();
 }
 
 // Cierra el vestuario y vuelve al menú.
@@ -6440,7 +6493,7 @@ function updateCamera(dt, T) {
     custZoom += (wantHead - custZoom) * (1 - Math.exp(-8 * dt));
     const k = custZoom * custZoom * (3 - 2 * custZoom), hp = human.rig.head.getWorldPosition(_cz);
     const off = near ? 0 : -0.95, offH = near ? 0 : -0.42, hy = hp.y + 0.2;
-    camera.position.set(lerp(off, hp.x + offH, k), lerp(1.45, hy + 0.06, k), lerp(3.9, hp.z + 2.2, k));
+    camera.position.set(lerp(off, hp.x + offH, k), lerp(1.45, hy + 0.06, k), lerp(3.9, hp.z + 2.6, k));
     camera.lookAt(lerp(off, hp.x + offH, k), lerp(1.15, hy + 0.03, k), lerp(0, hp.z, k));
     camera.fov = lerp(40, 28, k); camera.updateProjectionMatrix(); return;
   }
