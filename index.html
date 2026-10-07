@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  HOOPBLAST 3v3 — versión 0.3 alpha
+  HOOPBLAST 3v3 — versión 0.5 alpha
   Baloncesto 3v3 en un único archivo: Three.js r128 + cel-shading, física propia del balón, regates estilo NBA 2K,
   mando PS4, IA, entrenamiento y vestuario. Sin recursos externos salvo Three.js y fuentes de Google.
   Estructura del código: ver el ÍNDICE al inicio del código JavaScript, más abajo (secciones §01–§31).
@@ -496,7 +496,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
     </div>
     <p id="touchnote" class="note" hidden>Necesitas teclado y ratón para jugar.</p>
   </div>
-  <span class="version">v0.3 alpha «Resort» · 7 oct 2026 · 14:54</span>
+  <span class="version">v0.5 alpha «Flow» · 7 oct 2026 · 16:30</span>
 </section>
 
 <!-- ── Controles (pestaña aparte) ── -->
@@ -640,7 +640,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 /* ==============================================================================
-   HOOPBLAST 3v3 — ÍNDICE DEL CÓDIGO (versión 0.3 alpha)
+   HOOPBLAST 3v3 — ÍNDICE DEL CÓDIGO (versión 0.5 alpha)
    Cada sección empieza con «§NN». Para ir a una sección busca «§NN» (p. ej. «§13»).
    Las funciones de cada sección se listan en su cabecera.
    ==============================================================================
@@ -764,7 +764,11 @@ const CFG = {
     step:    { dur: 0.62, prot: 0.18, cd: 1.3, cost: 0.08 },   // paso atrás en dos apoyos (tiro más fácil justo después)
     heatDecay: 0.8, heatPenalty: 0.4,
     // la clave del regate: un movimiento provoca la reacción del defensor y después EXPLOTAS con stick izquierdo + sprint
-    explodeWin: 0.4, burstSpeed: 9.6, burstTime: 0.5, burstCost: 0, chainGap: 0.45, queueAt: 0.4
+    explodeWin: 0.4, burstSpeed: 9.6, burstTime: 0.5, burstCost: 0, chainGap: 0.45, queueAt: 0.4,
+    // encadenar: con un regate pedido, el actual se corta en cancelAt (fracción) y el siguiente entra ya en marcha
+    // (se salta su bote de preparación: skip). El pedido se guarda queueTTL s si aún no se puede hacer.
+    cancelAt: { cross: 0.7, between: 0.72, behind: 0.78, behindAir: 0.75, retreat: 0.55, spin: 0.85, hesi: 0.6, inout: 0.75, swap: 0.8 },
+    skip: { cross: 0.22, between: 0.18, behind: 0.08, behindAir: 0.06 }, queueTTL: 0.35, chainCd: 0.6
   },
   // Tiro: mantén para cargar el medidor y suelta en la franja verde. La dirección al aro es automática.
   shot: { fill: 0.85, sweet: 0.8, late: 1.15, three: 6.75, layup: 2.6, fakeMax: 0.2, fakeDur: 0.3, fakeCd: 0.25 },
@@ -3317,7 +3321,11 @@ function updatePlayer(p, inp, dt) {
       const dx = F.fx * 0.7 + F.rx * p.hand * 0.7, dz = F.fz * 0.7 + F.rz * p.hand * 0.7, l = Math.hypot(dx, dz);
       p.vel.x = dx / l * 6.4; p.vel.z = dz / l * 6.4; p.ctrlT = 0.14;
     }
-    if (p.move && p.move.t >= p.move.dur) endMove(p);
+    if (p.move && (p.move.t >= p.move.dur || (p.nextMove && p.move.t >= p.move.dur * (CFG.moves.cancelAt[p.move.type] || 1)))) endMove(p);
+  } else if (p.nextMove) {   // regate pedido que aún no se podía hacer (recarga): se intenta unos instantes
+    const n = p.nextMove;
+    if (ball.holder !== p || (n.ttl -= dt) <= 0) p.nextMove = null;
+    else if (startMove(p, n.type, n.side || null, n.momentum, p.chainT < CFG.moves.chainGap)) { if (p.nextMove === n) p.nextMove = null; }
   }
 
   p.plantT = Math.max(0, p.plantT - dt);
@@ -3483,18 +3491,24 @@ function startSwap(p, side) {
 }
 // Inicia un regate (si se puede): coste, protección, impulso y reacción del defensor.
 // El lado es absoluto (hacia dónde va el balón). Si el balón ya está en esa mano, primero se cambia rápido de mano y luego se hace el regate.
-function startMove(p, type, side, momentum) {
+function startMove(p, type, side, momentum, chained) {
   finishSwap(p);
   const M = CFG.moves[type];
-  if (!M || ball.holder !== p || !p.onGround || p.charging || p.shotT > 0 || p.stunT > 0 || p.move || p.inbounding || p.moveCd[type] > 0) return false;
+  if (!M || ball.holder !== p || !p.onGround || p.charging || p.shotT > 0 || p.stunT > 0 || p.move || p.inbounding || p.moveCd[type] > (chained ? M.cd * CFG.moves.chainCd : 0)) return false;
   if (p.stamina < M.cost || (p.exhausted && (type === 'spin' || type === 'step'))) return false;
   const F = carrierFrame(p);
-  const s = side || -p.hand;
-  if ((type === 'cross' || type === 'between' || type === 'behind' || type === 'behindAir') && s === p.hand) {
-    startSwap(p, -s); p.nextMove = { type, side: s, momentum };   // balón en la mano de destino: cambio rápido y luego el regate
+  let s = side || -p.hand;
+  const handMove = type === 'cross' || type === 'between' || type === 'behind' || type === 'behindAir';
+  if (handMove && chained && s === p.hand) s = -p.hand;   // en un combo el regate sale de la mano que tiene el balón (↖ luego ↙ = cruce + espalda), sin cambio de mano en medio
+  if (handMove && s === p.hand) {
+    startSwap(p, -s); p.nextMove = { type, side: s, momentum, ttl: CFG.moves.queueTTL };   // balón en la mano de destino: cambio rápido y luego el regate
+    if (chained && p.move) p.move.t = p.move.dur * 0.3;   // en un combo el cambio de mano también va ya en marcha
     return true;
   }
-  p.move = { type, t: 0, dur: M.dur, side: s, from: p.hand, burst: false, static: Math.hypot(p.vel.x, p.vel.z) < 1.5 };   // parado: el regate se hace en el sitio
+  // tras un retroceso o paso atrás, el regate siguiente se hace en el sitio y mirando al aro (no sigue yendo hacia atrás)
+  const prevT = chained ? p.chain[p.chain.length - 1] : null, fromBack = prevT === 'retreat' || prevT === 'step';
+  p.move = { type, t: 0, dur: M.dur, side: s, from: p.hand, burst: false, static: fromBack || Math.hypot(p.vel.x, p.vel.z) < 1.5, chained: !!chained, fromBack };   // parado: el regate se hace en el sitio
+  if (chained && CFG.moves.skip[type]) p.move.t = M.dur * CFG.moves.skip[type];   // encadenado: sin bote de preparación, entra ya en marcha
   if (p.chainT > CFG.moves.chainGap) { p.chain = []; p.chainHand = p.hand; }   // empieza una secuencia nueva
   p.chain.push(type); p.explodeWin = 0; p.burstT = 0;
   if (type === 'cross' || type === 'between' || type === 'behind' || type === 'behindAir' || type === 'spin') mirrorDir(p, s);
@@ -3619,7 +3633,7 @@ function mirrorDir(p, s) {
   const c = hoops[p.attackSide].rimC, ax = c.x - p.pos.x, az = c.z - p.pos.z, al = Math.hypot(ax, az) || 1;
   const fx = ax / al, fz = az / al, rx = -fz, rz = fx;            // hacia la canasta y su derecha
   let vx = p.vel.x, vz = p.vel.z, vl = Math.hypot(vx, vz);
-  if (vl < 1) { const F = carrierFrame(p); vx = F.fx; vz = F.fz; vl = 1; }
+  if (vl < 1 || (p.move && p.move.fromBack)) { vx = fx; vz = fz; vl = 1; }
   vx /= vl; vz /= vl;
   const th = Math.atan2(vx * rx + vz * rz, vx * fx + vz * fz);   // ángulo actual respecto a la canasta (+ derecha)
   const th2 = s * clamp(Math.abs(th), 0.7, 2.4);
@@ -3703,7 +3717,7 @@ function hesiBurst(p, move) {
 function endMove(p) {
   const t = p.move.type;
   if (t === 'cross' || t === 'between' || t === 'behind' || t === 'behindAir' || t === 'swap') p.hand = p.move.side;
-  if (t === 'swap') { p.move = null; ball.phase = 0; if (p.nextMove) { const n = p.nextMove; p.nextMove = null; startMove(p, n.type, n.side || null, n.momentum); } return; }
+  if (t === 'swap') { p.move = null; ball.phase = 0; if (p.nextMove) { const n = p.nextMove; p.nextMove = null; if (!startMove(p, n.type, n.side || null, n.momentum, true) && n.ttl > 0) p.nextMove = n; } return; }
   if (p.move.type === 'spin' || p.move.type === 'postspin' || p.move.type === 'spinlay') { p.yaw = p.yaw + p.spinAngle; p.spinAngle = 0; }
   const burst = p.move.burst;
   if (t === 'step' && ball.holder === p && p.move.shotLinked) {
@@ -3725,7 +3739,7 @@ function endMove(p) {
   if ((t === 'euro' || t === 'spinlay') && ball.holder === p) { p.onGround = true; layup(p); return; }   // remata en bandeja
   if (!burst) p.explodeWin = CFG.moves.explodeWin;
   // combo: el siguiente regate pulsado durante este sale encadenado sin esperar
-  if (p.nextMove) { const n = p.nextMove; p.nextMove = null; if (!startMove(p, n.type, n.side || null, n.momentum)) p.explodeWin = CFG.moves.explodeWin; }
+  if (p.nextMove) { const n = p.nextMove; p.nextMove = null; if (!startMove(p, n.type, n.side || null, n.momentum, true)) { p.explodeWin = CFG.moves.explodeWin; if (n.ttl > 0) p.nextMove = n; } }
 }
 
 // Lado (+1 derecha / -1 izquierda) del regate según el stick izquierdo.
@@ -4432,8 +4446,10 @@ function handleActions(p, inp, dt) {
     // en el poste: cualquier regate lateral es un giro de poste (gancho y fadeaway van con L2 + stick)
     if (inp.moveType !== 'between' && inp.moveType !== 'step' && inp.moveType !== 'retreat') startMove(p, 'postspin', inp.moveSide || sideFromInput(p, inp.move) || 1, false);
   } else if (inp.moveType) {
-    if (p.move && p.move.t / p.move.dur >= CFG.moves.queueAt) p.nextMove = { type: inp.moveType, side: inp.moveSide || null, momentum: inp.sprint };   // encadenar
-    else startMove(p, inp.moveType, inp.moveSide || sideFromInput(p, inp.move), inp.sprint);
+    const side = inp.moveSide || sideFromInput(p, inp.move);
+    // encadenar: se guarda y sale al llegar al punto de corte (sin lado marcado, va a la mano contraria a la que tenga entonces)
+    if (p.move) p.nextMove = { type: inp.moveType, side: inp.moveSide || null, momentum: inp.sprint, ttl: CFG.moves.queueTTL };
+    else if (!startMove(p, inp.moveType, side, inp.sprint, p.chainT < CFG.moves.chainGap) && ball.holder === p) p.nextMove = { type: inp.moveType, side: side || null, momentum: inp.sprint, ttl: CFG.moves.queueTTL };
   }
   // pase / pedir
   if (inp.pass) {
@@ -5655,7 +5671,7 @@ function animatePlayer(p, dt, T) {
   if (p.move) {
     const mt = p.move.type, mk = p.move.t / p.move.dur;
     crouchD = mt === 'euro' ? 0.3 : mt === 'retreat' ? 0.22 : mt === 'postspin' || mt === 'spin' || mt === 'spinlay' ? 0.24 : mt === 'step' ? 0.2 : mt === 'hesi' ? (p.move.t < 0.2 || !p.move.burst ? 0.0 : 0.3) : mt === 'step' ? 0.14 : mt === 'between' ? 0.3 : mt === 'cross' ? 0.3 : 0.28;
-    crouchD *= 0.6 + 0.4 * Math.sin(Math.PI * Math.min(1, mk * 1.3));   // baja de golpe y sube al salir
+    crouchD *= p.move.chained ? 0.85 + 0.15 * Math.sin(Math.PI * Math.min(1, mk * 1.3)) : 0.6 + 0.4 * Math.sin(Math.PI * Math.min(1, mk * 1.3));   // baja de golpe y sube al salir (en un combo se queda abajo)
   }
   if (p.fakeT > 0) crouchD = 0.04;
   if (p.charging) crouchD = 0.06 + 0.24 * smooth(Math.min(1, p.charge / CFG.shot.sweet));
