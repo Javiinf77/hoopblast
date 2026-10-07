@@ -517,7 +517,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
     </div>
     <p id="touchnote" class="note" hidden>Necesitas teclado y ratón para jugar.</p>
   </div>
-  <span class="version">v0.5 alpha «Flow» · 7 oct 2026 · 20:05</span>
+  <span class="version">v0.5 alpha «Flow» · 7 oct 2026 · 20:13</span>
 </section>
 
 <!-- ── Controles (pestaña aparte) ── -->
@@ -3020,6 +3020,59 @@ function updateParticles(dt) {
     }
   }
   pGeo.attributes.position.needsUpdate = true; pGeo.attributes.color.needsUpdate = true;
+  updateFlames(dt);
+}
+// ---- Llamas del sobresfuerzo ----
+// Mientras dura la explosión, el jugador arde: lenguas de fuego que nacen de los pies y la cintura, suben y se quedan atrás
+// (amarillo → naranja → rojo). Al encenderse sale un anillo de fuego a ras de suelo. Partículas con tamaño propio y forma de llama.
+const FLN = 600, flPos = new Float32Array(FLN * 3), flCol = new Float32Array(FLN * 3), flSize = new Float32Array(FLN), flA = new Float32Array(FLN), flames = [];
+for (let i = 0; i < FLN; i++) { flames.push({ life: 0, max: 1, p: new V3(), v: new V3(), s: 0.3 }); flPos[i * 3 + 1] = -999; }
+const flGeo = new THREE.BufferGeometry();
+flGeo.setAttribute('position', new THREE.BufferAttribute(flPos, 3)); flGeo.setAttribute('fcol', new THREE.BufferAttribute(flCol, 3)); flGeo.setAttribute('fsize', new THREE.BufferAttribute(flSize, 1)); flGeo.setAttribute('falpha', new THREE.BufferAttribute(flA, 1));
+const flMesh = new THREE.Points(flGeo, new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false,   // mezcla normal: el fuego se ve naranja también sobre el parqué claro (la aditiva lo quemaba a blanco)
+  vertexShader: 'attribute vec3 fcol; attribute float fsize; attribute float falpha; varying vec3 vC; varying float vA; void main(){ vC = fcol; vA = falpha; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = fsize * 520.0 / max(0.5, -mv.z); gl_Position = projectionMatrix * mv; }',
+  fragmentShader: 'varying vec3 vC; varying float vA; void main(){ vec2 q = gl_PointCoord * 2.0 - 1.0; q.y = -q.y; float d = length(vec2(q.x * (1.25 + 0.75 * q.y), (q.y + 0.25) * 0.85)); float w = 1.0 - smoothstep(0.1, 1.0, d); if (w <= 0.01) discard; float core = smoothstep(0.55, 0.95, w); gl_FragColor = vec4(mix(vC, vec3(1.0, 0.95, 0.7), core * 0.6), w * 0.9 * vA); }'
+}));
+flMesh.frustumCulled = false; scene.add(flMesh);
+let flCursor = 0;
+function flameSpawn(x, y, z, vx, vy, vz, life, size) {
+  for (let j = 0; j < FLN; j++) {
+    const i = (flCursor + j) % FLN, q = flames[i]; if (q.life > 0) continue;
+    flCursor = (i + 1) % FLN; q.life = q.max = life; q.p.set(x, y, z); q.v.set(vx, vy, vz); q.s = size; return;
+  }
+}
+// encendido: anillo de fuego a ras de suelo y una llamarada hacia atrás
+function flameIgnite(p, dir) {
+  for (let k = 0; k < 46; k++) { const a = k / 46 * Math.PI * 2, sp = rand(3.2, 5);
+    flameSpawn(p.pos.x + Math.cos(a) * 0.2, 0.1, p.pos.z + Math.sin(a) * 0.2, Math.cos(a) * sp, rand(0.6, 1.6), Math.sin(a) * sp, rand(0.28, 0.42), rand(0.22, 0.34)); }
+  for (let k = 0; k < 26; k++) flameSpawn(p.pos.x + rand(-0.2, 0.2), rand(0.1, 1.2), p.pos.z + rand(-0.2, 0.2), -dir.x * rand(2, 5) + rand(-0.6, 0.6), rand(1.5, 3.5), -dir.z * rand(2, 5) + rand(-0.6, 0.6), rand(0.3, 0.5), rand(0.3, 0.5));
+}
+const FL_Y = [1, 0.8, 0.15], FL_O = [1, 0.38, 0.02], FL_R = [0.75, 0.08, 0.02];
+function updateFlames(dt) {
+  if (dt <= 0) return;
+  // emisión: cada jugador en sobresfuerzo arde (más cuanto más reciente)
+  for (const p of players) {
+    if (!(p.burstT > 0) || !p.rig || !p.rig.root.visible) continue;
+    const k = p.burstT / CFG.moves.burstTime, n = Math.round(dt * (90 + 260 * k) + Math.random());
+    for (let i = 0; i < n; i++) {
+      const a = rand(0, 6.283), r = rand(0.08, 0.26), h = Math.pow(Math.random(), 1.6) * 1.35;   // más fuego abajo, en los pies
+      flameSpawn(p.pos.x + Math.cos(a) * r, p.pos.y + 0.05 + h, p.pos.z + Math.sin(a) * r,
+        -p.vel.x * 0.35 + rand(-0.4, 0.4), rand(1.6, 3.2), -p.vel.z * 0.35 + rand(-0.4, 0.4), rand(0.22, 0.42), (0.26 + 0.2 * k) * (1.15 - h * 0.35));
+    }
+  }
+  for (let i = 0; i < FLN; i++) {
+    const q = flames[i];
+    if (q.life <= 0) continue;
+    q.life -= dt;
+    if (q.life <= 0) { flPos[i * 3 + 1] = -999; flSize[i] = 0; continue; }
+    q.v.y += 1.5 * dt; q.v.x *= 1 - 3 * dt; q.v.z *= 1 - 3 * dt; q.p.addScaledVector(q.v, dt);
+    const t = 1 - q.life / q.max, A = t < 0.35 ? FL_Y : FL_O, B = t < 0.35 ? FL_O : FL_R, u = t < 0.35 ? t / 0.35 : (t - 0.35) / 0.65, fade = 1 - t * t;
+    flPos[i * 3] = q.p.x; flPos[i * 3 + 1] = q.p.y; flPos[i * 3 + 2] = q.p.z;
+    for (let c = 0; c < 3; c++) flCol[i * 3 + c] = lerp(A[c], B[c], u); flA[i] = fade;
+    flSize[i] = q.s * (0.55 + 0.9 * Math.sin(Math.PI * Math.min(1, t * 1.2)));
+  }
+  flGeo.attributes.position.needsUpdate = true; flGeo.attributes.fcol.needsUpdate = true; flGeo.attributes.fsize.needsUpdate = true; flGeo.attributes.falpha.needsUpdate = true;
 }
 const TN = 18, tPos = new Float32Array(TN * 3), tCol = new Float32Array(TN * 3);
 const tGeo = new THREE.BufferGeometry();
@@ -3821,8 +3874,8 @@ function explode(p, move) {
   p.burstDir = { x: move.x / l, z: move.z / l };
   p.burstT = D.burstTime; p.explodeWin = 0; p.plantT = 0;
   p.dash = Math.max(0, (p.dash || 0) - 1);                     // gasta una carga de sobresfuerzo
-  burst(_bp.set(p.pos.x, 0.35, p.pos.z), CFG.colors.blue, 28, 5);   // destello azul en los pies
-  for (let i = 1; i <= 3; i++) burst(_bp.set(p.pos.x - p.burstDir.x * i * 0.25, 0.6, p.pos.z - p.burstDir.z * i * 0.25), 0x7fd7ff, 6, 2.5);
+  flameIgnite(p, p.burstDir);                                    // se enciende: anillo de fuego en los pies y llamarada hacia atrás
+  burst(_bp.set(p.pos.x, 0.35, p.pos.z), 0xffb02e, 14, 4);         // chispas
   // quien se había enganchado con el regate se queda un poco más clavado
   let near = null, nd = 1e9;
   for (const o of live) {
@@ -4124,7 +4177,7 @@ function onScore(hi) {
   }
   score[team] += pts; updateScore();
   lastScoreHoop = hi; scoredTeam = team; state = 'scored'; stateT = CFG.scorePause;
-  slowT = Math.max(slowT, 0.7); shake = Math.max(shake, 0.5);
+  if (sh && (sh.dunk || sh.alley)) slowmo(0.2, 0.75); else slowmo(0.55, 0.35); shake = Math.max(shake, 0.5);   // tras un mate apenas se frena: ya lo hizo en el salto
   hp.jiggle = 1; hp.waveT = 1; teamLights[hi].intensity = 4;
   burst(hp.rimC, team === 0 ? CFG.colors.blue : CFG.colors.rival, 200, 10);
   crowdExc = 1; crowdSettled = false;
@@ -4322,7 +4375,7 @@ function startDunk(p, type, alley) {
   p.charging = false; p.charge = 0; p.move = null; p.spinAngle = 0; p.shotT = 0; p.onGround = false;
   spend(p, D.cost);
   stats[p.team].att++; trainAttempt(p, false, false);
-  slowT = Math.max(slowT, type === 'windmill' || type === 'spin360' || type === 'reverse' ? 0.6 : 0.35);
+  slowmo(type === 'windmill' || type === 'spin360' || type === 'reverse' ? 0.3 : 0.18, 0.62);   // mate: un toque de cámara lenta, sin parar el juego
   if (p === human || hdist(p.pos, human.pos) < 14) sfx('jump');
 }
 
@@ -4555,7 +4608,7 @@ function blockSuccess(p, victim, label) {
   if (victim) { victim.charging = false; victim.charge = 0; victim.shotT = 0; victim.pickupCd = 0.5; }
   if (mode === 'train') trainResolveMiss();
   banner(label || '¡Tapón!', teamColor(p.team), 1.1);
-  shake = Math.max(shake, 0.5); hitstop = Math.max(hitstop, 0.08); slowT = Math.max(slowT, 0.35);
+  shake = Math.max(shake, 0.5); hitstop = Math.max(hitstop, 0.08); slowmo(0.35, 0.3);
   crowdExc = Math.max(crowdExc, 0.8); crowdSettled = false;
   sfx('hit'); sfx('cheer', 0.7);
 }
@@ -5289,7 +5342,9 @@ function padFrame(dt) {
      setupCheck, setupInbound, shotClockViolation, endGame, pause, resume, togglePause, toMenu
    ============================================================================== */
 let state = 'menu', prevState = 'play', stateT = 0, lastCount = 0;
-let hitstop = 0, slowT = 0, timeScale = 1, shake = 0, menuKickT = 0;
+let hitstop = 0, slowT = 0, slowK = 0.3, timeScale = 1, shake = 0, menuKickT = 0;
+// cámara lenta: t segundos a la velocidad k (si ya había una más lenta, se respeta)
+const slowmo = (t, k) => { if (slowT <= 0 || k < slowK) slowK = k; slowT = Math.max(slowT, t); };
 
 // Coloca jugadores y balón en posiciones iniciales y limpia su estado.
 function resetEntities() {
@@ -6620,7 +6675,7 @@ function frame(now) {
   shake = Math.max(0, shake - rdt * 2.2);
   if (hitstop > 0) { hitstop -= rdt; updateCamera(rdt, T); renderer.render(scene, camera); return; }
   if (slowT > 0) slowT -= rdt;
-  timeScale = lerp(timeScale, slowT > 0 ? 0.3 : 1, 1 - Math.exp(-10 * rdt));
+  timeScale = lerp(timeScale, slowT > 0 ? slowK : 1, 1 - Math.exp(-10 * rdt));
   const gdt = rdt * timeScale;
 
   if (state === 'play' || state === 'scored') {
