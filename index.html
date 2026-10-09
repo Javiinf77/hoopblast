@@ -517,7 +517,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
     </div>
     <p id="touchnote" class="note" hidden>Necesitas teclado y ratón para jugar.</p>
   </div>
-  <span class="version">v0.5 alpha «Flow» · 7 oct 2026 · 20:13</span>
+  <span class="version">v0.5 alpha «Flow» · 9 oct 2026 · 20:03</span>
 </section>
 
 <!-- ── Controles (pestaña aparte) ── -->
@@ -4177,6 +4177,7 @@ function onScore(hi) {
   }
   score[team] += pts; updateScore();
   lastScoreHoop = hi; scoredTeam = team; state = 'scored'; stateT = CFG.scorePause;
+  if (!overtime && clock > 0) { startReset(team, sh && sh.shooter); stateT = 1e9; }   // la reposición termina sola
   if (sh && (sh.dunk || sh.alley)) slowmo(0.2, 0.75); else slowmo(0.55, 0.35); shake = Math.max(shake, 0.5);   // tras un mate apenas se frena: ya lo hizo en el salto
   hp.jiggle = 1; hp.waveT = 1; teamLights[hi].intensity = 4;
   burst(hp.rimC, team === 0 ? CFG.colors.blue : CFG.colors.rival, 200, 10);
@@ -4847,7 +4848,11 @@ function aiThink(me, dt) {
     else if (me.reactMode === 'drift') { const v = Math.hypot(me.vel.x, me.vel.z); if (v > 0.3) out.move.set(me.vel.x / v, 0, me.vel.z / v); }
     out.stance = true; return out;
   }
-  if (state === 'scored') { moveTo(me, me.home, out); return out; }
+  if (state === 'scored') {
+    const t = RESET ? resetTarget(me) : me.home, d = moveTo(me, t, out), sc = RESET && me === RESET.scorer && RESET.ph !== 'pass';
+    out.move.multiplyScalar(sc ? (d > 3 ? 0.78 : 0.55) : d > 5 ? 0.66 : d > 1.5 ? 0.48 : 0.3);   // se colocan andando (trotando si están lejos); quien anota va a por el balón
+    return out;
+  }
   st.t -= dt;
   const atk = hoops[me.attackSide].rimC, def = hoops[1].rimC, s = Math.sign(atk.x);   // media pista: se defiende la misma canasta
   const mates = live.filter(p => p.team === me.team && p !== me);
@@ -5348,6 +5353,7 @@ const slowmo = (t, k) => { if (slowT <= 0 || k < slowK) slowK = k; slowT = Math.
 
 // Coloca jugadores y balón en posiciones iniciales y limpia su estado.
 function resetEntities() {
+  RESET = null;   // sin reposición a medias
   if (human !== players[0]) { const m = mode; mode = 'match'; setControlled(players[0]); mode = m; }
   const spots = [[-5, 0], [-9, -5.5], [-9, 5.5], [-12, -2.5], [-12, 2.5]];
   for (const p of players) {
@@ -5416,10 +5422,13 @@ function bestInboundTarget(p) {
 
 // Prepara el saque de fondo del equipo que ha recibido la canasta.
 // Media pista: saque "check ball" fuera del triple, en lo alto de la zona. Atacantes abiertos, defensores entre ellos y el aro.
-function setupCheck(team) {
+function checkSpots() {
   const c = hoops[1].rimC, sx = Math.sign(c.x);
   const at = (dist, ang) => new V3(c.x - sx * Math.cos(ang) * dist, 0, Math.sin(ang) * dist);
-  const offSpots = [at(8.2, 0), at(7.4, 0.95), at(7.4, -0.95), at(7.0, 1.45), at(7.0, -1.45)], defSpots = [at(6.4, 0), at(5.6, 0.85), at(5.6, -0.85), at(5.2, 1.35), at(5.2, -1.35)];
+  return { off: [at(8.2, 0), at(7.4, 0.95), at(7.4, -0.95), at(7.0, 1.45), at(7.0, -1.45)], def: [at(6.4, 0), at(5.6, 0.85), at(5.6, -0.85), at(5.2, 1.35), at(5.2, -1.35)] };
+}
+function setupCheck(team) {
+  const c = hoops[1].rimC, sx = Math.sign(c.x), SP = checkSpots(), offSpots = SP.off, defSpots = SP.def;
   for (const p of players) {
     if (!live.includes(p)) { p.pos.set(0, -50, 0); p.vel.set(0, 0, 0); continue; }   // (1 contra 1 / online: los que no juegan, fuera)
     p.charging = false; p.charge = 0; p.move = null; p.nextMove = null; p.spinAngle = 0; p.inbounding = false; p.dunkSeq = null; p.shotT = 0; p.stunT = 0; p.swipeT = 0; p.blockT = 0; p.deadDribble = false;
@@ -5455,6 +5464,68 @@ function setupInbound() {
   if (inb === human) { camYaw = s * Math.PI / 2; camPos.set(inb.pos.x + s * 3.5, 2.4, inb.pos.z); }
   state = 'play';
   banner2(concede === 0 ? 'Saca de fondo: pulsa Q para pasar' : 'Saque de fondo rival', teamColor(concede), 1.4);
+}
+
+// ---- Tras una canasta (partido): sin cortes ----
+// Quien ha anotado va a por el balón bajo el aro y lo recoge; mientras, todos se colocan andando en sus sitios del saque.
+// Lo lleva hasta cerca de lo alto y se lo pasa picado al base rival, que lo recibe fuera del triple y empieza el ataque.
+// Fases: fetch (recoger) → carry (llevarlo) → pass (pase) → set (el base asienta y arranca). Unos 3,5–4 s, al paso.
+let RESET = null;
+function startReset(scoreTeam, shooter) {
+  const concede = 1 - scoreTeam, SP = checkSpots(), c = hoops[1].rimC;
+  for (const p of live) { p.home.copy((p.team === concede ? SP.off : SP.def)[p.idx] || SP.def[0]); p.charging = false; p.charge = 0; p.move = null; p.nextMove = null; }
+  const offP = live.filter(p => p.team === concede), defP = live.filter(p => p.team === scoreTeam);
+  const recv = offP.find(p => p.idx === 0) || offP[0];
+  let scorer = shooter && live.includes(shooter) && shooter.team === scoreTeam ? shooter : null;
+  if (!scorer) { let bd = 1e9; for (const p of defP) { const d = hdist(p.pos, c); if (d < bd) { bd = d; scorer = p; } } }
+  RESET = { t: 0, ph: 'fetch', pt: 0, scorer, recv, team: concede, next: null };
+}
+// destino de cada jugador durante la reposición (lo usa aiThink)
+function resetTarget(p) {
+  const R = RESET;
+  if (p === R.scorer) {
+    if (R.ph === 'fetch') { const c = hoops[1].rimC; return ball.holder ? p.pos : new V3(lerp(ball.pos.x, c.x, ball.pos.y > 1.5 ? 0.6 : 0), 0, ball.pos.z); }
+    if (R.ph === 'carry') { const h = R.recv.home, c = hoops[1].rimC, dx = c.x - h.x, dz = c.z - h.z, l = Math.hypot(dx, dz) || 1; return new V3(h.x + dx / l * 4.6, 0, h.z + dz / l * 4.6); }
+  }
+  return p.home;
+}
+function updateReset(dt) {
+  const R = RESET, sc = R.scorer, rc = R.recv; R.t += dt; R.pt += dt;
+  const hands = p => new V3(p.pos.x, p.pos.y + 1.15, p.pos.z);
+  if (R.ph === 'fetch') {
+    if (!ball.holder && !ball.guide) {
+      const near = hdist(ball.pos, sc.pos) < 1.15 && ball.pos.y < 2.0;
+      if (near || R.pt > 1.3) {   // lo recoge (si se le ha ido lejos, el balón le llega rodando a las manos)
+        if (near) { ball.holder = sc; ball.vel.copy(sc.vel); } else { ball.guide = { from: ball.pos.clone(), to: hands(sc), dur: 0.45, arc: 0.4, t: 0, endVel: new V3() }; R.grab = true; }
+      }
+    } else if (R.grab && !ball.guide) { ball.holder = sc; R.grab = false; }
+    if (ball.holder === sc) { sc.deadDribble = true; sc.hand = 1; ball.shot = null; R.ph = 'carry'; R.pt = 0; sfx('grab'); }
+  } else if (R.ph === 'carry') {
+    const tgt = resetTarget(sc);
+    if ((hdist(sc.pos, tgt) < 0.9 && R.pt > 0.5) || R.pt > 1.3) {   // pase picado al base rival, sin prisa
+      const from = ball.pos.clone(), to = hands(rc), mid = new V3(lerp(from.x, to.x, 0.58), CFG.ball.r, lerp(from.z, to.z, 0.58)), d = hdist(from, to);
+      ball.holder = null; sc.deadDribble = false; sc.throwT = 0.3; sc.throwKind = 'bounce'; sc.yaw = Math.atan2(rc.pos.x - sc.pos.x, rc.pos.z - sc.pos.z);
+      ball.guide = { from, to: mid, dur: Math.max(0.22, d * 0.58 / 9), arc: 0.05, t: 0, endVel: new V3() };
+      R.next = { from: mid, to, dur: Math.max(0.2, d * 0.42 / 8), arc: 0.25, t: 0, endVel: new V3() };
+      ball.pass = { team: sc.team, from: sc, to: rc, alley: false, target: to, t: 3, type: 'bounce', g: 1, home: false };   // para la pose de recibir
+      R.ph = 'pass'; R.pt = 0; sfx('pass');
+    }
+  } else if (R.ph === 'pass') {
+    if (!ball.guide && R.next) { R.next.to = hands(rc); ball.guide = R.next; R.next = null; sfx('bounce'); }
+    else if (!ball.guide) { ball.holder = rc; ball.pass = null; rc.hand = 1; rc.deadDribble = false; rc.catchArc = null; R.ph = 'set'; R.pt = 0; sfx('grab'); }
+  } else if (R.ph === 'set') {
+    const placed = live.every(p => hdist(p.pos, p.home) < 1.2);
+    if (R.pt > 0.6 && (placed || R.pt > 1.0)) finishReset();
+  }
+}
+function finishReset() {
+  const R = RESET; RESET = null;
+  needClear[0] = needClear[1] = false; possTeam = R.team; shotClock = CFG.shotClock;
+  R.recv.protectT = 0.8; for (const p of teamOf(1 - R.team)) p.swipeCd = 0.8;
+  for (const p of players) for (const k in p.pend) p.pend[k] = k === 'move' ? null : false;
+  state = 'play';
+  if (R.team === human.team) setControlled(R.recv);
+  banner2(R.team === human.team ? 'Tu balón' : 'Ataca el rival', teamColor(R.team), 0.9);
 }
 
 // Se agotan los 14 s de posesión: el balón pasa al rival.
@@ -6251,7 +6322,7 @@ function animatePlayer(p, dt, T) {
     }
   }
   // ---- celebración ----
-  if (state === 'scored' && p.team === scoredTeam && !holding) {
+  if (state === 'scored' && p.team === scoredTeam && !holding && (!RESET || (RESET.t < 1.1 && p !== RESET.scorer))) {
     tp.aL.x = tp.aR.x = -2.9; tp.aL.z = 0.4; tp.aR.z = -0.4; tp.aL.el = tp.aR.el = -0.1;
     tp.hipsY += 0.04 * Math.abs(Math.sin(T * 9 + p.idx));
   }
@@ -6641,7 +6712,7 @@ function step(dt, frames) {
   tryPickup();
   updateClear();
   // ataque 3v3: controlas siempre a quien tiene el balón de tu equipo (como en NBA 2K)
-  if (mode === 'match' && ball.holder && ball.holder.team === human.team && ball.holder !== human) setControlled(ball.holder);
+  if (mode === 'match' && state === 'play' && ball.holder && ball.holder.team === human.team && ball.holder !== human) setControlled(ball.holder);
   if (wantSwitch) { wantSwitch = false; switchToNearest(); }
   stepBall(dt);
   if (mode === 'train') { stepTraining(dt); return; }
@@ -6681,10 +6752,10 @@ function frame(now) {
   if (state === 'play' || state === 'scored') {
     if (mode === 'match') updateTeamPlans(gdt);
     const hf = mode === 'anim' ? ANIM.inp : humanFrameInput();
-    const frames = live.map(p => p === human ? hf : mode === 'anim' ? (ANIM.npc.get(p) || ANIM.idle) : p.netCtl ? p.netIn : aiThink(p, gdt));
+    const frames = live.map(p => mode === 'anim' ? (p === human ? hf : (ANIM.npc.get(p) || ANIM.idle)) : (state === 'scored' && RESET) ? aiThink(p, gdt) : p === human ? hf : p.netCtl ? p.netIn : aiThink(p, gdt));
     acc += gdt; let n = 0;
     while (acc >= CFG.step && n < 12) { step(CFG.step, frames); acc -= CFG.step; n++; if (state !== 'play' && state !== 'scored') break; }
-    if (state === 'scored') { stateT -= rdt; if (stateT <= 0) afterScore(); }
+    if (state === 'scored') { if (RESET) updateReset(gdt); else { stateT -= rdt; if (stateT <= 0) afterScore(); } }
   } else if (state === 'countdown') {
     stateT -= rdt;
     const c = Math.ceil(stateT);
