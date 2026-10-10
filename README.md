@@ -3,12 +3,19 @@
 Baloncesto 3 contra 3 arcade en el navegador, con estética cel-shading inspirada en Rematch y controles de regate inspirados en NBA 2K.
 Todo el juego está en **un solo archivo** (`index.html`): sin instalación y sin recursos externos, salvo Three.js y las fuentes de Google.
 
-**Versión actual: 0.3 alpha** · [Qué incluye](CHANGELOG.md)
+**Versión actual: 0.5 alpha «Flow»** · [Qué incluye](CHANGELOG.md)
 
 ## Jugar
 - Abre `index.html` en Chrome, Edge o Firefox de escritorio.
 - O juega en la web si GitHub Pages está activado: `https://javiinf77.github.io/hoopblast/`
 - Teclado y ratón, o mando de PS4 (se detecta solo). Los controles completos están en el menú del juego.
+
+## Jugar online con amigos
+1. Uno crea la sala en **Online** y comparte el código que aparece.
+2. Los demás abren el juego, entran en **Online** y escriben ese código.
+3. Hasta 10 jugadores (1c1, 2c2, 3c3 o 5c5). Cada uno controla solo a su jugador; los huecos libres los lleva la IA.
+
+Todos tienen que tener la misma versión del juego: descargad `index.html` (o `dist/hoopblast.min.html`) del último commit de `main`, o usad el enlace de GitHub Pages.
 
 ## Estructura del repositorio
 | Ruta | Qué es |
