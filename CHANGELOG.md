@@ -1,5 +1,23 @@
 # Registro de cambios
 
+## 0.5 alpha «Flow»
+**Modos y jugadas**
+- Nuevo 5 contra 5, también online.
+- Bloqueos: L1 con balón pide bloqueo por la izquierda o la derecha (según el stick) y el compañero más cercano lo pone sobre tu defensor y luego continúa al aro. ○ sin balón te planta como bloqueador (pensado para el online).
+- Pase dirigido: mantén R1 con balón y aparece un botón (□ ✕ ○ △) sobre cada compañero; pulsándolo le pasas a él. En teclado, Tab + 1–4.
+- Tras canasta, quien anota recoge el balón y se lo pasa al base rival mientras todos se colocan, sin cortes de cámara.
+
+**Controles y tiro**
+- Se corre solo con R2; doble R2 gasta el turbo, con llamas en el jugador.
+- Mate: corriendo al aro con R2 + □/△/○ (L2 + □ tomahawk, L2 + △ reverso). Menos cámara lenta.
+- Bandeja con barra: suelta R2 y mantén □ cerca del aro; suelta en el verde. Debajo del aro sale un aro pasado. La mano depende del lado de la canasta.
+- Regates encadenados sin cortes entre animaciones (p. ej. entre las piernas → por la espalda).
+
+**Vestuario y aspecto**
+- Caras Mii con ojos, cejas, bocas, gafas, bigotes y barbas; tamaño y posición de ojos, nariz y boca ajustables (±6) con primer plano de la cabeza.
+- Vestuario manejable con mando; cinta plana, calcetines y zapatillas altas rediseñadas; la cabeza ya no atraviesa el pelo.
+- Pistas exteriores con público, decorado y animaciones.
+
 ## 0.2 alpha
 **3 contra 3 y controles**
 - Controlas siempre a quien tiene el balón; el pase va al compañero hacia el que apuntas (anillo blanco) y el control salta al receptor.
