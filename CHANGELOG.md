@@ -1,5 +1,27 @@
 # Registro de cambios
 
+## 0.6 alpha «Combo»
+**Regates y ataque**
+- El giro ya solo rota sobre sí mismo: no se desplaza hacia los lados y al acabar sigue en la dirección que llevabas.
+- Nuevos: medio giro (amaga el giro y vuelve), Shammgod (↑ con R2), parada falsa (↑) y amago de cruce (cruce hacia la mano que ya lleva el balón). Teclado: H, Mayús+H, Y y N.
+- Paso de recogida a dos pies: L2 corriendo hacia el aro. Tras un amago cerca del aro, □ con el stick hacia el aro da el paso por el lado (amago y paso).
+- Flotadora: mantener □ entrando al aro a media distancia; arco alto, difícil de tapar.
+- Tiro tras bote en carrera: frena en dos apoyos en vez de clavarse en seco.
+- Combos: cada regate encadenado tiene nombre, engancha más al defensor y da flow.
+- Flow: regates que funcionan, combos, canastas, asistencias, robos y tapones llenan una barra; al llenarse entras «en flow» (franja verde más ancha, menos recarga, explosiones más fuertes, llamas en las manos).
+
+**Contacto**
+- Choques con respuesta física: los cuerpos se rodean y resbalan en vez de temblar o atravesarse; un choque fuerte desequilibra a los dos un instante.
+- Entre compañeros el cuerpo es más estrecho y se cruzan de lado.
+- Falta en ataque: arrollar a un defensor plantado en postura y de cara da el balón al rival.
+- Bandejas: el salto se ajusta para soltar a ~0,9 m del aro en lo alto; debajo del aro sale siempre a aro pasado.
+
+**IA**
+- Ataque: puestos de espaciado (esquinas, alas, arriba; en 5c5 un grande en el lado débil), cortes por la puerta de atrás, «dar y seguir», penetrar y doblar al libre, circulación de balón, bloqueos pedidos, combos, flotadoras y pasos de recogida.
+- Defensa: cambio en los bloqueos, ayuda del lado del balón, cierre del rebote; en ataque unos van al rebote y otros vuelven.
+- Tiro de la IA medido en franjas verdes (solo entra a menudo, punteado mucho menos); se protege el balón cambiando de mano; menos intercepciones y manotazos.
+- En CPU contra CPU (10 min, 3c3): de ~78 a ~110 puntos, de 3 a 10 asistencias y de 31 a 14 pérdidas.
+
 ## 0.5 alpha «Flow»
 **Modos y jugadas**
 - Nuevo 5 contra 5, también online.

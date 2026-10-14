@@ -3,7 +3,7 @@
 Baloncesto 3 contra 3 arcade en el navegador, con estética cel-shading inspirada en Rematch y controles de regate inspirados en NBA 2K.
 Todo el juego está en **un solo archivo** (`index.html`): sin instalación y sin recursos externos, salvo Three.js y las fuentes de Google.
 
-**Versión actual: 0.5 alpha «Flow»** · [Qué incluye](CHANGELOG.md)
+**Versión actual: 0.6 alpha «Combo»** · [Qué incluye](CHANGELOG.md)
 
 ## Jugar
 - Abre `index.html` en Chrome, Edge o Firefox de escritorio.
@@ -31,6 +31,7 @@ npm install        # dependencias de las pruebas (solo la primera vez)
 npm test           # ¿el comportamiento sigue igual que la referencia?
 npm run smoke      # prueba rápida de carga, partido, entrenamiento y vestuario
 npm run min        # regenera dist/hoopblast.min.html
+npm run sim        # CPU contra CPU: estadísticas de la IA (tiros, pases, robos, regates, espaciado)
 ```
 Si un cambio es intencionado, las diferencias de `npm test` deben estar solo en lo que se ha tocado.
 Al cerrar una versión, se regenera la referencia (`tests/referencia_X.txt`).

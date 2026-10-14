@@ -1,13 +1,15 @@
 {
   "name": "hoopblast",
-  "version": "0.5.0-alpha",
+  "version": "0.6.0-alpha",
   "private": true,
   "description": "Baloncesto 3v3 arcade en el navegador (Three.js, un solo archivo HTML)",
   "scripts": {
     "test": "bash tests/golden.sh salida.txt && diff tests/referencia_0.3-alpha.txt tests/salida.txt && echo 'Comportamiento idéntico a la referencia'",
     "smoke": "node tests/mintest.js index.html",
     "min": "node tools/minify.js index.html dist/hoopblast.min.html",
-    "test:hair": "node tests/testhair.js index.html"
+    "test:hair": "node tests/testhair.js index.html",
+    "test:gameplay": "node tests/testgameplay.js index.html",
+    "sim": "node tests/simcpu.js index.html 3 300"
   },
   "devDependencies": {
     "acorn": "^8.11.0",

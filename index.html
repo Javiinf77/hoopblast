@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  HOOPBLAST 3v3 — versión 0.5 alpha
+  HOOPBLAST 3v3 — versión 0.6 alpha
   Baloncesto 3v3 en un único archivo: Three.js r128 + cel-shading, física propia del balón, regates estilo NBA 2K,
   mando PS4, IA, entrenamiento y vestuario. Sin recursos externos salvo Three.js y fuentes de Google.
   Estructura del código: ver el ÍNDICE al inicio del código JavaScript, más abajo (secciones §01–§31).
@@ -532,7 +532,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
     </div>
     <p id="touchnote" class="note" hidden>Necesitas teclado y ratón para jugar.</p>
   </div>
-  <span class="version">v0.5 alpha «Flow» · 9 oct 2026 · 20:16</span>
+  <span class="version">v0.6 alpha «Combo» · 14 oct 2026 · 21:44</span>
 </section>
 
 <!-- ── Controles (pestaña aparte) ── -->
@@ -682,7 +682,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 /* ==============================================================================
-   HOOPBLAST 3v3 — ÍNDICE DEL CÓDIGO (versión 0.5 alpha)
+   HOOPBLAST 3v3 — ÍNDICE DEL CÓDIGO (versión 0.6 alpha)
    Cada sección empieza con «§NN». Para ir a una sección busca «§NN» (p. ej. «§13»).
    Las funciones de cada sección se listan en su cabecera.
    ==============================================================================
@@ -699,7 +699,7 @@ table, td, th{ color:var(--chalk); } .version{ color:var(--muted) !important; }
    §10  EFECTOS: PARTÍCULAS Y ESTELA     Chispas/confeti (burst) y estela del balón rápido.
    §11  FÍSICA DEL BALÓN                 Choques con suelo, cristal, aro, tablero y cuerpos; balón en las manos (bote); imán del pase; paso de física.
    §12  MOVIMIENTO Y ENERGÍA             Energía/agotamiento, dirección con inercia (steer), actualización del jugador y choques entre jugadores (corte defensivo).
-   §13  REGATES                          Regates (cruce, entre piernas, espalda, giro, retroceso, pasos atrás y lateral, eurostep, bandeja con giro, poste),
+   §13  REGATES                          Regates (cruce, entre piernas, espalda, giro, medio giro, Shammgod, retroceso, pasos atrás y lateral, paso de recogida, eurostep, bandeja con giro, poste), combos y flow,
    cambios de dirección, reacción del defensor, explosión tras el regate y combos.
    §14  ROBO (MANOTAZO)                  Manotazo con ventana activa, exposición del balón, esquivas y cooldown.
    §15  POSESIÓN Y MARCADOR              Recoger balones sueltos/pases, puntuación, estadísticas y canasta.
@@ -3745,6 +3745,11 @@ function playersCollide(a, b) {
     if (def.team !== atk.team && def.stance && def.stunT <= 0 && def.reactT <= 0 && !atk.move && !atk.dunkSeq && !atk.post && def.onGround && atk.onGround && (atk.cutT || 0) <= 0) {
       const v = Math.hypot(atk.vel.x, atk.vel.z);
       const ox = def.pos.x - atk.pos.x, oz = def.pos.z - atk.pos.z, ol = Math.hypot(ox, oz) || 1;
+      // carga: el defensor está plantado (casi quieto), de cara y fuera del semicírculo; el que conduce le arrolla a toda velocidad
+      const fd2 = facing(def), faceIn = -(fd2.x * ox + fd2.z * oz) / ol;
+      if (mode === 'match' && state === 'play' && v > 5.6 && Math.hypot(def.vel.x, def.vel.z) < 1.1 && faceIn > 0.6 && (atk.vel.x * ox + atk.vel.z * oz) / (v * ol) > 0.75 && hdist(def.pos, hoops[atk.attackSide].rimC) > 1.25 && Math.random() < 0.65) {
+        chargeFoul(atk, def); return;
+      }
       if (v > 3 && (atk.vel.x * ox + atk.vel.z * oz) / (v * ol) > 0.4) {
         atk.vel.x = atk.vel.x * 0.3 - ox / ol * 1.2; atk.vel.z = atk.vel.z * 0.3 - oz / ol * 1.2;
         atk.plantT = 0.2; atk.burstT = 0; atk.cutT = 0.7;
@@ -4911,6 +4916,16 @@ function handleActions(p, inp, dt) {
   if (!holding || p.stunT > 0) { p.charging = false; p.charge = 0; return; }
   if (inp.shootPress || inp.shootHold || inp.postShot) finishSwap(p);   // tirar (o paso atrás) no espera al cambio de mano
   if (p.move || p.inbounding) return;
+  if (p.deadDribble && inp.shootPress && p.onGround && p.moveCd.hop <= 0 && hdist(p.pos, hoops[p.attackSide].rimC) < 4.2) {
+    // amago y paso (up and under): tras el amago, con el stick hacia el aro, das el paso por el lado y bandeja
+    const c = hoops[p.attackSide].rimC, ax = c.x - p.pos.x, az = c.z - p.pos.z, al = Math.hypot(ax, az) || 1, mm = Math.hypot(inp.move.x, inp.move.z);
+    if (mm > 0.4 && (inp.move.x * ax + inp.move.z * az) / (mm * al) > 0.3) {
+      const lat = (inp.move.x * -az + inp.move.z * ax) / (mm * al);
+      p.fakeT = 0; p.deadDribble = false;
+      if (startMove(p, 'hop', Math.abs(lat) > 0.2 ? Math.sign(lat) : -p.hand)) { if (p === human) banner2('Amago y paso', 'var(--gold)', 0.6); return; }
+      p.deadDribble = true;
+    }
+  }
   if (p.fakeT > 0 && inp.shootPress) p.fakeT = 0;   // tras el amago puedes tirar al instante (corta la animación)
   // tiro: toque cerca del aro = bandeja; mantener = medidor de tiro
   // eurostep / bandeja con giro: corriendo hacia la canasta, □ y otra vez □ (rápido = giro; con algo de pausa = eurostep)
@@ -5202,7 +5217,7 @@ function aiThink(me, dt) {
       if (pick && Math.random() < (fd < 1.6 ? P.pass : P.pass * 0.5)) return passTo(pick);
       // circular el balón: si lleva tiempo sin avanzar y hay alguien muy libre, se la da
       st.holdT = (st.holdT || 0) + st.t;
-      if (st.holdT > 3 && fd < 2.5) { const k = bestOpen(3); if (k && Math.random() < 0.5) { st.holdT = 0; return passTo(k); } }
+      if (st.holdT > 2 && fd < 3) { const k = bestOpen(2.4); if (k && Math.random() < 0.55) { st.holdT = 0; return passTo(k); } }
       if (st.afterFake) { st.afterFake = false; if (foes.some(f => !f.onGround && hdist(f.pos, me.pos) < 3)) return shootNow(); }
       if (d < P.range && d > CFG.shot.layup && fd < 1.7 && me.fakeCd <= 0 && Math.random() < 0.25) { pend.fake = true; st.afterFake = true; st.t = 0.35; return out; }
       // selección de tiro: solo y en rango, tira casi seguro; muy encima y con reloj de sobra, mejor no
@@ -5924,6 +5939,18 @@ function shotClockViolation() {
   if (rec) { ball.holder = rec; ball.pos.set(rec.pos.x, 1.2, rec.pos.z); ball.vel.copy(rec.vel); possTeam = other; needClear[other] = true; }
   else possTeam = -1;
   shotClock = CFG.shotClock;
+}
+
+// Falta en ataque: quien conducía arrolla a un defensor plantado → balón para el defensor (sacando fuera del triple)
+function chargeFoul(atk, def) {
+  sfx('whistle'); sfx('hit');
+  atk.vel.x *= -0.2; atk.vel.z *= -0.2; atk.stunT = 0.6; atk.move = null; atk.spinAngle = 0; atk.charging = false; atk.charge = 0; atk.pickupCd = 1; atk.burstT = 0;
+  def.vel.set(0, 0, 0); def.stunT = 0.45; def.bumpT = 0.3; def.bumpDir = { x: def.pos.x - atk.pos.x, z: def.pos.z - atk.pos.z };
+  ball.shot = null; ball.pass = null; ball.guide = null; ball.holder = def; ball.pos.set(def.pos.x, 1.2, def.pos.z); ball.vel.set(0, 0, 0);
+  possTeam = def.team; needClear[def.team] = true; shotClock = CFG.shotClock;
+  stats[def.team].steals++; flowAdd(def, 0.3); flowLose(atk, 0.3);
+  banner(def.team === human.team ? '¡Falta en ataque! Carga recibida' : 'Falta en ataque', teamColor(def.team), 1.2);
+  if (involvesHuman(atk, def)) { rumble(0.7, 0.4, 180); shake = Math.max(shake, 0.35); }
 }
 
 // Fin del partido: pantalla de resultado y estadísticas.

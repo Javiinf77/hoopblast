@@ -105,3 +105,23 @@ for (const [ty, sp, nm] of [['shammgod', 5, 'Shammgod'], ['hesi', 5, 'Parada fal
   for (let i = 0; i < 120; i++) { E('updatePlayer(window.__a, {move: new THREE.Vector3(1,0,0), sprint: false}, CFG.step); updatePlayer(window.__b, {move: new THREE.Vector3(), sprint: false}, CFG.step); playersCollide(window.__a, window.__b);'); minD2 = Math.min(minD2, E('hdist(window.__a.pos, window.__b.pos)')); }
   console.log('rodear a un parado| distancia mínima', fx(minD2), 'm | lo ha rebasado', E('window.__a.pos.x > window.__b.pos.x + 0.3'), '| desvío lateral', fx(Math.abs(E('window.__a.pos.z'))), 'm');
 }
+// ---- falta en ataque y amago y paso ----
+{
+  let charges = 0;
+  for (let n = 0; n < 6; n++) {
+    E(place); E(`(() => { const c = hoops[1].rimC, sx = Math.sign(c.x), d = live.find(p => p.team === 1 && p.idx === 0); window.__d = d;
+      human.pos.set(c.x - sx * 9, 0, 0); human.vel.set(sx * 7.5, 0, 0); human.burstT = 0; d.pos.set(c.x - sx * 6.6, 0, 0.05); d.vel.set(0, 0, 0); d.yaw = Math.atan2(-sx, 0); d.swipeCd = 99; })()`);
+    E('keys.ShiftLeft = true; keys.KeyW = true; camYaw = Math.atan2(-Math.sign(hoops[1].rimC.x), 0)');
+    let got = false; for (let i = 0; i < 60; i++) { E('window.__d.vel.set(0, 0, 0); window.__d.pos.z = 0.05;'); frame(); if (E('ball.holder === window.__d')) { got = true; break; } }
+    E('keys.ShiftLeft = false; keys.KeyW = false'); if (got) charges++; run(0.5);
+  }
+  console.log('falta en ataque   | arrollando a un defensor plantado:', charges + '/6 cargas');
+  let uu = 0;
+  for (let n = 0; n < 4; n++) {
+    E(place); E(`(() => { const c = hoops[1].rimC, sx = Math.sign(c.x); human.pos.set(c.x - sx * 3.2, 0, 0.8); human.vel.set(0, 0, 0); human.deadDribble = true; human.fakeCd = 0; })()`);
+    E('keys.KeyW = true; camYaw = Math.atan2(-Math.sign(hoops[1].rimC.x), 0)'); key('KeyJ'); let hop = false;
+    for (let i = 0; i < 40; i++) { frame(); if (E('human.move && human.move.type === "hop"')) hop = true; }
+    key('KeyJ', false); E('keys.KeyW = false'); if (hop) uu++; run(1.5);
+  }
+  console.log('amago y paso      | tras amago, clic + stick al aro:', uu + '/4');
+}
